@@ -926,6 +926,7 @@
 .v280-device .v278-player-page { display: flex; flex-direction: column; gap: 10px; min-height: 0; padding: 0 14px calc(12px + env(safe-area-inset-bottom, 0px)) !important; }
 .v280-device .v278-player-header { height: 94px; flex: none; }
 .v280-device .v278-player-card { flex: 1; min-height: 0; height: auto !important; overflow-y: auto; overscroll-behavior: contain; }
+.v280-device .v278-player-cover { background-image: url('/task-player-cover.webp') !important; background-size: cover !important; background-position: center !important; }
 .v280-device .v278-player-process { flex: none; min-height: 125px; padding-bottom: 12px; }
 .v280-device .v278-player-process ol li { min-height: 56px !important; grid-template-columns: 24px minmax(0,1fr); gap: 10px; font-family: inherit; font-size: 14px; line-height: 1.5; }
 .v280-device .v278-player-process ol li > div { min-width: 0; }
@@ -956,6 +957,7 @@
 .v280-device .elfred-markdown :is(th,td) { padding: 7px 10px; border: 1px solid #dfe5e8; text-align: left; }
 .v280-device .v277-result-section > ol > li { min-width: 0; align-items: start; }
 .v280-device .v277-result-section > ol > li > .elfred-markdown { min-width: 0; }
+.v280-device .v277-task-hero h1 { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; font-size: 21px !important; line-height: 1.5 !important; }
 .v280-device .elfred-file-preview { max-height: 360px; overflow-y: auto; padding: 14px; margin: 10px 0; border: 1px solid #e0e5e8; border-radius: 12px; background: white; overscroll-behavior: contain; }
 .elfred-search-source-content mark { background: #fff2b5; color: inherit; }
 @media (max-width: 600px) {

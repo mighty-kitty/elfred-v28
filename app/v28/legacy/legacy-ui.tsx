@@ -1,4 +1,5 @@
 "use client";
+import {MarkdownContent} from '../core/markdown-content';
 import {FollowAuthor,RecruitmentSummary} from '../features/home/community-author';
 import {Observations} from '../features/home/observations';
 import {ContextRecovery} from '../features/home/context-recovery';
@@ -1187,7 +1188,7 @@ export function TaskPlayer({
           <i />
         </span>
         <span>
-          <small>{current ? `Agent ${current.status}` : "Agent 空闲"}</small>
+          <small>{current ? `Agent ${current.runtimeStatus?runtimeStatuses[current.runtimeStatus]||current.status:current.status}` : "Agent 空闲"}</small>
           <b>{current?.title || "点击查看任务播放器"}</b>
         </span>
       </button>
@@ -1387,14 +1388,17 @@ export function TaskPlayerPage({
     playable.findIndex((task) => task.id === current?.id),
   );
   const liveTask=runtime?.snapshot?.objects.task.find(item=>item.id===current?.id),liveRun=runtime?.snapshot?.objects.run.find(item=>item.id===liveTask?.data.run_id);
-  const steps=(liveRun?.data.plan as {steps:{id:string;tool:string}[]}|undefined)?.steps||[];
-  const receipts=(liveRun?.data.receipts||[]) as {id:string;step_id:string;at:string;status:string;output_hash:string}[];
-  const progress=steps.length?Math.floor(receipts.length/steps.length*100):0;
+  const steps=(liveRun?.data.plan as {steps:{id:string;tool:string;phase?:string}[]}|undefined)?.steps||[];
+  const receipts=(liveRun?.data.receipts||[]) as {id:string;step_id:string;at:string;status:string;output_hash:string;provider?:string}[];
+  const progress=steps.length?Math.floor(steps.filter(step=>receipts.some(receipt=>receipt.step_id===step.id)).length/steps.length*100):0;
+  const status=liveTask?runtimeStatuses[entityText(liveTask,'status')]||'待处理':current?.status||'等待执行';
+  const phaseNames:Record<string,string>={work:'生成成果',review:'核对结果',repair:'按反馈修订',collaboration:'协作准备',context:'读取资料'};
+  const toolNames:Record<string,string>={'text.compose':'生成内容','document.read':'读取资料','search.local':'查找资料','owner.report':'记录本人完成结果'};
   const title = current?.title || (runtime?"当前没有任务":"生成今日重点简报");
   const agent = current
     ? agentList.find((item) => item.id === current.agent)?.name
     : "探索";
-  const playing = current?.status === "进行中";
+  const playing = liveRun?entityText(liveRun,'status')==='running':current?.status === '进行中';
   const selectOffset = (offset: number) => {
     if (!playable.length) return;
     setActiveId(
@@ -1465,13 +1469,11 @@ export function TaskPlayerPage({
         <i className="v278-player-cover" />
         <div className="v278-player-summary">
           <span>
-            <i /> {playing ? "正在执行" : current?.status || "等待执行"}
+            <i /> {playing ? "正在执行" : status}
           </span>
           <h2>{title}</h2>
           <p>{agent} Agent · {runtime?"累计运行 "+Math.round(Number(liveTask?.data.elapsed_ms||0)/1000)+" 秒":"已运行 12 分钟"}</p>
-          <strong>
-            {current?.brief || "正在汇总与你相关的动态与待确认事项"}
-          </strong>
+          {current?.brief!==title&&<strong>{current?.brief || "正在汇总与你相关的动态与待确认事项"}</strong>}
           <div>
             <span>步骤完成度</span>
             <b>{runtime?progress:64}%</b>
@@ -1500,7 +1502,7 @@ export function TaskPlayerPage({
               </button>
             </nav>
           </header>
-          {runtime?<ol>{steps.map(step=><li key={step.id} className={receipts.some(receipt=>receipt.step_id===step.id)?'done':'current'}><i/><span>{step.tool}</span><strong>{tab==='实时日志'?receipts.filter(receipt=>receipt.step_id===step.id).map(receipt=>new Date(receipt.at).toLocaleTimeString()+' · 成功回执 '+receipt.output_hash.slice(0,8)).join('；')||'暂无回执':step.id}</strong></li>)}{Boolean(liveRun?.data.error)&&<li><span>{String((liveRun!.data.error as {message:string}).message)}</span></li>}</ol>:tab === "SOP" ? (
+          {runtime?<ol>{steps.map((step,index)=>{const receipt=receipts.find(r=>r.step_id===step.id),started=playing&&!receipt&&steps.slice(0,index).every(previous=>receipts.some(r=>r.step_id===previous.id));return <li key={step.id} className={receipt?'done':started?'current':''}><i>{receipt&&<Check size={14}/>}</i><div><span>{phaseNames[step.phase||step.id]||toolNames[step.tool]||'执行步骤'}</span><small>{tab==='实时日志'?receipt?new Date(receipt.at).toLocaleTimeString('zh-CN',{hour:'2-digit',minute:'2-digit'})+' · '+(receipt.provider==='conditional-skip'||receipt.status==='skipped'?'无需修订，已跳过':'已记录结果'):started?'正在处理':'尚未执行':receipt?(receipt.provider==='conditional-skip'||receipt.status==='skipped'?'无需修订，已跳过':'已完成'):started?'正在处理':'等待执行'}</small></div></li>})}{!steps.length&&<li><span>确认并启动任务后，执行过程会出现在这里。</span></li>}{Boolean(liveRun?.data.error)&&<li><span>{String((liveRun!.data.error as {message:string}).message)}</span></li>}</ol>:tab === "SOP" ? (
             <ol>
               <li className="done">
                 <i>
@@ -1540,7 +1542,7 @@ export function TaskPlayerPage({
                 setModelOpen(false);
               }}
             >
-              {speed.toFixed(1)}×<ChevronDown size={17} />
+              {runtime?"实时":speed.toFixed(1)+"×"}{!runtime&&<ChevronDown size={17} />}
             </button>
             {speedOpen && (
               <div className="v279-control-popover speed-options">
@@ -1570,7 +1572,7 @@ export function TaskPlayerPage({
           <button
             type="button"
             className="v278-pause"
-            aria-label={playing ? "暂停任务" : "继续任务"}
+            aria-label={playing ? "暂停任务" : runtime?"查看任务":"继续任务"}
             onClick={togglePlayback}
           >
             {playing ? (
@@ -1597,7 +1599,7 @@ export function TaskPlayerPage({
                 setSpeedOpen(false);
               }}
             >
-              {runtime?runtime.snapshot?.provider.model||"未配置模型":model}
+              {runtime?"模型设置":model}
               <ChevronDown size={17} />
             </button>
             {modelOpen && (
@@ -1722,7 +1724,7 @@ export function PlayerQueueSheet({
                   <b>{task.title}</b>
                   <small>
                     {agentList.find((agent) => agent.id === task.agent)?.name}{" "}
-                    Agent · {task.status}
+                    Agent · {task.runtimeStatus?runtimeStatuses[task.runtimeStatus]||task.status:task.status}
                   </small>
                 </span>
                 {task.id === currentId ? (
@@ -3434,7 +3436,7 @@ export function TasksPage({
     onDragEnd: () => setDraggingId(""),
   });
   const people = ["avatar-lin", "avatar-kevin", "avatar-aya"];
-  const schedule = runtime?state.tasks.filter(task=>task.status!=="已完成"&&String(new Date(Number(runtime.snapshot?.objects.task.find(item=>item.id===task.id)?.data.not_before)||runtime.snapshot?.server_time||0).getDate())===selectedDate).map(task=>({taskId:task.id,category:"工作",time:task.updatedAt,title:task.title,meta:task.nextStep,action:task.nextStep,actionClass:task.status==="进行中"?"running":"waiting",icon:Clock3})):[
+  const schedule = runtime?state.tasks.filter(task=>task.status!=="已完成"&&String(new Date(Number(runtime.snapshot?.objects.task.find(item=>item.id===task.id)?.data.not_before)||runtime.snapshot?.server_time||0).getDate())===selectedDate).map(task=>({taskId:task.id,category:"工作",time:new Date(Number(runtime.snapshot?.objects.task.find(item=>item.id===task.id)?.data.not_before)||runtime.snapshot?.objects.task.find(item=>item.id===task.id)?.updated||runtime.snapshot?.server_time||0).toLocaleTimeString('zh-CN',{hour:'2-digit',minute:'2-digit'}),title:task.title,meta:task.nextStep,action:task.nextStep,actionClass:task.status==="进行中"?"running":"waiting",icon:Clock3})):[
     {
       taskId: "schedule-client",
       category: "协作",
@@ -3636,7 +3638,7 @@ export function TasksPage({
             </span>
             <span>
               <small>整体进度</small>
-              <b>{runtime?"待逐项验收":"56%"}</b>
+              <b className={runtime?"elfred-stat-label":undefined}>{runtime?"待逐项验收":"56%"}</b>
             </span>
           </section>
           <section className="v277-project-list">
@@ -3909,7 +3911,7 @@ export function TaskDetail({
           {task.result.map((line, index) => (
             <li key={line}>
               <span>{index + 1}</span>
-              <p>{line}</p>
+              <MarkdownContent text={line}/>
             </li>
           ))}
         </ol>

@@ -1,5 +1,6 @@
 "use client";
 
+import {MarkdownContent} from '../../../core/markdown-content';
 import { useState, type Dispatch, type SetStateAction } from "react";
 import { ArrowRight, BookOpen, ListChecks, Plus, Sparkles } from "lucide-react";
 import type { V277State } from "../../../../v27-7-state";
@@ -74,7 +75,7 @@ export function KnowledgeDetailPage({
 
         <section className={styles.block}>
           <h3>使用示例</h3>
-          <p className={styles.note}>{item.example}</p>
+          <MarkdownContent text={item.example}/>
         </section>
 
         {/* 这两个动作是这次补上的闭环 */}

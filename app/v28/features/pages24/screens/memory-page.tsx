@@ -109,7 +109,7 @@ export function MemoryPage({
               <b>{view.daysTracked > 0 ? view.daysTracked : "—"}</b> 天持续更新
             </span>
             <span>
-              <b>{view.credibility > 0 ? `${view.credibility}%` : "待验证"}</b> 记忆可信度
+              <b className={view.credibility > 0 ? undefined : "elfred-stat-label"}>{view.credibility > 0 ? `${view.credibility}%` : "待验证"}</b> 记忆可信度
             </span>
           </div>
         </section>

@@ -911,6 +911,52 @@
 .elfred-search-source-content { margin: 15px 22px; padding: 18px; background: white; border-radius: 18px; overflow-wrap: anywhere; }
 .elfred-search-source-content h2 { font-size: 18px; line-height: 1.6; }
 .elfred-search-source-content p { white-space: pre-wrap; line-height: 1.8; font-size: 14px; }
+
+/* Libraries scroll their content below the tabs, including on short phones. */
+.v280-device .v277-library-page { display: flex; flex-direction: column; min-height: 0; padding-bottom: calc(106px + env(safe-area-inset-bottom, 0px)) !important; touch-action: pan-y pinch-zoom !important; }
+.v280-device .v277-library-head, .v280-device .v277-memory-filter { flex-shrink: 0; }
+.v280-device .v277-library-page .v277-library-scroll { position: static !important; flex: 1; min-height: 0; height: auto !important; overflow-x: hidden !important; overflow-y: auto !important; touch-action: pan-y pinch-zoom !important; overscroll-behavior-y: contain; padding-bottom: 32px !important; }
+.v280-device .v277-project-stats > span { min-width: 0; padding: 10px !important; height: auto; }
+.v280-device .v277-project-stats b.elfred-stat-label, .v280-device .v277-understanding-stats b.elfred-stat-label { font-size: 13px !important; line-height: 1.5 !important; letter-spacing: 0; white-space: nowrap; }
+.v280-device .v277-understanding-stats { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); height: auto !important; gap: 8px; }
+.v280-device .v277-understanding-stats > span { min-width: 0; display: flex; flex-direction: column; align-items: flex-start; gap: 5px; padding: 0 !important; font-size: 10px !important; line-height: 1.5; }
+.v280-device .v277-schedule-list time b { font-size: 18px !important; line-height: 1.4; white-space: nowrap; font-variant-numeric: tabular-nums; }
+
+/* The process scrolls inside the card; controls and composer reserve their own rows. */
+.v280-device .v278-player-page { display: flex; flex-direction: column; gap: 10px; min-height: 0; padding: 0 14px calc(12px + env(safe-area-inset-bottom, 0px)) !important; }
+.v280-device .v278-player-header { height: 94px; flex: none; }
+.v280-device .v278-player-card { flex: 1; min-height: 0; height: auto !important; overflow-y: auto; overscroll-behavior: contain; }
+.v280-device .v278-player-process { flex: none; min-height: 125px; padding-bottom: 12px; }
+.v280-device .v278-player-process ol li { min-height: 56px !important; grid-template-columns: 24px minmax(0,1fr); gap: 10px; font-family: inherit; font-size: 14px; line-height: 1.5; }
+.v280-device .v278-player-process ol li > div { min-width: 0; }
+.v280-device .v278-player-process ol li small { display: block; margin-top: 4px; font-size: 11px; font-weight: 400; color: #7b8790; }
+.v280-device .v278-player-controls { position: sticky; bottom: -10px; z-index: 2; height: 74px !important; min-height: 74px; margin-top: auto !important; grid-template-columns: minmax(0,1fr) 30px 54px 30px minmax(0,1fr) !important; gap: 5px; background: #fff; }
+.v280-device .v278-player-controls .v278-pause { width: 54px; height: 54px; }
+.v280-device .v278-player-controls .v279-control-menu { min-width: 0; }
+.v280-device .v278-player-controls .v278-speed, .v280-device .v278-player-controls .v278-model { width: 100%; min-width: 0; height: 38px; font-size: 11px; display: flex; align-items: center; justify-content: center; }
+.v280-device .v278-player-composer { position: static !important; flex: none; width: 100%; height: 58px; min-height: 58px; margin: 0; }
+
+.v280-device .elfred-markdown { font-family: inherit; font-size: 14px; line-height: 1.8; color: #29343c; overflow-wrap: anywhere; white-space: normal; }
+.v280-device .elfred-markdown p { margin: 0 0 12px !important; font-size: 14px !important; font-weight: 400; color: inherit !important; line-height: 1.8 !important; white-space: pre-wrap; }
+.v280-device .elfred-markdown :is(h1,h2,h3,h4,h5,h6) { margin: 20px 0 10px !important; font-weight: 650; letter-spacing: 0 !important; line-height: 1.5 !important; white-space: normal; }
+.v280-device .elfred-markdown h1 { font-size: 22px !important; }
+.v280-device .elfred-markdown h2 { font-size: 20px !important; }
+.v280-device .elfred-markdown :is(h3,h4,h5,h6) { font-size: 16px !important; }
+.v280-device .elfred-markdown :first-child { margin-top: 0 !important; }
+.v280-device .elfred-markdown :is(ul,ol) { display: block !important; padding-left: 22px !important; margin: 8px 0 14px !important; list-style: revert !important; }
+.v280-device .elfred-markdown ul { list-style-type: disc !important; }
+.v280-device .elfred-markdown ol { list-style-type: decimal !important; }
+.v280-device .elfred-markdown li { display: list-item !important; min-height: 0 !important; height: auto !important; padding: 0 !important; border: 0 !important; margin: 4px 0; font-size: 14px; background: transparent; }
+.v280-device .elfred-markdown blockquote { margin: 12px 0; padding: 5px 12px; border-left: 3px solid #91b6a5; color: #69767e; }
+.v280-device .elfred-markdown pre { overflow-x: auto; padding: 12px; border-radius: 10px; background: #f0f3f5; white-space: pre; }
+.v280-device .elfred-markdown code { font-family: ui-monospace, SFMono-Regular, Consolas, monospace; font-size: 12px; }
+.v280-device .elfred-markdown a { color: #347263; text-decoration: underline; }
+.v280-device .elfred-markdown-table { overflow-x: auto; margin: 12px 0; }
+.v280-device .elfred-markdown table { border-collapse: collapse; min-width: 100%; }
+.v280-device .elfred-markdown :is(th,td) { padding: 7px 10px; border: 1px solid #dfe5e8; text-align: left; }
+.v280-device .v277-result-section > ol > li { min-width: 0; align-items: start; }
+.v280-device .v277-result-section > ol > li > .elfred-markdown { min-width: 0; }
+.v280-device .elfred-file-preview { max-height: 360px; overflow-y: auto; padding: 14px; margin: 10px 0; border: 1px solid #e0e5e8; border-radius: 12px; background: white; overscroll-behavior: contain; }
 .elfred-search-source-content mark { background: #fff2b5; color: inherit; }
 @media (max-width: 600px) {
  .v280-device .elfred-connected-search { inset: 0 !important; border-radius: 0 !important; }

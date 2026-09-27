@@ -176,7 +176,6 @@ export function KnowledgePage({
     null,
   );
   const insightSwipe = useRef({ y: 0, moved: false });
-  const libraryScroll = useRef<HTMLDivElement>(null);
   const store = readPage2();
   const fileInputRef = useRef<HTMLInputElement>(null);
   // 待确认素材：后端在跑就用后端那份（真素材、真解析结果），够不着才用本地兜底
@@ -260,19 +259,6 @@ export function KnowledgePage({
       className={`v277-page v277-library-page v277-knowledge-overview${
         insightEmpty ? ` ${styles.isEmpty}` : ""
       }`}
-      onScroll={(event) => {
-        if (event.currentTarget.scrollTop !== 0)
-          event.currentTarget.scrollTop = 0;
-      }}
-      onWheel={(event) => {
-        event.preventDefault();
-        event.stopPropagation();
-        if (Math.abs(event.deltaY) > 14)
-          setInsightIndex(event.deltaY > 0 ? 1 : 0);
-        requestAnimationFrame(() => {
-          if (libraryScroll.current) libraryScroll.current.scrollTop = 0;
-        });
-      }}
     >
       <LibraryHeader
         active="knowledge"
@@ -282,12 +268,7 @@ export function KnowledgePage({
         alignment={emptyMode ? 0 : undefined}
       />
       <div
-        ref={libraryScroll}
         className="v277-library-scroll"
-        onScroll={(event) => {
-          if (event.currentTarget.scrollTop !== 0)
-            event.currentTarget.scrollTop = 0;
-        }}
       >
         <section className="v277-ability-head">
           {/* 两个货架：能力（能干活）/ 知识（能查阅）。素材不给位置，只在导入与"来源"里露头 */}

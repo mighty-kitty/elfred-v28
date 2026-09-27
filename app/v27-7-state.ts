@@ -56,6 +56,7 @@ export type V277Task = {
   sourceId?: string;
   agent: V277AgentId;
   status: V277TaskStatus;
+  runtimeStatus?: string;
   nextStep: string;
   result: string[];
   knowledgeIds: string[];

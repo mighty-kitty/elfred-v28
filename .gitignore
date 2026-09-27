@@ -71,3 +71,18 @@ tsconfig.tsbuildinfo
 
 # 我们自己的 QA 截图证据（不进 PR，留在本地/内测版仓库）
 docs/证据-*/
+
+# services/ 下三个上游服务：源码进仓库，本地运行产物不进
+services/**/.venv/
+services/**/__pycache__/
+services/**/.pytest_cache/
+services/**/*.pyc
+services/**/logs/
+services/**/*.db
+services/**/*.db-shm
+services/**/*.db-wal
+services/**/*.sqlite3
+services/**/*.sqlite3-wal
+services/**/*.sqlite3-shm
+services/emos-memory/data/runtime/
+services/skill-foundry/data/

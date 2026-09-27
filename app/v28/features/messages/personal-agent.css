@@ -5,7 +5,7 @@
 
 .v280-device .v279-human-composer.elfred-connected-composer{grid-template-columns:36px minmax(0,1fr) 32px 36px;gap:2px}.v280-device .elfred-connected-composer>button{width:34px;height:36px}.v280-device .elfred-connected-composer>textarea{padding:0 4px}
 
-.elfred-mention-picker{position:absolute;left:12px;right:12px;bottom:calc(var(--elfred-composer-height,64px) + 24px);z-index:41;padding:13px 10px 8px;border:1px solid #edf0f2;border-radius:20px;background:rgba(255,255,255,.98);box-shadow:0 7px 28px #2630390a;color:#14181a}
+.elfred-mention-picker{position:absolute;left:12px;right:12px;bottom:calc(var(--elfred-composer-height,64px) + 24px);max-height:calc(100% - var(--elfred-composer-height,64px) - 110px);overflow-y:auto;z-index:41;padding:13px 10px 8px;border:1px solid #edf0f2;border-radius:20px;background:rgba(255,255,255,.98);box-shadow:0 7px 28px #2630390a;color:#14181a}
 .elfred-mention-title{font-size:12px!important;color:#90939b;line-height:18px!important;margin:0 5px 4px!important}
 .elfred-mention-card{border:1px solid #f0f1f3;border-radius:13px;padding:0 9px}
 .elfred-mention-personal{width:100%;display:flex;align-items:center;gap:10px;background:none;border:0;padding:8px 0 9px;text-align:left;cursor:pointer;color:inherit}

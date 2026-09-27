@@ -1,4 +1,5 @@
 "use client";
+import {createClientId} from './client-id';
 import {finalReceipts} from './result-output';
 import {createContext,useContext,useCallback,useEffect,useRef,useState,type ReactNode} from 'react';
 import {createInitialV277State,type V277State,type V277TaskStatus,type V277AgentId} from '../../v27-7-state';
@@ -28,7 +29,7 @@ export function RuntimeProvider({children}:{children:ReactNode}) {
   useEffect(()=>{void refresh().catch(err=>setError(err.message)).finally(()=>setLoading(false));},[refresh]);
   useEffect(()=>{if(!snapshot?.user.id)return;let debounce:ReturnType<typeof setTimeout>|undefined;const update=()=>{if(debounce)clearTimeout(debounce);debounce=setTimeout(()=>{void refresh().catch(err=>setError(err.message))},150)};const events=new EventSource('/api/elfred/events');events.addEventListener('changed',update);const timer=setInterval(update,15000);return()=>{events.close();clearInterval(timer);if(debounce)clearTimeout(debounce)}},[snapshot?.user.id,refresh]);
   const command=useCallback(async(action:string,input:Record<string,unknown>)=>{
-    const fingerprint=JSON.stringify({action,input});let key=pending.current.get(fingerprint);if(!key){key=crypto.randomUUID();pending.current.set(fingerprint,key)}
+    const fingerprint=JSON.stringify({action,input});let key=pending.current.get(fingerprint);if(!key){key=createClientId();pending.current.set(fingerprint,key)}
     try {const result=await request<Result>('/commands',{action,input},key);pending.current.delete(fingerprint);try{await refresh();setError('')}catch{setError('操作已保存，页面同步失败；请刷新查看最新状态。')}return result;}catch(err){setError(err instanceof Error?err.message:'操作失败');throw err}
   },[request,refresh]);
   const login=async(handle:string,password:string,register:boolean)=>{const generation=++identity.current;pending.current.clear();try{const result=await request<{csrf:string}>(register?'/auth/register':'/auth/login',{handle,password,name:handle.split('@')[0]});if(generation!==identity.current)return;csrf.current=result.csrf;await refresh();setError('');}catch(err){if(generation===identity.current)setError(err instanceof Error?err.message:'登录失败');throw err}};

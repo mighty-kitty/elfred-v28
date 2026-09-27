@@ -4,6 +4,7 @@ import { readFileSync } from 'node:fs';
 import { randomUUID } from 'node:crypto';
 import ts from 'typescript';
 import {finalReceipts} from '../../app/v28/core/result-output.ts';
+import {createClientId} from '../../app/v28/core/client-id.ts';
 
 const response = value => ({ ok: true, status: 200, json: async () => value });
 const deferred = () => {
@@ -42,6 +43,7 @@ function hookHarness(filename, imports = {}, fetcher = async () => { throw new E
     'react/jsx-runtime': { jsx: (type, props) => ({ type, props }) },
     '../../v27-7-state': {},
     './result-output': {finalReceipts},
+    './client-id': {createClientId},
     '../features/live/types': { text: (entity, key) => entity?.data?.[key] || '' },
     ...imports,
   };

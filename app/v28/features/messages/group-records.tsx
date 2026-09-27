@@ -1,4 +1,5 @@
 "use client";
+import {createClientId} from '../../core/client-id';
 import {useState} from 'react';
 import {useRuntime,entityRef} from '../../core/runtime-context';
 import {Action,Field} from '../../core/runtime-panels';
@@ -6,7 +7,7 @@ import {text,type Entity} from '../live/types';
 export function downloadCalendar(title:string,start:string){
  const escape=(v:string)=>v.replace(/\\/g,'\\\\').replace(/\r?\n/g,'\\n').replace(/,/g,'\\,').replace(/;/g,'\\;'),date=(d:Date)=>d.toISOString().replace(/[-:]/g,'').replace(/\.\d+Z$/,'Z');
  const from=new Date(start),to=new Date(from.getTime()+30*60000);
- const body=['BEGIN:VCALENDAR','VERSION:2.0','PRODID:-//Elfred//Local Calendar//ZH','BEGIN:VEVENT',`UID:${crypto.randomUUID()}@elfred.local`,`DTSTAMP:${date(new Date())}`,`DTSTART:${date(from)}`,`DTEND:${date(to)}`,`SUMMARY:${escape(title)}`,'END:VEVENT','END:VCALENDAR'].join('\r\n');
+ const body=['BEGIN:VCALENDAR','VERSION:2.0','PRODID:-//Elfred//Local Calendar//ZH','BEGIN:VEVENT',`UID:${createClientId()}@elfred.local`,`DTSTAMP:${date(new Date())}`,`DTSTART:${date(from)}`,`DTEND:${date(to)}`,`SUMMARY:${escape(title)}`,'END:VEVENT','END:VCALENDAR'].join('\r\n');
  const url=URL.createObjectURL(new Blob([body],{type:'text/calendar;charset=utf-8'})),link=document.createElement('a');link.href=url;link.download='elfred-event.ics';link.click();setTimeout(()=>URL.revokeObjectURL(url),1000);
 }
 export function GroupRecords({conversation}:{conversation:Entity}){

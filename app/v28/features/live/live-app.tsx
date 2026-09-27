@@ -1,4 +1,5 @@
 "use client";
+import {createClientId} from '../../core/client-id';
 import {useCallback,useEffect,useRef,useState} from 'react';
 import {Home,MessageCircle,Library,UserRound,Compass,Lightbulb,PenLine,Link2,CheckCircle2,ArrowLeft,Search,Plus,RefreshCw,Sparkles,ListTodo,Bell} from 'lucide-react';
 import {Card,Empty,Badge,Item,Action,Form,Content} from './ui';
@@ -23,7 +24,7 @@ export default function LiveApp(){
   useEffect(()=>{let active=true;void api<{user:User|null;csrf:string|null}>('/session').then(async result=>{if(!active)return;csrf.current=result.csrf||'';setUser(result.user);if(result.user)await refresh();}).catch(err=>setError(err.message)).finally(()=>setLoading(false));return()=>{active=false}},[api,refresh]);
   useEffect(()=>{if(!user)return;const timer=setInterval(()=>{void refresh().catch(err=>setError(err.message));},4000);return()=>clearInterval(timer)},[user,refresh]);
   const command=async(action:string,input:Record<string,unknown>):Promise<Result|undefined>=>{
-    setError('');const fingerprint=JSON.stringify({action,input});let key=pending.current.get(fingerprint);if(!key){key=crypto.randomUUID();pending.current.set(fingerprint,key)}
+    setError('');const fingerprint=JSON.stringify({action,input});let key=pending.current.get(fingerprint);if(!key){key=createClientId();pending.current.set(fingerprint,key)}
     try{const result=await api('/commands',{action,input},key) as Result;pending.current.delete(fingerprint);await refresh();return result;}catch(err){setError(err instanceof Error?err.message:'操作失败，请重试');return undefined}
   };
   const go=(next:Screen,id:string|null=null)=>{previous.current=screen;setScreen(next);setSelected(id);setError('');};

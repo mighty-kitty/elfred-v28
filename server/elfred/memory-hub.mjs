@@ -6,7 +6,7 @@ import {memoryUsable,projectMemory,memoryEvidenceActive} from './memory-validity
 export function queueMemorySync(store,memory){
   const usable=memoryUsable(store,memory);
   const projected=projectMemory(store,memory);
-  const stateHash=hash(JSON.stringify({version:memory.version,usable,alignment:projected.data.alignment,evidence:(memory.data.evidence||[]).filter(e=>memoryEvidenceActive(store,memory,e))}));
+  const stateHash=hash(JSON.stringify({version:memory.version,usable,alignment:projected.data.alignment,domain_alignment:projected.data.domain_alignment,evidence:(memory.data.evidence||[]).filter(e=>memoryEvidenceActive(store,memory,e))}));
   const latest=store.list('memory_bridge').filter(e=>e.data.memory_id===memory.id).sort((a,b)=>(b.data.intent_sequence||0)-(a.data.intent_sequence||0))[0];
   if(latest?.data.state_hash===stateHash)return latest;
   const sequence=(latest?.data.intent_sequence||0)+1;
@@ -28,7 +28,8 @@ export async function syncMemoryHub(store,config=process.env,fetcher=fetch){
   if(queueMemorySync(store,memory).id!==event.id){store.update(event,{...event.data,status:'superseded'},event.owner);return;}
   const usable=memoryUsable(store,memory);
   if(usable!==event.data.usable){store.update(event,{...event.data,status:'superseded'},event.owner);return;}
-  const payload=usable?{contract:'elfred-memory-v1',owner:memory.owner,id:memory.id,revision:memory.version,content:memory.data.content,scope:memory.data.scope,group:memory.data.group,source_refs:memory.data.source_refs,alignment:projectMemory(store,memory).data.alignment,evidence:(memory.data.evidence||[]).filter(e=>memoryEvidenceActive(store,memory,e)),expires_at:memory.data.expires_at||null,supersedes_id:memory.data.supersedes_id||null}:{contract:'elfred-memory-v1',owner:memory.owner,id:memory.id,revision:memory.version,action:'forget'};
+  const projected=projectMemory(store,memory);
+  const payload=usable?{contract:'elfred-memory-v1',owner:memory.owner,id:memory.id,revision:memory.version,content:memory.data.content,scope:memory.data.scope,group:memory.data.group,kind:memory.data.kind||'user_understanding',risk:memory.data.risk,status:memory.data.status,learning_mode:memory.data.learning_mode||'owner_confirmed',allocation:memory.data.allocation||{holder:memory.data.scope,allowed_systems:[],contextual:true},professional_scope:memory.data.professional_scope||null,source_refs:memory.data.source_refs,alignment:projected.data.alignment,domain_alignment:projected.data.domain_alignment,evidence:(memory.data.evidence||[]).filter(e=>memoryEvidenceActive(store,memory,e)),expires_at:memory.data.expires_at||null,supersedes_id:memory.data.supersedes_id||null}:{contract:'elfred-memory-v1',owner:memory.owner,id:memory.id,revision:memory.version,action:'forget'};
   try{
     payload.state_hash=event.data.state_hash;
     const response=await fetcher(base.href.replace(/\/$/,'')+'/v1/memories/'+encodeURIComponent(memory.id),{method:usable?'PUT':'DELETE',redirect:'error',headers:{'Content-Type':'application/json',Authorization:`Bearer ${config.ELFRED_MEMORY_HUB_TOKEN}`,'Idempotency-Key':`${memory.id}:${memory.version}:${event.data.state_hash}:${event.data.intent_sequence}`},body:JSON.stringify(payload),signal:AbortSignal.timeout(4000)});

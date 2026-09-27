@@ -18,12 +18,12 @@ function setup(t){
  const learn=async(text,system='create')=>{const thread=command('agent.chat.create',{system});command('agent.chat.send',{id:thread.id,text,model_consent:true});await new Runtime(store,provider).tick();return thread;};
  return {store,service,user,provider,requests,command,ref,learn};
 }
-test('聊天形成有原句和领域的候选；确认后新线程调用，其他领域和其他账号不调用',async t=>{
+test('聊天明确低风险表达自动生效并保留原句；其他领域和其他账号不调用',async t=>{
  const e=setup(t);await e.learn('以后写产品方案先给结论，再展开依据');
- const m=e.store.list('memory')[0];assert.equal(m.data.status,'candidate');assert.equal(m.data.scope,'create');assert.match(m.data.source_quote,/以后写产品方案/);
+ const m=e.store.list('memory')[0];assert.equal(m.data.status,'learned');assert.equal(m.data.scope,'create');assert.match(m.data.source_quote,/以后写产品方案/);
  assert.equal(e.store.get(m.data.source_refs[0].id).data.actor_type,'human');
- assert.equal(agentAlignment(e.service.list(e.user.id,'memory'),'create').label,'理解待验证');
- assert.equal(e.requests[0].context.length,0);
+ assert.equal(agentAlignment(e.service.list(e.user.id,'memory'),'create').label,'明确信息');
+ assert.equal(e.requests[0].context.length,1);
  e.command('memory.decide',{...e.ref(m),decision:'confirm'});
  assert.equal(agentAlignment(e.service.list(e.user.id,'memory'),'create').label,'明确信息');
  await e.learn('请写一份产品方案');assert.match(JSON.stringify(e.requests[1].context),/先给结论/);
@@ -34,7 +34,7 @@ test('聊天形成有原句和领域的候选；确认后新线程调用，其�
 });
 test('临时情绪、一次性要求、引用他人和密钥不进入记忆；模型伪造原句被丢弃',t=>{
  const e=setup(t);
- for(const text of ['今天很难过','帮我写三行代码','他说以后喜欢详细说明','密钥是 sk-this-is-a-fake-secret-only'])assert.equal(explicitMemoryStatements(text).length,0);
+ for(const text of ['今天很难过','我现在很难过','我现在已经困了','帮我写三行代码','他说以后喜欢详细说明','密钥是 sk-this-is-a-fake-secret-only'])assert.equal(explicitMemoryStatements(text).length,0);
  const message=e.store.add('message',e.user.id,{text:'今天只是随便聊聊',actor_type:'human'});
  assert.equal(captureMemories(e.store,e.user.id,{text:message.data.text,system:'create',source:message,proposals:[{content:'用户偏好长文',quote:'我一直喜欢长文'}]}).length,0);
  assert.equal(e.store.list('memory').length,0);
@@ -56,13 +56,13 @@ test('修正、隐藏、到期、反证会影响后续召回和首页，不按�
  const current=e.store.get(fixed.id);e.store.update(current,{...current.data,expires_at:new Date(Date.now()-1).toISOString()},e.user.id);
  assert.equal(recallMemories(e.store,e.user.id,'create','结论').length,0);assert.equal(agentAlignment(e.service.list(e.user.id,'memory'),'create').label,'尚无足够理解');
 });
-test('任务读取确认过的记忆；仅验收不升级，明确核对场景后才升级；反馈形成候选',async t=>{
+test('任务读取确认过的记忆；仅验收不升级，明确核对场景后才升级；反馈自动形成低风险记忆',async t=>{
  const e=setup(t);await e.learn('以后写方案先给结论');const m=e.store.list('memory')[0];e.command('memory.decide',{...e.ref(m),decision:'confirm'});
  const runTask=async()=>{const task=e.command('task.create',{goal:'写方案',system:'create',review_mode:'single'});e.command('task.confirm',{...e.ref(task),confirm:true,model_consent:true});e.command('run.start',e.ref(task));await new Runtime(e.store,e.provider).tick();return task;};
  const first=await runTask();assert.match(JSON.stringify(e.requests.at(-1).context),/先给结论/);e.command('task.accept',{...e.ref(first),accept:true});assert.equal(e.store.get(m.id).data.alignment,'explicit');
  const second=await runTask();e.command('task.accept',{...e.ref(second),accept:true,memory_evidence_ids:[m.id],feedback:'以后方案中每次说明适用范围'});
  assert.equal(e.store.get(m.id).data.alignment,'scenario_verified');assert.equal(e.store.get(m.id).data.evidence.length,1);assert.equal(e.store.list('memory').length,2);
- assert.equal(e.store.list('memory').find(x=>x.id!==m.id).data.status,'candidate');
+ assert.equal(e.store.list('memory').find(x=>x.id!==m.id).data.status,'learned');
  assert.throws(()=>e.command('memory.review_stability',{...e.ref(m),confirm:true,note:'只凭一次结果'}),{code:'EVIDENCE_REQUIRED'});
 });
 test('任务授权后记忆被纠正，运行必须停下重新授权，不读取旧理解',async t=>{

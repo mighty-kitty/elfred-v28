@@ -5,6 +5,7 @@ import {resultReceipts} from './agent-plan.mjs';
 import {recentChatMessages} from './agent-chat-context.mjs';
 import {search} from './knowledge.mjs';
 import {captureMemories} from './memory-learning.mjs';
+import {dialogueMemoryFeedback} from './memory-feedback.mjs';
 
 const SYSTEMS=['explore','advise','create','connect','execute'];
 const NAMES={explore:'探索',advise:'参谋',create:'创作',connect:'连接',execute:'执行'};
@@ -30,6 +31,8 @@ export function agentChatCommand(store,user,action,input){
     const seq=conversation.data.seq+1;
     const message=store.add('message',user,{conversation_id:conversation.id,seq,text,actor_type:'human',human_sender_id:user,attachments:[],mentions:[]},{space:conversation.id});
     store.update(conversation,{...conversation.data,seq,last_message_id:message.id},user);
+    dialogueMemoryFeedback(store,user,conversation,message);
+    captureMemories(store,user,{text,system:conversation.data.system,source:message,origin:'conversation'});
     const recent=recentChatMessages(history(store,user,conversation));
     const goal=text;
     const discoveries=conversation.data.system==='explore'&&/最近|近期|资讯|新闻|变化|关注|发现/.test(text)?store.visible(user,'feed').filter(item=>item.owner===user&&item.data.status==='active'&&item.data.purpose==='discovery'&&item.data.external_url).sort((a,b)=>b.created.localeCompare(a.created)).slice(0,4):[];

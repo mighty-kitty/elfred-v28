@@ -29,6 +29,7 @@ import {provisionInitialDiscovery} from './auto-discovery.mjs';
 import {swarmCommand} from './swarm.mjs';
 import {memoryHubStatus,queueMemorySync} from './memory-hub.mjs';
 import {projectMemory} from './memory-validity.mjs';
+import {migrateAutomaticMemories} from './memory-learning.mjs';
 
 export const READ_TYPES=['observation','context_request','context_grant','handoff','project_stage','attachment','skill_version','tool_use','shared_record','project_slot','profile','settings','onboarding','task','run','attempt','approval','document','knowledge','memory','outcome','feed','interaction','inbox','notification','friend','conversation','message','draft','assist','commitment','project','post','comment','claim','copy','contribution','release','feedback','resource','connector','data_request','brief','skill','shortcut','trace','candidate','evaluation','method','rollout'];
 export class Service {
@@ -40,6 +41,7 @@ export class Service {
       s.unique('settings',user.id,()=>s.add('settings',user.id,{timezone:'Asia/Shanghai',notifications:true,quiet:false,model_allowed:false}));
       const onboarding=s.unique('onboarding',user.id,()=>s.add('onboarding',user.id,{status:'collecting',intent:'',skipped:[]}));
       if(onboarding.data.choice_confirmed_at&&Array.isArray(onboarding.data.choice_summary)){provisionInitialDiscovery(s,user.id,onboarding.data.choice_summary);materializeInitialMemories(s,user.id,onboarding.data.choice_summary);}
+      migrateAutomaticMemories(s,user.id);
       for(const memory of s.list('memory').filter(m=>m.owner===user.id))queueMemorySync(s,memory);
       s.db.prepare('INSERT OR IGNORE INTO budget_accounts(owner,limit_units) VALUES(?,?)').run(user.id,10000);
     });
@@ -48,7 +50,7 @@ export class Service {
     if(!READ_TYPES.includes(type)) fail('INVALID_TYPE','对象类型不可查询');
     const s=this.store;
     if(type==='claim') return s.list(type).filter(item=>item.owner===user||s.get(item.data.project_id)?.owner===user).map(item=>{if(s.role(item.data.project_id,user))return item;const {new_rules,...data}=item.data;return {...item,data};});
-    return s.visible(user,type).filter(item=>!['deleted'].includes(item.data.status)).map(item=>{
+    return s.visible(user,type).filter(item=>!['deleted'].includes(item.data.status)&&(type!=='memory'||item.data.kind!=='method_experience')).map(item=>{
       if(type==='context_request'){const task=s.get(item.data.task_id);return {...item,data:{...item.data,recovery_task:task?.owner===user&&s.canRead(user,{...task,data:{...task.data,source_refs:[]}})?{id:task.id,version:task.version,status:task.data.status,source_invalid:!s.canRead(user,task)}:null}};}
       if(type==='memory')return projectMemory(s,item);
       if(type==='skill')return {...item,data:{...item.data,activity:toolActivity(item)}};
@@ -76,6 +78,7 @@ export class Service {
     const onboarding=this.store.visible(user,'onboarding')[0];
     if(onboarding?.data.choice_confirmed_at&&Array.isArray(onboarding.data.choice_summary)&&!this.store.visible(user,'observation').some(item=>item.data.auto_suggested))this.store.transaction(()=>provisionInitialDiscovery(this.store,user,onboarding.data.choice_summary));
     if(onboarding?.data.choice_confirmed_at&&Array.isArray(onboarding.data.choice_summary))this.store.transaction(()=>materializeInitialMemories(this.store,user,onboarding.data.choice_summary));
+    this.store.transaction(()=>migrateAutomaticMemories(this.store,user));
     const types=['observation','context_request','context_grant','handoff','project_stage','attachment','skill_version','tool_use','shared_record','project_slot','profile','settings','onboarding','task','run','knowledge','document','memory','feed','notification','friend','conversation','message','post','comment','project','draft','assist','commitment','copy','contribution','release','feedback','claim','interaction','approval','resource','connector','brief','skill','shortcut','inbox','candidate','evaluation','outcome','method','rollout','trace'];
     const module_errors={},objects=Object.fromEntries(types.map(type=>{try{return [type,this.list(user,type)];}catch(error){if(['profile','settings','onboarding'].includes(type))throw error;module_errors[type]='此模块暂时加载失败，请重试';return [type,[]];}}));
     return {memory_hub:memoryHubStatus(this.store,user,this.provider.config||process.env),user:this.store.user(user),provider:this.provider.status(),systems:SYSTEMS,definitions:DEFINITIONS,objects,module_errors,budget:this.store.db.prepare('SELECT * FROM budget_accounts WHERE owner=?').get(user),usage:this.store.db.prepare('SELECT * FROM usage WHERE owner=? ORDER BY created DESC LIMIT 100').all(user),server_time:now(),storage:'local-sqlite',production_ready:false};

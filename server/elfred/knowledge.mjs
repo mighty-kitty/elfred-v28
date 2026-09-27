@@ -1,8 +1,9 @@
 import { fail, hash, now } from './store.mjs';
 import { string, enumeration } from './policy.mjs';
-import {memoryGroup} from '../../app/v28/core/memory-policy.mjs';
+import {memoryAdmitted} from '../../app/v28/core/memory-policy.mjs';
 import {queueMemorySync} from './memory-hub.mjs';
-import {memoryEvidenceActive,memorySourceActive} from './memory-validity.mjs';
+import {allocateMemory,memoryRisk} from './memory-allocation.mjs';
+import {memoryEvidenceActive,memorySourceActive,memoryCounterevidenceActive} from './memory-validity.mjs';
 
 export function sourceRefs(store, user, refs=[], maximum=20) {
   if (!Array.isArray(refs) || refs.length>maximum) fail('INVALID_INPUT','最多选择 '+maximum+' 个来源');
@@ -41,10 +42,11 @@ function handleKnowledge(store,user,action,input) {
   if (action==='memory.create') {
     const content=string(input.content,'理解内容',4000);
     const scope=enumeration(input.scope||'owner',['owner','explore','advise','create','connect','execute'],'归属');
-    const risk=enumeration(input.risk||'high',['low','high'],'影响');
+    const requestedRisk=enumeration(input.risk||memoryRisk(content),['low','high'],'影响');
+    const risk=memoryRisk(content)==='high'?'high':requestedRisk;const allocation=allocateMemory(content,scope,{scope});
     const refs=sourceRefs(store,user,input.source_refs);
     if(refs.some(ref=>!memorySourceActive(store,user,store.get(ref.id))))fail('MEMORY_SOURCE_SCOPE','一次任务的上下文授权不能转为长期记忆，请由本人独立核对适用范围',403);
-    return {id:store.add('memory',user,{content,scope,group:memoryGroup(content),risk,source_refs:refs,status:risk==='high'?'pending_confirmation':'candidate',alignment:'insufficient',claim_type:input.claim_type==='fact'?'fact':'hypothesis',evidence:[],usage_purpose:string(input.purpose||'由本人核对后用于相关任务','用途',500)}).id};
+    return {id:store.add('memory',user,{content,...allocation,risk,source_refs:refs,status:risk==='high'?'pending_confirmation':'learned',alignment:risk==='high'?'insufficient':'explicit',initial_alignment:'explicit',learning_mode:risk==='high'?'requires_confirmation':'automatic_low_risk',claim_type:input.claim_type==='fact'?'fact':'hypothesis',evidence:[],usage_purpose:string(input.purpose||'由本人核对后用于相关任务','用途',500)}).id};
   }
   if (action==='memory.decide') {
     const memory=store.expect(store.owned(user,input.id,'memory'),input.version);
@@ -52,22 +54,22 @@ function handleKnowledge(store,user,action,input) {
     if (['superseded','deleted'].includes(memory.data.status)) fail('INVALID_STATE','旧理解已失效',409);
     if(decision==='confirm'&&memory.data.status==='validated')return {id:memory.id};
     const status={confirm:'validated',correct:'superseded',defer:'deferred',reject:'rejected',delete:'deleted'}[decision];
-    const updated=store.update(memory,{...memory.data,status,alignment:decision==='confirm'?'explicit':'insufficient',decided_at:now()},user);
+    const updated=store.update(memory,{...memory.data,status,alignment:decision==='confirm'?memory.data.alignment==='insufficient'?'explicit':memory.data.alignment:'insufficient',confirmation_mode:decision==='confirm'?'owner_confirmed':memory.data.confirmation_mode,...(decision==='confirm'&&memory.data.scope==='owner'?{allocation:{...memory.data.allocation,allowed_systems:['explore','advise','create','connect','execute']}}:{}),decided_at:now()},user);
     for (const derived of store.list('memory').filter(item=>(item.data.source_refs||[]).some(ref=>ref.id===memory.id))) store.update(derived,{...derived.data,status:'needs_review',alignment:'insufficient'},user);
-    if (decision==='correct') return {id:store.add('memory',user,{...memory.data,content:string(input.content,'修正内容',4000),group:memoryGroup(input.content),correction_origin_refs:memory.data.source_refs,source_refs:[],supersedes_id:memory.id,status:'validated',alignment:'explicit',evidence:[],counterevidence:[],decided_at:now()}).id};
+    if (decision==='correct') {const allocation=allocateMemory(input.content,memory.data.scope,{scope:memory.data.scope});if(memory.data.scope==='owner')allocation.allocation.allowed_systems=['explore','advise','create','connect','execute'];return {id:store.add('memory',user,{...memory.data,content:string(input.content,'修正内容',4000),...allocation,confirmation_mode:'owner_corrected',initial_alignment:'explicit',correction_origin_refs:memory.data.source_refs,source_refs:[],supersedes_id:memory.id,status:'validated',alignment:'explicit',evidence:[],counterevidence:[],decided_at:now()}).id};}
     return {id:updated.id};
   }
   if(action==='memory.evidence') {
     const memory=store.expect(store.owned(user,input.id,'memory'),input.version);
-    if(memory.data.status!=='validated'||input.confirm!==true)fail('CONFIRMATION_REQUIRED','需先由本人确认理解，再核对真实情境证据');
+    if(!memoryAdmitted(memory)||input.confirm!==true)fail('CONFIRMATION_REQUIRED','需先由本人确认理解，再核对真实情境证据');
     const outcome=store.owned(user,input.outcome_id,'outcome');
     if(outcome.data.verdict!=='accepted')fail('OUTCOME_REQUIRED','需要本人已验收的结果');
     const task=store.owned(user,outcome.data.task_id,'task');
     if(memory.data.scope!=='owner'&&task.data.system!==memory.data.scope)fail('MEMORY_SCOPE','证据属于其他领域，不能直接提高本领域的理解',403);
     const evidence=[...(memory.data.evidence||[])];
     if(evidence.some(item=>item.outcome_id===outcome.id))fail('DUPLICATE_EVIDENCE','同一结果不能重复计入证据',409);
-    evidence.push({outcome_id:outcome.id,outcome_version:outcome.version,scenario:string(input.scenario,'情境',200),note:string(input.note,'理解与结果的对应依据',2000),observed_at:outcome.created,confirmed_at:now()});
-    const alignment=(memory.data.counterevidence||[]).some(item=>!item.resolved_at)?'hypothesis':'scenario_verified';
+    evidence.push({outcome_id:outcome.id,outcome_version:outcome.version,system:task.data.system,scenario:string(input.scenario,'情境',200),note:string(input.note,'理解与结果的对应依据',2000),observed_at:outcome.created,confirmed_at:now()});
+    const alignment=(memory.data.counterevidence||[]).some(item=>memoryCounterevidenceActive(store,memory,item))?'hypothesis':'scenario_verified';
     return {id:store.update(memory,{...memory.data,evidence,alignment},user).id};
   }
   if (action==='knowledge.create') {
@@ -76,13 +78,13 @@ function handleKnowledge(store,user,action,input) {
   }
   if(action==='memory.counterevidence'||action==='memory.review_stability') {
     const memory=store.expect(store.owned(user,input.id,'memory'),input.version);
-    if(memory.data.status!=='validated'||input.confirm!==true)fail('CONFIRMATION_REQUIRED','请先确认理解和本次核对');
+    if(!memoryAdmitted(memory)||input.confirm!==true)fail('CONFIRMATION_REQUIRED','请先确认理解和本次核对');
     const note=string(input.note,'核对依据',2000);
     if(action==='memory.counterevidence')return {id:store.update(memory,{...memory.data,alignment:'hypothesis',counterevidence:[...(memory.data.counterevidence||[]),{note,at:now()}]},user).id};
     const evidence=memory.data.evidence||[];
     for(const entry of evidence){if(!memoryEvidenceActive(store,memory,entry))fail('EVIDENCE_CHANGED','原验证证据已失效，请重新核对',409);}
     if(evidence.length<2||new Set(evidence.map(e=>e.observed_at)).size<2)fail('EVIDENCE_REQUIRED','需要分散时间的多次真实情境反馈，不能按天数自动升级');
-    if((memory.data.counterevidence||[]).some(e=>!e.resolved_at)&&input.resolve_counterevidence!==true)fail('COUNTEREVIDENCE_UNRESOLVED','请先核对并明确处理未解决反证');
+    if((memory.data.counterevidence||[]).some(e=>memoryCounterevidenceActive(store,memory,e))&&input.resolve_counterevidence!==true)fail('COUNTEREVIDENCE_UNRESOLVED','请先核对并明确处理未解决反证');
     return {id:store.update(memory,{...memory.data,alignment:'stable_over_time',stability_review:{note,at:now(),evidence_ids:evidence.map(e=>e.outcome_id)},counterevidence:(memory.data.counterevidence||[]).map(e=>({...e,resolved_at:e.resolved_at||now(),resolution:e.resolution||note}))},user).id};
   }
   if(action==='knowledge.update') {

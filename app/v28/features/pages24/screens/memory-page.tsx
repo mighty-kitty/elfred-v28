@@ -102,7 +102,7 @@ export function MemoryPage({
           </header>
           <div className="v277-understanding-stats">
             <span>
-              <b>{view.totalCount}</b> 已确认的记忆
+              <b>{view.totalCount}</b> 有效的记忆
             </span>
             <span>
               {/* 这一格以前是"7 天有确认记录"，中间换过一版叫"覆盖类别"（四类记忆有着落几类）。
@@ -110,7 +110,7 @@ export function MemoryPage({
               <b>{view.daysTracked > 0 ? view.daysTracked : "—"}</b> 天持续更新
             </span>
             <span>
-              <b className="elfred-stat-label">{view.memories.filter(m=>m.status!=="已确认").length}</b> 条待核对
+              <b className="elfred-stat-label">{view.memories.filter(m=>!["已确认","自动记录"].includes(m.status)).length}</b> 条待核对
             </span>
           </div>
         </section>
@@ -126,7 +126,7 @@ export function MemoryPage({
             <button type="button" onClick={() => go({ name: "chat", id: "elfred" })}>
               去聊两句
             </button>
-            <em className={knowledgeStyles.emptyNote}>只记你确认过的，随时可以改</em>
+            <em className={knowledgeStyles.emptyNote}>偏好自动学习，敏感理解由你确认，随时可以改</em>
           </section>
         )}
 
@@ -272,7 +272,7 @@ export function MemoryPage({
                     <span className={styles.rowHead}>
                       <em className={styles.rowLabel}>{memory.label}</em>
                       <small className={styles.rowStatus}>
-                        {memory.status === "已确认" ? (
+                        {["已确认","自动记录"].includes(memory.status) ? (
                           <CheckCircle2 size={12} />
                         ) : (
                           <CircleDashed size={12} />

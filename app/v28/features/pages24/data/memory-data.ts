@@ -104,7 +104,7 @@ export function buildMemoryView(memories: V277Memory[]): MemoryPageView {
     }));
   return {
     headline: LIVE?.headline ?? UNDERSTANDING.headline,
-    totalCount: rows.filter(row=>row.status==="已确认").length,
+    totalCount: rows.filter(row=>["已确认","自动记录"].includes(row.status)).length,
     daysTracked: LIVE?.daysTracked ?? UNDERSTANDING.daysTracked,
     credibility: LIVE?.credibility ?? UNDERSTANDING.credibility,
     identity: LIVE ? LIVE.identity : IDENTITY,

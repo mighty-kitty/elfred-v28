@@ -3,8 +3,8 @@ import {enumeration} from './policy.mjs';
 import {taskCommand} from './runtime.mjs';
 import {alignmentQuestions,alignmentSummary,choiceVersion,firstValueChoices} from '../../app/v28/core/onboarding-choice.mjs';
 import {provisionInitialDiscovery} from './auto-discovery.mjs';
-import {memoryGroup} from '../../app/v28/core/memory-policy.mjs';
 import {queueMemorySync} from './memory-hub.mjs';
+import {allocateMemory} from './memory-allocation.mjs';
 
 export function onboardingChoiceCommand(store,user,action,input){
  if(!action.startsWith('onboarding.choice.'))return null;
@@ -59,9 +59,10 @@ export function onboardingChoiceCommand(store,user,action,input){
 export function materializeInitialMemories(store,user,summary){
   for(const memory of store.list('memory').filter(m=>m.owner===user&&m.data.origin==='initialization'&&!['deleted','rejected','superseded'].includes(m.data.status))){const row=summary.find(s=>s.question_id===memory.data.question_id);if(!row||row.certainty!=='selected'||row.label!==memory.data.choice_label){const changed=store.update(memory,{...memory.data,status:'needs_review',alignment:'insufficient'},user);queueMemorySync(store,changed);}}
   for(const row of summary.filter(s=>s.certainty==='selected')){
-    if(store.list('memory').some(m=>m.owner===user&&m.data.origin==='initialization'&&m.data.question_id===row.question_id&&m.data.choice_label===row.label&&!['superseded','needs_review'].includes(m.data.status)))continue;
+    const existing=store.list('memory').find(m=>m.owner===user&&m.data.origin==='initialization'&&m.data.question_id===row.question_id&&m.data.choice_label===row.label&&!['superseded','needs_review'].includes(m.data.status));
+    if(existing){if(existing.data.status==='pending_confirmation'&&!existing.data.learning_mode&&!existing.data.hidden){const allocation=allocateMemory(existing.data.content,row.agent,{scope:row.agent,contextual:true});queueMemorySync(store,store.update(existing,{...existing.data,...allocation,status:allocation.risk==='high'?'validated':'learned',alignment:'explicit',initial_alignment:'explicit',learning_mode:'initialization_selected',confirmation_mode:'initialization_summary'},user));}continue;}
     const evidence=store.add('feedback',user,{kind:'initialization_choice',question:row.question,content:row.label,status:'recorded'});
     const content=row.question+' '+row.label;
-    const memory=store.add('memory',user,{content,scope:row.agent,group:memoryGroup(content),risk:'high',source_refs:[{id:evidence.id,version:evidence.version}],origin:'initialization',question_id:row.question_id,choice_label:row.label,status:'pending_confirmation',alignment:'insufficient',claim_type:'hypothesis',evidence:[],usage_purpose:'本次项目的初始选择，需单独核对适用范围，不能推断为长期稳定事实'});queueMemorySync(store,memory);
+    const memory=store.add('memory',user,{content,...allocateMemory(content,row.agent,{scope:row.agent,contextual:true}),source_refs:[{id:evidence.id,version:evidence.version}],origin:'initialization',question_id:row.question_id,choice_label:row.label,status:allocateMemory(content,row.agent).risk==='high'?'validated':'learned',alignment:'explicit',initial_alignment:'explicit',learning_mode:'initialization_selected',confirmation_mode:'initialization_summary',claim_type:'fact',evidence:[],usage_purpose:'本人已确认的本次项目初始选择，仅适用于对应项目方向，不推断为跨场景稳定事实'});queueMemorySync(store,memory);
   }
 }

@@ -1,6 +1,6 @@
 "use client";
 import {memoryOverview} from '../../../core/agent-alignment.mjs';
-import {memoryActive,memoryGroup,systemNames} from '../../../core/memory-policy.mjs';
+import {memoryAdmitted,memoryActive,memoryGroup,systemNames} from '../../../core/memory-policy.mjs';
 import {entityTitle,markdownExcerpt} from '../../../core/display-labels';
 
 // Second/fourth page projection of the authenticated V28 runtime.
@@ -234,9 +234,9 @@ function projectSnapshot(snapshot: Snapshot): Page2Data {
   for (const item of memories) {
     const group = (item.data.group || memoryGroup(field(item,"content"))) as keyof LiveMemory["groups"];
     groups[group].push({ id: item.id, group, label: systemNames[field(item,"scope")] || "个人理解", value: field(item, "content"),
-      source: (item.data.source_refs as unknown[] | undefined)?.length ? "有来源" : "本人记录", status: field(item, "status") === "validated" ? "已确认" : field(item,"status")==="needs_review"?"需重评":field(item,"status")==="deferred"?"已搁置":"待确认" });
+      source: (item.data.source_refs as unknown[] | undefined)?.length ? "有来源" : "本人记录", status: field(item,"status")==="learned"?"自动记录":field(item, "status") === "validated" ? "已确认" : field(item,"status")==="needs_review"?"需重评":field(item,"status")==="deferred"?"已搁置":"待确认" });
   }
-  const confirmed = memories.filter(item => item.data.status === "validated").length;
+  const confirmed = memories.filter(item => memoryAdmitted(item)).length;
   const friends = list(snapshot, "friend").filter(item => item.data.status === "accepted");
   return { capabilities, todayEvidence: evidence.filter(item => item.day === "今天").map(item => ({ id: item.id, title: item.title, note: item.note,
       kind: item.kind, verdict: item.verdict, day: item.day })), evidence,
@@ -244,7 +244,7 @@ function projectSnapshot(snapshot: Snapshot): Page2Data {
       previousComposite: null, outcomeCount: outcomes.length, externalChecks: 0, trend: null },
     alignment: { alignment: null, level: null, stage: memoryOverview(memories).label, nextGate: null, confirmedMemories: confirmed, credibility: 0, externalChecks: 0 },
     memory: { headline: "Elfred 对你的当前理解", totalCount: confirmed, coveredGroups: Object.values(groups).filter(rows=>rows.length).length,
-      groupCount: 4, daysTracked: new Set(memories.filter(m=>m.data.status==="validated"&&memoryActive(m)).map(m=>m.updated.slice(0,10))).size, credibility: 0, groups,
+      groupCount: 4, daysTracked: new Set(memories.filter(m=>memoryAdmitted(m)&&memoryActive(m)).map(m=>m.updated.slice(0,10))).size, credibility: 0, groups,
       identity: { headline: "当前身份", describe: groups["基础"].filter(row=>row.status==="已确认").slice(0,3).map(row=>row.value).join("；") || "还没有确认的身份信息", photoLabel: "", rule: "用于机会推荐，可随时纠正" },
       relationships: friends.map(item => ({ id: item.id, name: field(item, "name") || field(item, "handle"), role: "好友", photo: "", chatId: field(item, "conversation_id") })),
       relationshipStats: { longTerm: friends.length, pending: 0 } },

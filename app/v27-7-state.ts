@@ -75,7 +75,7 @@ export type V277Memory = {
   label: string;
   value: string;
   source: string;
-  status: "已确认" | "待确认";
+  status: "已确认" | "待确认" | "自动记录";
 };
 
 export type V277State = {

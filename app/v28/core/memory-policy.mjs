@@ -2,6 +2,7 @@ export const memoryGroups=['基础','社交','习惯','偏好'];
 export const memorySystems=['owner','explore','advise','create','connect','execute'];
 /** @type {Record<string,string>} */
 export const systemNames={owner:'个人',explore:'探索',advise:'参谋',create:'创作',connect:'连接',execute:'执行'};
+export const memoryAdmitted=item=>item.data.status==='validated'||item.data.status==='learned'&&item.data.risk==='low';
 export function memoryActive(item,at=Date.now()){
   const d=item.data||{};
   return !d.hidden&&!['deleted','rejected','superseded','expired','deferred','needs_review'].includes(d.status)&&(!d.expires_at||Date.parse(d.expires_at)>Number(at));

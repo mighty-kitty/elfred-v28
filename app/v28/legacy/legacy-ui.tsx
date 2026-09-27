@@ -5655,7 +5655,7 @@ export function MemoryDetail({
           </div>
           <div>
             <dt>使用规则</dt>
-            <dd>仅已确认信息会用于任务与 Agent 对话</dd>
+            <dd>低风险偏好自动学习；待验证推断会标明，高影响理解须本人确认</dd>
           </div>
           {!!entity?.data.source_quote&&<div><dt>对话原句</dt><dd>{String(entity.data.source_quote)}</dd></div>}
           {entity&&<div><dt>适用范围</dt><dd>{String(entity.data.usage_purpose||'本人核对后用于所属领域')}</dd></div>}
@@ -5666,7 +5666,7 @@ export function MemoryDetail({
           disabled={!value.trim() || (!runtime&&value === item.value)}
           onClick={save}
         >
-          {runtime&&value===item.value?"确认这条理解":"保存修改"}
+          {runtime&&value===item.value?(entity?.data.status==='learned'?"已自动记录 · 可保存修改":"确认这条理解"):"保存修改"}
         </button>
         {runtime&&entity&&<div>{['defer','reject'].map(decision=><button className="v277-secondary" key={decision} onClick={()=>void runtime.command('memory.decide',{...entityRef(entity),decision}).then(()=>go({name:'memory'})).catch(()=>{})}>{decision==='defer'?'搁置':'否认'}</button>)}</div>}
       </section>

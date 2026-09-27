@@ -12,8 +12,10 @@ import {checkContextUse} from './context-request.mjs';
 import {groupAgentReady,publishGroupAgentReply} from './group-agent.mjs';
 import {publishAgentChatReply} from './agent-chat.mjs';
 import {chatModelRequest} from './agent-chat-context.mjs';
-import {recallMemories,feedbackMemory,verifyTaskMemoryEvidence,unpackLearningReply} from './memory-learning.mjs';
+import {recallMemories,feedbackMemory,verifyTaskMemoryEvidence,unpackLearningReply,captureTaskExperience} from './memory-learning.mjs';
 import {syncMemoryHub} from './memory-hub.mjs';
+import {taskMemoryFeedback} from './memory-feedback.mjs';
+import {memoryApplies} from './memory-allocation.mjs';
 import {memoryUsable,projectMemory} from './memory-validity.mjs';
 
 export function taskCommand(store,user,action,input) {
@@ -49,9 +51,9 @@ export function taskCommand(store,user,action,input) {
     if (task.data.mode==='compose' && input.model_consent!==true) fail('CONSENT_REQUIRED','使用模型需确认把目标和所选资料发送给配置的服务');
     sourceRefs(store,user,task.data.source_refs,task.data.search_semantic?128:20);
     if(task.data.mode==='compose'&&composePlan(task).length>12)fail('INVALID_PLAN','本次协作、主责和复核合计超过计划上限，请减少协作步骤');
-    const memoryRefs=task.data.mode==='compose'&&!task.data.project_id&&!task.data.access_space&&!task.data.group_agent&&!task.data.search_semantic&&!task.data.media_operation?recallMemories(store,user,task.data.system,task.data.goal).map(m=>({id:m.id,version:m.version})):[];
+    const memoryRefs=task.data.mode==='compose'&&!task.data.project_id&&!task.data.access_space&&!task.data.group_agent&&!task.data.search_semantic&&!task.data.media_operation?recallMemories(store,user,task.data.system,task.data.goal,{skillId:task.data.skill_id||null}).map(m=>({id:m.id,version:m.version})):[];
     const memoryChanged=JSON.stringify(task.data.memory_refs||[])!==JSON.stringify(memoryRefs);
-    const updatedTask=store.update(task,{...task.data,memory_refs:memoryRefs,execution_revision:(task.data.execution_revision||0)+(memoryChanged?1:0)},user);
+    const updatedTask=store.update(task,{...task.data,memory_refs:memoryRefs,memory_dispatch:{holder:'person',target_system:task.data.system,purpose:task.data.goal,global_refs:memoryRefs.filter(ref=>store.get(ref.id).data.scope==='owner'),domain_refs:memoryRefs.filter(ref=>store.get(ref.id).data.scope!=='owner'),at:now()},execution_revision:(task.data.execution_revision||0)+(memoryChanged?1:0)},user);
     const approval=store.add('approval',user,{task_id:task.id,goal_hash:hash(JSON.stringify(updatedTask.data)),resource_version:updatedTask.version,scopes:task.data.mode==='compose'?['read','model']:['read'],status:'approved',expires:Date.now()+86400000,policy:POLICY_VERSION});
     return {id:store.update(updatedTask,{...updatedTask.data,status:'ready',approval_id:approval.id},user).id};
   }
@@ -125,8 +127,10 @@ export function taskCommand(store,user,action,input) {
     if(task.data.feed_event_id){const feed=store.read(user,task.data.feed_event_id,'feed');store.unique('feedback','feed-response:'+task.id,()=>store.add('feedback',user,{feed_id:feed.id,kind:'agent_response',system:task.data.system,content:artifact.data.content,run_id:run.id,task_id:task.id,source_refs:[{id:artifact.id,version:artifact.version}],status:'reviewed'}));}
     else if(!task.data.internal_search)store.unique('feed',task.id,()=>store.add('feed',user,{title:task.data.title,access_space:task.data.access_space,summary,topic:publish?.topic||'成果',format:'来源内容',system:task.data.system,event_key:task.id,task_id:task.id,artifact_id:artifact.id,status:'active',purpose:'outcome',source_refs:run.data.source_refs,...feedEvidence(store,user,task,run)}));
     if(input.memory_evidence_ids?.length)verifyTaskMemoryEvidence(store,user,task,outcome,input.memory_evidence_ids);
+    else taskMemoryFeedback(store,user,task,run,outcome,input.feedback||'');
     if(input.feedback)feedbackMemory(store,user,task,string(input.feedback,'验收反馈',3000),'task_acceptance');
     feedbackMemory(store,user,task,task.data.goal,'task_goal');
+    captureTaskExperience(store,user,task,outcome);
     return {id:task.id,artifact_id:artifact.id};
   }
   if (action==='approval.revoke') {
@@ -166,7 +170,7 @@ export class Runtime {
     const approval=this.store.get(run.data.approval_id);
     if (!approval || approval.version!==run.data.approval_version || approval.data.status!=='approved' || approval.data.expires<Date.now()) fail('GRANT_REVOKED','授权已撤销或过期',403);
     sourceRefs(this.store,run.owner,run.data.source_refs,128);
-    for(const ref of run.data.memory_refs||[]){const memory=this.store.read(run.owner,ref.id,'memory');if(memory.version!==ref.version||memory.data.scope!==task.data.system||!memoryUsable(this.store,memory))fail('MEMORY_CHANGED','本次理解已变化或失效，请重新核对任务授权',409);}
+    for(const ref of run.data.memory_refs||[]){const memory=this.store.read(run.owner,ref.id,'memory');if(memory.version!==ref.version||!memoryApplies(memory,task.data.system,task.data.goal)||!memoryUsable(this.store,memory))fail('MEMORY_CHANGED','本次理解已变化或失效，请重新核对任务授权',409);}
   }
   finish(job,status,extra={}) {
     const s=this.store;
@@ -267,7 +271,7 @@ export class Runtime {
           }
           else {
             const context=sourceRefs(s,run.owner,stepRefs.filter(ref=>ref.id!==run.data.version_snapshot.method?.id),128).map(ref=>{const object=s.read(run.owner,ref.id);const content=task.data.search_query_id?bodyFor(s,run.owner,object):String(object.data.content||object.data.text||object.data.summary||object.data.instructions||object.data.goal||'');return {ref,title:task.data.search_query_id?null:object.data.title||object.data.name||null,type:object.type,content:content.slice(0,12000),truncated:content.length>12000};});
-            if(step.phase!=='collaboration'&&!task.data.group_agent&&!task.data.project_id)for(const ref of run.data.memory_refs||[]){const memory=s.read(run.owner,ref.id);context.push({ref,type:'confirmed_memory',title:'本人已确认的领域理解',content:JSON.stringify({content:memory.data.content,scope:memory.data.scope,usage_purpose:memory.data.usage_purpose,alignment:projectMemory(s,memory).data.alignment})});}
+            if(step.phase!=='collaboration'&&!task.data.group_agent&&!task.data.project_id)for(const ref of run.data.memory_refs||[]){const memory=s.read(run.owner,ref.id);context.push({ref,type:'user_understanding',title:'本次可用的理解（以阶段和适用范围为准）',content:JSON.stringify({content:memory.data.content,scope:memory.data.scope,usage_purpose:memory.data.usage_purpose,alignment:memory.data.scope==='owner'?projectMemory(s,memory).data.domain_alignment[task.data.system]:projectMemory(s,memory).data.alignment,learning_mode:memory.data.learning_mode,claim_type:memory.data.claim_type})});}
             const media=stepRefs.map(ref=>s.read(run.owner,ref.id)).filter(item=>item.type==='attachment');
             const collaborationEvidence=run.data.receipts.filter(r=>r.phase==='collaboration'&&(step.phase!=='collaboration'||step.depends.includes(r.step_id))).map(r=>({role:r.role,step_id:r.step_id,output:r.output,evidence_status:'模型协作建议，需按原始来源与分歧核对'}));
             providerResult=task.data.media_operation==='jev'?await this.provider.judge({context,intent:task.data.search_intent,maxTokens:stop.maxTokens-task.data.tokens,signal:AbortSignal.any([this.controller.signal,AbortSignal.timeout(Math.max(1,stop.maxSeconds*1000-task.data.elapsed_ms))])}):task.data.media_operation==='transcribe'?await this.provider.transcribe({bytes:Buffer.from(media[0].data.base64,'base64'),name:media[0].data.name,signal:this.controller.signal}):await this.provider.generate({model:run.data.version_snapshot.model||undefined,images:media.filter(item=>item.data.mime.startsWith('image/')).map(item=>'data:'+item.data.mime+';base64,'+item.data.base64),goal:{...(step.phase==='collaboration'?{goal:step.goal,parameters:step.parameter_values||{},criteria:'完成此协作目标；保留证据、异议和未知，不代其他系统确认事实'}:run.data.goal),collaboration_evidence:collaborationEvidence,phase:step.phase||'work',draft:step.phase==='review'||step.phase==='repair'?run.data.receipts.find(r=>r.step_id==='work')?.output:undefined,review:step.phase==='repair'?reviewVerdict(run.data.receipts):undefined,revision_feedback:step.phase==='collaboration'?null:run.data.plan.feedback||null},context,systemPrompt:[rolePrompt(stepSystem,step.phase),capabilityPrompt(step.phase==='collaboration'?step.capability:step.phase==='review'?run.data.version_snapshot.reviewer:run.data.version_snapshot.role,step.phase),...(step.phase==='collaboration'?[]:[run.data.version_snapshot.method?.prompt,run.data.version_snapshot.preferences?.duty,run.data.version_snapshot.preferences?.focus])].filter(Boolean).join('\n'),maxTokens:stop.maxTokens-task.data.tokens,signal:AbortSignal.any([this.controller.signal,AbortSignal.timeout(Math.max(1,stop.maxSeconds*1000-task.data.elapsed_ms))])});

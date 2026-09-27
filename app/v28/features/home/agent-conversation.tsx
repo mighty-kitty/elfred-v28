@@ -1,5 +1,6 @@
 "use client";
 import './agent-conversation-memory.css';
+import {systemNames} from '../../core/memory-policy.mjs';
 import {displayTitle} from "../../core/display-labels";
 
 import {useEffect,useRef,useState,type FormEvent,type KeyboardEvent} from 'react';
@@ -36,7 +37,6 @@ export function AgentConversationPage({id,go,onBack,prefill,conversationId,messa
   const composer=useRef<HTMLTextAreaElement>(null);
   const threads=(runtime?.snapshot?.objects.conversation||[]).filter(item=>item.data.kind==='agent'&&item.data.system===systemOf(id)).sort((a,b)=>b.updated.localeCompare(a.updated));
   const activeId=newThread?null:selectedId||threads[0]?.id||null;
-  const active=threads.find(item=>item.id===activeId);
   const messages=(runtime?.snapshot?.objects.message||[]).filter(item=>item.data.conversation_id===activeId).sort((a,b)=>Number(a.data.seq)-Number(b.data.seq));
   const runs=(runtime?.snapshot?.objects.task||[]).filter(item=>(item.data.agent_chat as {conversation_id?:string}|undefined)?.conversation_id===activeId).sort((a,b)=>b.created.localeCompare(a.created));
   const pending=runs.find(item=>['queued','running','cancel_requested','pause_requested'].includes(String(item.data.status)));
@@ -126,7 +126,7 @@ export function AgentConversationPage({id,go,onBack,prefill,conversationId,messa
         {drafts.map(draft=><button type="button" className="v283-agent-chat-draft-link" key={draft.id} onClick={()=>go({name:'task',id:draft.id})}><span className="v283-chat-task-label"><b>{String(displayTitle(draft.data.title,''))}</b><small>{statuses[entityText(draft,'status')]||entityText(draft,'status')}</small></span><span>{draft.data.status==='draft'?'查看草稿':['awaiting_review','awaiting_acceptance','completed'].includes(String(draft.data.status))?'查看结果':'查看任务'} <ChevronRight size={14}/></span></button>)}
       </div>}
 
-      {(runtime?.snapshot?.objects.memory||[]).filter(m=>m.data.scope===systemOf(id)&&['candidate','pending_confirmation'].includes(String(m.data.status))&&!m.data.hidden&&(m.data.source_refs as {id:string}[]|undefined)?.some(ref=>messages.some(message=>message.id===ref.id))).slice(0,3).map(memory=><div className="v277-edit-card" key={memory.id}><small>待核对的理解 · 仅用于{agent.name}领域</small><p>{String(memory.data.content)}</p><div className="v284-memory-actions"><Action run={()=>runtime!.command('memory.decide',{...entityRef(memory),decision:'confirm'})}>确认记住</Action><button type="button" className="v277-secondary" onClick={()=>go({name:'memory-detail',id:memory.id})}>修改</button><Action run={()=>runtime!.command('memory.decide',{...entityRef(memory),decision:'reject'})}>不记这条</Action></div></div>)}
+      {(runtime?.snapshot?.objects.memory||[]).filter(m=>['candidate','pending_confirmation'].includes(String(m.data.status))&&!m.data.hidden&&(m.data.source_refs as {id:string}[]|undefined)?.some(ref=>messages.some(message=>message.id===ref.id))).slice(0,3).map(memory=><div className="v277-edit-card" key={memory.id}><small>待核对的理解 · {systemNames[String(memory.data.scope)]||'个人'}</small><p>{String(memory.data.content)}</p><div className="v284-memory-actions"><Action run={()=>runtime!.command('memory.decide',{...entityRef(memory),decision:'confirm'})}>确认记住</Action><button type="button" className="v277-secondary" onClick={()=>go({name:'memory-detail',id:memory.id})}>修改</button><Action run={()=>runtime!.command('memory.decide',{...entityRef(memory),decision:'reject'})}>不记这条</Action></div></div>)}
     </section>
     <form className="v283-agent-chat-composer" onSubmit={event=>void send(event)}>
       <textarea ref={composer} value={input} onChange={event=>setInput(event.target.value)} onKeyDown={keyDown} rows={1} placeholder={`问${agent.name} Agent…`} aria-label={`问${agent.name} Agent`}/>

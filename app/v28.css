@@ -964,6 +964,8 @@
 /* The deck owns one-finger swipes in both directions; pinch zoom remains native. */
 .v280-device .v283-brief-deck, .v280-device .v283-brief-card { touch-action: pinch-zoom !important; }
 .v280-device .elfred-player-logs { min-width: 0; margin: 10px 0; }
+.v280-device .v278-player-process nav button { background: transparent !important; color: #75828c !important; }
+.v280-device .v278-player-process nav button.active { background: #111315 !important; color: #fff !important; }
 .v280-device .elfred-player-logs > div { display: grid; grid-template-columns: 68px minmax(0,1fr); gap: 10px; padding: 10px 0; border-bottom: 1px solid #eef0f2; }
 .v280-device .elfred-player-logs time { font-size: 11px; font-weight: 400; color: #78838b; line-height: 1.8; }
 .v280-device .elfred-player-logs p { margin: 0; min-width: 0; font-size: 14px; font-weight: 400; line-height: 1.7; overflow-wrap: break-word; }

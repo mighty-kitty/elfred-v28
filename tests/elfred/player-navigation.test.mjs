@@ -44,6 +44,15 @@ test('task model changes invalidate prior approval, reject cross-account, frozen
  assert.throws(()=>command(a,'task.model_settings',{...ref(task),model:'default',review_mode:'single'}),{code:'INVALID_STATE'});
  await new Runtime(store,provider).tick();assert.equal(inputs[0].model,'balanced');
 });
+test('a historical skip copied from work is dated when recorded, after the review that caused it',t=>{
+ const {store,a}=fixture(t,new ModelProvider({}));
+ const work={id:id(),step_id:'work',phase:'work',at:'2026-01-01T01:00:00.000Z'},review={id:id(),step_id:'review',phase:'review',at:'2026-01-01T01:01:00.000Z'};
+ let run=store.add('run',a.id,{status:'running',plan:{steps:[]},receipts:[work,review]});
+ run=store.update(run,{...run.data,status:'completed',receipts:[work,review,{...work,id:id(),step_id:'repair',phase:'repair',provider:'conditional-skip'}]},a.id);
+ const messages=playerLogs(store,a.id,run.id).items.map(item=>item.message);
+ assert.ok(messages.indexOf('按反馈修订 · 无需修订，已跳过')>messages.indexOf('核对结果 · 已记录结果'));
+ assert.equal(messages.at(-1),'本次执行结束');
+});
 test('model catalog and generation use server credentials without exposing them',async()=>{
  let request;
  const provider=new ModelProvider({ELFRED_MODEL_BASE_URL:'https://models.example/v1',ELFRED_MODEL_API_KEY:'fixture-private-key',ELFRED_MODEL_NAME:'default'},async(url,init)=>{request={url,init};return new Response(JSON.stringify(url.endsWith('/models')?{data:[{id:'balanced'}]}:{choices:[{message:{content:'结果'},finish_reason:'stop'}],usage:{total_tokens:20}}))});

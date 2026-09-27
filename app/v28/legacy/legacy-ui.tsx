@@ -4334,7 +4334,6 @@ export function AgentExperiencePage({
   const Icon = agent.icon;
   const [historyOpen, setHistoryOpen] = useState(false);
   const [input, setInput] = useState("");
-  const backGesture = useRef(0);
   const quickIcons =
     id === "explore"
       ? [Compass, Search, FileText]
@@ -4369,13 +4368,6 @@ export function AgentExperiencePage({
   return (
     <main
       className="v277-page v283-agent-page"
-      onTouchStart={(event) => {
-        backGesture.current = event.touches[0]?.clientX || 0;
-      }}
-      onTouchEnd={(event) => {
-        const distance = (event.changedTouches[0]?.clientX || 0) - backGesture.current;
-        if (!historyOpen && backGesture.current < 36 && distance > 72) onBack();
-      }}
     >
       <header className="v283-agent-head">
         <span className="v279-agent-head-left">

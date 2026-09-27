@@ -6,8 +6,8 @@ import {useEffect,useLayoutEffect,useRef,type RefObject} from 'react';
 export function useBackSwipe(root:RefObject<HTMLElement|null>,back:()=>void,enabled:boolean,accountKey:string){
  const latest=useRef({back,enabled});useLayoutEffect(()=>{latest.current={back,enabled}},[back,enabled]);
  useEffect(()=>{
-  const element=root.current;if(!element)return;
-  let start:{x:number;y:number;target:HTMLElement;locked:boolean}|null=null,suppressUntil=0;
+  const element=root.current?.closest<HTMLElement>('.phone-stage')||root.current;if(!element)return;
+  let start:{x:number;y:number;dialog:HTMLElement|null;locked:boolean}|null=null,suppressUntil=0;
   const begin=(event:TouchEvent)=>{
    start=null;if(event.touches.length!==1)return;
    const target=event.target instanceof Element?(event.target instanceof HTMLElement?event.target:event.target.parentElement):null;
@@ -16,8 +16,10 @@ export function useBackSwipe(root:RefObject<HTMLElement|null>,back:()=>void,enab
     const style=getComputedStyle(node);
     if(node.scrollWidth>node.clientWidth+2&&['auto','scroll'].includes(style.overflowX))return;
    }
-   if(!latest.current.enabled&&!target.closest('[role="dialog"]'))return;
-   start={x:event.touches[0].clientX,y:event.touches[0].clientY,target,locked:false};
+   const dialogs=[...element.querySelectorAll<HTMLElement>('[role="dialog"][aria-modal="true"]')].filter(node=>node.getClientRects().length).sort((a,b)=>(Number.parseInt(getComputedStyle(a).zIndex)||0)-(Number.parseInt(getComputedStyle(b).zIndex)||0));
+   const dialog=dialogs.at(-1)||null;
+   if(!latest.current.enabled&&!dialog)return;
+   start={x:event.touches[0].clientX,y:event.touches[0].clientY,dialog,locked:false};
   };
   const move=(event:TouchEvent)=>{
    if(!start)return;if(event.touches.length!==1){start=null;return;}
@@ -29,9 +31,12 @@ export function useBackSwipe(root:RefObject<HTMLElement|null>,back:()=>void,enab
    const origin=start;start=null;if(!origin?.locked||!event.changedTouches.length)return;
    const dx=event.changedTouches[0].clientX-origin.x,dy=event.changedTouches[0].clientY-origin.y;
    if(dx<75||dx<Math.abs(dy)*1.4)return;
-   const dialog=origin.target.closest('[role="dialog"]');
+   const dialog=origin.dialog;
    if(dialog){
-    const close=[...dialog.querySelectorAll<HTMLButtonElement>('button')].find(button=>/^(关闭|返回)/.test(button.getAttribute('aria-label')||button.innerText));
+    if(!dialog.isConnected)return;
+    const ownClose=[...dialog.querySelectorAll<HTMLButtonElement>('button')].find(button=>/^(关闭|返回)/.test(button.getAttribute('aria-label')||button.innerText));
+    const backdrop=dialog.previousElementSibling;
+    const close=ownClose||(backdrop instanceof HTMLButtonElement&&/^关闭/.test(backdrop.getAttribute('aria-label')||'')?backdrop:null);
     if(!close)return;close.click();
    }else latest.current.back();
    suppressUntil=Date.now()+450;

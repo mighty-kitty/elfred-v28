@@ -10,7 +10,7 @@ import { improvementCommand } from './improvement.mjs';
 import {groupCommand} from './group-records.mjs';
 import {attachmentCommand,attachmentMetadata} from './attachments.mjs';
 import {toolLibraryCommand} from './tool-library.mjs';
-import {onboardingChoiceCommand} from './onboarding-choice.mjs';
+import {onboardingChoiceCommand,materializeInitialMemories} from './onboarding-choice.mjs';
 import {onboardingCommand} from './onboarding.mjs';
 import {projectWorkCommand} from './project-work.mjs';
 import {searchCommand} from './search-commands.mjs';
@@ -27,6 +27,8 @@ import {feedCommand} from './feed.mjs';
 import {observationCommand} from './observation.mjs';
 import {provisionInitialDiscovery} from './auto-discovery.mjs';
 import {swarmCommand} from './swarm.mjs';
+import {memoryHubStatus,queueMemorySync} from './memory-hub.mjs';
+import {projectMemory} from './memory-validity.mjs';
 
 export const READ_TYPES=['observation','context_request','context_grant','handoff','project_stage','attachment','skill_version','tool_use','shared_record','project_slot','profile','settings','onboarding','task','run','attempt','approval','document','knowledge','memory','outcome','feed','interaction','inbox','notification','friend','conversation','message','draft','assist','commitment','project','post','comment','claim','copy','contribution','release','feedback','resource','connector','data_request','brief','skill','shortcut','trace','candidate','evaluation','method','rollout'];
 export class Service {
@@ -37,7 +39,8 @@ export class Service {
       s.unique('profile',user.id,()=>s.add('profile',user.id,{name:user.name,bio:'',public:false}));
       s.unique('settings',user.id,()=>s.add('settings',user.id,{timezone:'Asia/Shanghai',notifications:true,quiet:false,model_allowed:false}));
       const onboarding=s.unique('onboarding',user.id,()=>s.add('onboarding',user.id,{status:'collecting',intent:'',skipped:[]}));
-      if(onboarding.data.choice_confirmed_at&&Array.isArray(onboarding.data.choice_summary))provisionInitialDiscovery(s,user.id,onboarding.data.choice_summary);
+      if(onboarding.data.choice_confirmed_at&&Array.isArray(onboarding.data.choice_summary)){provisionInitialDiscovery(s,user.id,onboarding.data.choice_summary);materializeInitialMemories(s,user.id,onboarding.data.choice_summary);}
+      for(const memory of s.list('memory').filter(m=>m.owner===user.id))queueMemorySync(s,memory);
       s.db.prepare('INSERT OR IGNORE INTO budget_accounts(owner,limit_units) VALUES(?,?)').run(user.id,10000);
     });
   }
@@ -47,6 +50,7 @@ export class Service {
     if(type==='claim') return s.list(type).filter(item=>item.owner===user||s.get(item.data.project_id)?.owner===user).map(item=>{if(s.role(item.data.project_id,user))return item;const {new_rules,...data}=item.data;return {...item,data};});
     return s.visible(user,type).filter(item=>!['deleted'].includes(item.data.status)).map(item=>{
       if(type==='context_request'){const task=s.get(item.data.task_id);return {...item,data:{...item.data,recovery_task:task?.owner===user&&s.canRead(user,{...task,data:{...task.data,source_refs:[]}})?{id:task.id,version:task.version,status:task.data.status,source_invalid:!s.canRead(user,task)}:null}};}
+      if(type==='memory')return projectMemory(s,item);
       if(type==='skill')return {...item,data:{...item.data,activity:toolActivity(item)}};
       if(type==='attachment')return attachmentMetadata(item);
       if(type==='conversation') {const members=s.members(item.id);return {...item,data:{...item.data,title:item.data.kind==='direct'?members.find(member=>member.id!==user)?.name||item.data.title:item.data.title},members,unread:Math.max(0,item.data.seq-(s.db.prepare('SELECT seq FROM read_cursors WHERE space=? AND user_id=?').get(item.id,user)?.seq||0))};}
@@ -66,14 +70,15 @@ export class Service {
     if(object?.type==='claim'){const result=this.list(user,'claim').find(item=>item.id===objectId);if(!result)fail('NOT_FOUND','申请不可访问',404);return result;}
     if(object && !READ_TYPES.includes(object.type)) fail('NOT_FOUND','内容不存在',404);
     if(object?.type==='brief'){this.store.read(user,objectId);return this.list(user,'brief').find(item=>item.id===objectId);}
-    return this.store.read(user,objectId);
+    const result=this.store.read(user,objectId);return result.type==='memory'?projectMemory(this.store,result):result;
   }
   bootstrap(user) {
     const onboarding=this.store.visible(user,'onboarding')[0];
     if(onboarding?.data.choice_confirmed_at&&Array.isArray(onboarding.data.choice_summary)&&!this.store.visible(user,'observation').some(item=>item.data.auto_suggested))this.store.transaction(()=>provisionInitialDiscovery(this.store,user,onboarding.data.choice_summary));
+    if(onboarding?.data.choice_confirmed_at&&Array.isArray(onboarding.data.choice_summary))this.store.transaction(()=>materializeInitialMemories(this.store,user,onboarding.data.choice_summary));
     const types=['observation','context_request','context_grant','handoff','project_stage','attachment','skill_version','tool_use','shared_record','project_slot','profile','settings','onboarding','task','run','knowledge','document','memory','feed','notification','friend','conversation','message','post','comment','project','draft','assist','commitment','copy','contribution','release','feedback','claim','interaction','approval','resource','connector','brief','skill','shortcut','inbox','candidate','evaluation','outcome','method','rollout','trace'];
     const module_errors={},objects=Object.fromEntries(types.map(type=>{try{return [type,this.list(user,type)];}catch(error){if(['profile','settings','onboarding'].includes(type))throw error;module_errors[type]='此模块暂时加载失败，请重试';return [type,[]];}}));
-    return {user:this.store.user(user),provider:this.provider.status(),systems:SYSTEMS,definitions:DEFINITIONS,objects,module_errors,budget:this.store.db.prepare('SELECT * FROM budget_accounts WHERE owner=?').get(user),usage:this.store.db.prepare('SELECT * FROM usage WHERE owner=? ORDER BY created DESC LIMIT 100').all(user),server_time:now(),storage:'local-sqlite',production_ready:false};
+    return {memory_hub:memoryHubStatus(this.store,user,this.provider.config||process.env),user:this.store.user(user),provider:this.provider.status(),systems:SYSTEMS,definitions:DEFINITIONS,objects,module_errors,budget:this.store.db.prepare('SELECT * FROM budget_accounts WHERE owner=?').get(user),usage:this.store.db.prepare('SELECT * FROM usage WHERE owner=? ORDER BY created DESC LIMIT 100').all(user),server_time:now(),storage:'local-sqlite',production_ready:false};
   }
   command(user,key,action,input) {
     const s=this.store;

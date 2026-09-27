@@ -629,6 +629,7 @@ function applyLiveData(data: Page2Data) {
     }
   }
 
+  hasLiveAlignment = typeof data.alignment?.alignment === "number";
   if (data.alignment) {
     // 后端这两个字段可能是 null（用户还没有记忆时返回的就是 null）。
     // 以前是直接赋值，等于把 86/4 洗成 null/undefined，页头会渲染出 "null%"。

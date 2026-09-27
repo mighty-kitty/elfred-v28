@@ -6,6 +6,9 @@ import {PREVIEW_CSP,validateWebArtifact,renderWebArtifact} from './preview.mjs';
 import { DomainError, fail, hash } from './store.mjs';
 import {playerLogs} from './player-logs.mjs';
 import {dependencyHealth} from './dependency-health.mjs';
+import {recallMemories} from './memory-learning.mjs';
+import {memoryHubStatus} from './memory-hub.mjs';
+import {memorySystems} from '../../app/v28/core/memory-policy.mjs';
 
 async function readBody(request) {
   if(!String(request.headers['content-type']||'').startsWith('application/json')) fail('CONTENT_TYPE','仅支持 JSON 请求',415);
@@ -62,6 +65,12 @@ export function apiHandler(service,{origin='http://127.0.0.1:3000'}={}) {
         send(200,{items:items.reverse(),has_more:all.length>limit,next_before:items.length?Math.min(...items.map(item=>item.data.seq)):null});return true;
       }
       if(method==='GET' && route==='/bootstrap') {send(200,service.bootstrap(user.id));return true;}
+      if(method==='GET'&&route==='/memory/hub'){send(200,memoryHubStatus(s,user.id,service.provider.config||process.env));return true;}
+      if(method==='GET'&&route==='/memory/recall'){
+        const scope=url.searchParams.get('scope'),query=url.searchParams.get('q')||'';
+        if(!memorySystems.includes(scope)||query.length>1000)fail('INVALID_INPUT','请选择理解领域，并缩短检索描述');
+        send(200,{scope,items:recallMemories(s,user.id,scope,query).map(m=>({id:m.id,revision:m.version,content:m.data.content,scope:m.data.scope,usage_purpose:m.data.usage_purpose,source_refs:m.data.source_refs,alignment:m.data.alignment})),status:'local-authorized-cache'});return true;
+      }
       if(method==='GET'&&route==='/models'){send(200,await service.provider.models());return true;}
       if(method==='GET'&&route==='/health/deps'){send(200,await dependencyHealth(s,service.provider,user.id));return true;}
       if(method==='GET'&&/^\/runs\/[^/]+\/logs$/.test(route)){send(200,playerLogs(s,user.id,route.split('/')[2]));return true;}

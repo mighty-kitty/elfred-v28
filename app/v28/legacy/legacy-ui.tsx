@@ -25,6 +25,7 @@ import {usePageState} from '../core/page-memory';
 import {BriefActions,type BriefFact} from '../features/home/brief-actions';
 import {agentAlignment} from '../core/agent-alignment.mjs';
 import {MemoryGovernance,InactiveMemories} from '../features/home/memory-governance';
+import {TaskMemoryReview} from '../features/home/task-memory-review';
 import {MemoryEvidence} from "../core/memory-evidence";
 import {ConnectedUtility,ConnectedSettings,PrivateAssist,AssetEditor,MethodsPanel,ConversationMembers} from "../core/runtime-panels";
 import {text as entityText,statuses as runtimeStatuses} from "../features/live/types";
@@ -3856,6 +3857,7 @@ export function TaskDetail({
   const [consent,setConsent]=useState(false);
   const [feedback,setFeedback]=useState('');
   const [acceptance,setAcceptance]=useState(false);
+  const [memoryEvidence,setMemoryEvidence]=useState<string[]>([]);
   const setStatus = (status: V277TaskStatus) =>
     setState((s) => ({
       ...s,
@@ -3951,7 +3953,7 @@ export function TaskDetail({
           {actual.data.status==='partial'&&<button className="v277-secondary" onClick={()=>void runtime.command('run.replan',entityRef(actual)).catch(()=>{})}>按本人反馈进行有限修订</button>}
           {run&&['queued','running'].includes(String(run.data.status))&&<><button className="v277-secondary" onClick={()=>void runtime.command('run.command',{...entityRef(run),command:'pause'}).catch(()=>{})}>暂停</button><button className="v277-secondary" onClick={()=>void runtime.command('run.command',{...entityRef(run),command:'cancel'}).catch(()=>{})}>取消</button></>}
           {run?.data.error?<p role="status">{String((run.data.error as {message:string}).message)}</p>:null}
-          {['awaiting_acceptance','awaiting_review'].includes(String(actual.data.status))&&<><label className="v277-field"><span>需要修订的具体缺口</span><textarea value={feedback} onChange={event=>setFeedback(event.target.value)}/></label><label><input type="checkbox" checked={acceptance} onChange={event=>setAcceptance(event.target.checked)}/>已阅读实际成果与来源，符合本次目标</label><button className="v277-primary" disabled={!acceptance||!task.result.length} onClick={()=>void runtime.command('task.accept',{...entityRef(actual),accept:true}).catch(()=>{})}>验收并保存成果</button><button className="v277-secondary" onClick={()=>void runtime.command('task.accept',{...entityRef(actual),accept:false,feedback:feedback||'本人认为仍有缺口，需要修改'}).catch(()=>{})}>仍有缺口</button></>}
+          {['awaiting_acceptance','awaiting_review'].includes(String(actual.data.status))&&<><TaskMemoryReview task={actual} selected={memoryEvidence} onChange={setMemoryEvidence}/><label className="v277-field"><span>补充反馈或需要修订的缺口</span><textarea value={feedback} onChange={event=>setFeedback(event.target.value)}/></label><label><input type="checkbox" checked={acceptance} onChange={event=>setAcceptance(event.target.checked)}/>已阅读实际成果与来源，符合本次目标</label><button className="v277-primary" disabled={!acceptance||!task.result.length} onClick={()=>void runtime.command('task.accept',{...entityRef(actual),accept:true,feedback,memory_evidence_ids:memoryEvidence}).catch(()=>{})}>验收并保存成果</button><button className="v277-secondary" onClick={()=>void runtime.command('task.accept',{...entityRef(actual),accept:false,feedback:feedback||'本人认为仍有缺口，需要修改'}).catch(()=>{})}>仍有缺口</button></>}
           {actual.data.status==='completed'&&<button className="v277-primary" onClick={()=>go({name:'knowledge-detail',id:String(actual.data.artifact_id)})}>查看已验收成果</button>}
         </>:<>
         {task.status === "待确认" && (
@@ -5655,6 +5657,8 @@ export function MemoryDetail({
             <dt>使用规则</dt>
             <dd>仅已确认信息会用于任务与 Agent 对话</dd>
           </div>
+          {!!entity?.data.source_quote&&<div><dt>对话原句</dt><dd>{String(entity.data.source_quote)}</dd></div>}
+          {entity&&<div><dt>适用范围</dt><dd>{String(entity.data.usage_purpose||'本人核对后用于所属领域')}</dd></div>}
         </dl>
         <button
           type="button"

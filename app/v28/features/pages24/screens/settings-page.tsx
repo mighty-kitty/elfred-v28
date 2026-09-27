@@ -38,8 +38,9 @@ import {
 } from "../api/page2-api";
 import {
   hasLiveAlignment,
-  libraryHeader,
 } from "../data/knowledge-data";
+import {useRuntime} from '../../../core/runtime-context';
+import {memoryOverview} from '../../../core/agent-alignment.mjs';
 import { buildMemoryView } from "../data/memory-data";
 import { shownNameOf } from "../data/identity";
 import { UnderstandingSheet } from "../parts/understanding-sheet";
@@ -102,9 +103,8 @@ export function SettingsPage({
   const name = shownNameOf(rawName, state.profile.username || "");
   const handle = account ? `@${account}` : "";
   const memoryCount = buildMemoryView(state.memories).totalCount;
-  const alignmentValue = hasLiveAlignment
-    ? `${libraryHeader.alignment}% · Lv.${libraryHeader.level}`
-    : "还没有评估";
+  const memoryRuntime=useRuntime();
+  const alignmentValue=memoryOverview(memoryRuntime?.snapshot?.objects.memory||[]).label;
   const depsOffline = deps ? [deps.emos, deps.skill_foundry, deps.gateway].filter((item) => !item.ok).length : 0;
   const depsValue = !depsTried ? "读取中…" : !deps ? "读不到" : depsOffline === 0 ? "全部正常" : `${depsOffline} 项未接入`;
 

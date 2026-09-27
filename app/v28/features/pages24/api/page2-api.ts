@@ -1,4 +1,6 @@
 "use client";
+import {memoryOverview} from '../../../core/agent-alignment.mjs';
+import {memoryActive,memoryGroup,systemNames} from '../../../core/memory-policy.mjs';
 import {entityTitle,markdownExcerpt} from '../../../core/display-labels';
 
 // Second/fourth page projection of the authenticated V28 runtime.
@@ -103,8 +105,8 @@ export type LiveInsight = {
 };
 
 export type LiveAlignment = {
-  alignment: number;
-  level: number;
+  alignment: number | null;
+  level: number | null;
   stage: string;
   nextGate: number | null;
   confirmedMemories: number;
@@ -207,7 +209,7 @@ function projectSnapshot(snapshot: Snapshot): Page2Data {
   const outcomes = list(snapshot, "outcome").filter(item => item.data.verdict === "accepted");
   const tasks = new Map(list(snapshot, "task").map(item => [item.id, item]));
   const knowledge = list(snapshot, "knowledge").filter(active);
-  const memories = list(snapshot, "memory").filter(item => active(item) && !item.data.hidden);
+  const memories = list(snapshot, "memory").filter(item => active(item) && !item.data.hidden && (!item.data.expires_at || Date.parse(field(item,"expires_at"))>Date.now()));
   const documents = [...list(snapshot, "document"), ...list(snapshot, "resource")].filter(active);
   const capabilities: LiveCapability[] = tools.map(tool => {
     const uses = list(snapshot, "tool_use").filter(item => item.data.tool_id === tool.id && item.data.kind === "use").length;
@@ -230,9 +232,9 @@ function projectSnapshot(snapshot: Snapshot): Page2Data {
   });
   const groups: LiveMemory["groups"] = { 基础: [], 社交: [], 习惯: [], 偏好: [] };
   for (const item of memories) {
-    const group = "偏好";
-    groups[group].push({ id: item.id, group, label: field(item, "scope"), value: field(item, "content"),
-      source: (item.data.source_refs as unknown[] | undefined)?.length ? "有来源" : "本人记录", status: field(item, "status") === "validated" ? "已确认" : "待确认" });
+    const group = (item.data.group || memoryGroup(field(item,"content"))) as keyof LiveMemory["groups"];
+    groups[group].push({ id: item.id, group, label: systemNames[field(item,"scope")] || "个人理解", value: field(item, "content"),
+      source: (item.data.source_refs as unknown[] | undefined)?.length ? "有来源" : "本人记录", status: field(item, "status") === "validated" ? "已确认" : field(item,"status")==="needs_review"?"需重评":field(item,"status")==="deferred"?"已搁置":"待确认" });
   }
   const confirmed = memories.filter(item => item.data.status === "validated").length;
   const friends = list(snapshot, "friend").filter(item => item.data.status === "accepted");
@@ -240,10 +242,10 @@ function projectSnapshot(snapshot: Snapshot): Page2Data {
       kind: item.kind, verdict: item.verdict, day: item.day })), evidence,
     insight: { axes: ["洞察", "判断", "表达", "链接", "交付"].map(label => ({ label, value: null, previous: null })), composite: null,
       previousComposite: null, outcomeCount: outcomes.length, externalChecks: 0, trend: null },
-    alignment: { alignment: 0, level: 1, stage: "待验证", nextGate: null, confirmedMemories: confirmed, credibility: 0, externalChecks: 0 },
-    memory: { headline: "Elfred 对你的当前理解", totalCount: memories.length, coveredGroups: memories.length ? 1 : 0,
-      groupCount: 4, daysTracked: 0, credibility: 0, groups,
-      identity: { headline: "当前身份", describe: "还没有确认的身份信息", photoLabel: "", rule: "用于机会推荐，可随时纠正" },
+    alignment: { alignment: null, level: null, stage: memoryOverview(memories).label, nextGate: null, confirmedMemories: confirmed, credibility: 0, externalChecks: 0 },
+    memory: { headline: "Elfred 对你的当前理解", totalCount: confirmed, coveredGroups: Object.values(groups).filter(rows=>rows.length).length,
+      groupCount: 4, daysTracked: new Set(memories.filter(m=>m.data.status==="validated"&&memoryActive(m)).map(m=>m.updated.slice(0,10))).size, credibility: 0, groups,
+      identity: { headline: "当前身份", describe: groups["基础"].filter(row=>row.status==="已确认").slice(0,3).map(row=>row.value).join("；") || "还没有确认的身份信息", photoLabel: "", rule: "用于机会推荐，可随时纠正" },
       relationships: friends.map(item => ({ id: item.id, name: field(item, "name") || field(item, "handle"), role: "好友", photo: "", chatId: field(item, "conversation_id") })),
       relationshipStats: { longTerm: friends.length, pending: 0 } },
     documents: [...documents, ...knowledge].map(item => ({ id: item.id, name: entityTitle(item), status: field(item, "status"), excerpt: markdownExcerpt(field(item, "content")) })),

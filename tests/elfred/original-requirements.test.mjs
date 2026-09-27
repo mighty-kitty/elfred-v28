@@ -33,7 +33,7 @@ test('原稿 K03：知识编辑保留对象与来源、阻止旧版本和越权�
 });
 test('原稿 A10：单次情境可验证；反证阻止稳定；无七天自动升级',t=>{
  const {store,users:[a],cmd,ref}=setup(t);const memory=cmd(a,'memory.create',{content:'方案先讲问题',risk:'high',scope:'create'});cmd(a,'memory.decide',{...ref(memory),decision:'confirm'});
- const outcomes=[store.add('outcome',a.id,{verdict:'accepted'}),store.add('outcome',a.id,{verdict:'accepted'})];store.db.prepare('UPDATE objects SET created=? WHERE id=?').run('2025-01-01T00:00:00Z',outcomes[0].id);
+ const evidenceTask=store.add('task',a.id,{system:'create',status:'completed'});const outcomes=[store.add('outcome',a.id,{verdict:'accepted',task_id:evidenceTask.id}),store.add('outcome',a.id,{verdict:'accepted',task_id:evidenceTask.id})];store.db.prepare('UPDATE objects SET created=? WHERE id=?').run('2025-01-01T00:00:00Z',outcomes[0].id);
  cmd(a,'memory.evidence',{...ref(memory),outcome_id:outcomes[0].id,scenario:'评审',note:'实际符合本次目标',confirm:true});assert.equal(store.get(memory.id).data.alignment,'scenario_verified');
  cmd(a,'memory.counterevidence',{...ref(memory),note:'紧急沟通需要先说结论',confirm:true});
  cmd(a,'memory.evidence',{...ref(memory),outcome_id:outcomes[1].id,scenario:'评审',note:'再次核对本次范围',confirm:true});assert.equal(store.get(memory.id).data.alignment,'hypothesis');

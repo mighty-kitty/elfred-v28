@@ -16,7 +16,8 @@ test('逐个与同场使用原始记录相同的八题、选项、顺序和初�
  assert.deepEqual(alignmentQuestions.map(q=>q.agent),['owner','explore','advise','create','connect','execute','owner','owner']);
  for(const q of alignmentQuestions)assert.deepEqual(q.options.slice(-3).map(o=>o.id),['none','unsure','skip']);
  cmd(a,'onboarding.choice.confirm',{...ref(session(a)),confirm:true});
- for(const type of ['memory','approval','run','task','conversation','message','attachment','connector'])assert.equal(store.list(type).length,0,type);
+ for(const type of ['approval','run','task','conversation','message','attachment','connector'])assert.equal(store.list(type).length,0,type);
+ assert.equal(store.list('memory').length,8);assert.ok(store.list('memory').every(m=>m.data.status==='pending_confirmation'&&m.data.alignment==='insufficient'));
  const context=session(a).data.initial_context;
  assert.equal(context.create.items.length,1);assert.equal(context.create.items[0].question_id,'format');assert.equal(context.connect.items[0].question_id,'cooperation');
  assert.equal(context.create.alignment,'insufficient');assert.equal(service.list(a.id,'onboarding').length,1);
@@ -76,3 +77,13 @@ test('主动程度不扩大授权；无 Key 不伪造首个成果，配置后模
  }
 });
 
+
+
+test('旧账号已确认的初始化恢复为待核对理解，重复读取及本人删除不会重新建立',t=>{
+ const e=setup(t),{users:[a],cmd,session,ref,store,service}=e;chooseAll(e,a);
+ const summary=alignmentSummary(session(a).data.choice_answers);store.update(session(a),{...session(a).data,choice_summary:summary,choice_confirmed_at:new Date().toISOString()},a.id);
+ assert.equal(store.list('memory').length,0);const snapshot=service.bootstrap(a.id);assert.equal(snapshot.objects.memory.length,8);assert.ok(snapshot.objects.memory.every(m=>m.data.status==='pending_confirmation'));
+ const m=snapshot.objects.memory[0];cmd(a,'memory.decide',{...ref(m),decision:'delete'});service.bootstrap(a.id);service.bootstrap(a.id);
+ assert.equal(store.list('memory').length,8);assert.equal(service.list(a.id,'memory').length,7);
+ cmd(a,'onboarding.choice.confirm',{...ref(session(a)),confirm:true});assert.equal(store.list('memory').length,8);
+});

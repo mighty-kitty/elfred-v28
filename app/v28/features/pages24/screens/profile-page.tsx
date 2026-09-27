@@ -1,4 +1,6 @@
 "use client";
+import {useRuntime} from '../../../core/runtime-context';
+import {memoryOverview} from '../../../core/agent-alignment.mjs';
 import {displayTitle} from "../../../core/display-labels";
 
 import {
@@ -21,9 +23,7 @@ import knowledgeStyles from "../styles/knowledge.module.css";
 import {
   abilityInsight,
   hasLiveAlignment,
-  libraryHeader,
   abilityCardSamples,
-  readAlignmentStage,
   readStage,
 } from "../data/knowledge-data";
 import { CapabilitySheet, type SheetCard } from "../parts/capability-sheet";
@@ -67,8 +67,8 @@ export function ProfilePage({
   usePage2Live();
   // 名字旁边那个胶囊跟"理解度"那条线（不是卡片等级）。
   // 后端没给理解度时按第一档显示——**不能拿演示兜底值当用户真等级**（新用户不是 Lv.4）。
-  const level = hasLiveAlignment ? libraryHeader.level : 1;
-  const stageName = readAlignmentStage(level);
+  const memoryRuntime=useRuntime();
+  const understanding=memoryOverview(memoryRuntime?.snapshot?.objects.memory||[]);
   // 最左边那栏：原来叫「动态」，现在是 **Agent 动态 的总览**（用户 2026-09-26 定的）。
   const [tab, setTab] = useState("Agent 动态");
   const [shareOpen, setShareOpen] = useState(initialShareOpen);
@@ -121,9 +121,9 @@ export function ProfilePage({
     },
     ...(showLevel
       ? [{
-          label: "理解度",
-          value: hasLiveAlignment ? libraryHeader.alignment : 0,
-          suffix: "%",
+          label: "已确认理解",
+          value: understanding.confirmedCount,
+          suffix: " 条",
           open: () => setUnderstandingOpen(true),
         }]
       : []),
@@ -178,7 +178,7 @@ export function ProfilePage({
             {/* 关掉「展示等级与能力」之后，这一颗就不显示（开关真的生效） */}
             {showLevel ? (
               <span className={styles.levelChip}>
-                Lv.{level} · {stageName}
+                {understanding.label}
               </span>
             ) : null}
           </h1>

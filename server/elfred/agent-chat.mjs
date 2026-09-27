@@ -4,6 +4,7 @@ import {taskCommand} from './runtime.mjs';
 import {resultReceipts} from './agent-plan.mjs';
 import {recentChatMessages} from './agent-chat-context.mjs';
 import {search} from './knowledge.mjs';
+import {captureMemories} from './memory-learning.mjs';
 
 const SYSTEMS=['explore','advise','create','connect','execute'];
 const NAMES={explore:'探索',advise:'参谋',create:'创作',connect:'连接',execute:'执行'};
@@ -83,5 +84,7 @@ export function publishAgentChatReply(store,task,run,status){
     store.update(current,{...current.data,seq,last_message_id:posted.id},task.owner);
     return posted;
   });
+  const trigger=store.get(task.data.agent_chat.trigger_id);
+  if(trigger?.data.actor_type==='human')captureMemories(store,task.owner,{text:trigger.data.text,system:task.data.system,source:trigger,proposals:run.data.memory_proposals||[],origin:'conversation'});
   return message.id;
 }

@@ -1,3 +1,4 @@
+import * as memoryPolicy from '../../app/v28/core/memory-policy.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
@@ -47,6 +48,7 @@ function hookHarness(filename, imports = {}, fetcher = async () => { throw new E
     './client-id': {createClientId},
     './display-labels': {entityTitle,displayError},
     '../features/live/types': { text: (entity, key) => entity?.data?.[key] || '' },
+    './memory-policy.mjs':memoryPolicy,
     ...imports,
   };
   const code = ts.transpileModule(readFileSync(new URL(filename, import.meta.url), 'utf8'), {

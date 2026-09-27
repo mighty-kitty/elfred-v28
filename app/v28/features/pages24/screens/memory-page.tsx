@@ -1,5 +1,6 @@
 "use client";
 
+import {InactiveMemories} from '../../home/memory-governance';
 import { useState } from "react";
 import {
   Bookmark,
@@ -87,7 +88,7 @@ export function MemoryPage({
           </button>
         ))}
       </div>
-      <div className="v277-library-scroll memory-scroll">
+      <div className="v277-library-scroll memory-scroll"><InactiveMemories/>
         <section className="v277-understanding">
           <header>
             <span>
@@ -104,12 +105,12 @@ export function MemoryPage({
               <b>{view.totalCount}</b> 已确认的记忆
             </span>
             <span>
-              {/* 这一格以前是"7 天持续更新"，中间换过一版叫"覆盖类别"（四类记忆有着落几类）。
+              {/* 这一格以前是"7 天有确认记录"，中间换过一版叫"覆盖类别"（四类记忆有着落几类）。
                   "覆盖类别"这个词不是一眼能懂的，评审时被问了两遍，所以按原样回到"持续更新"。 */}
               <b>{view.daysTracked > 0 ? view.daysTracked : "—"}</b> 天持续更新
             </span>
             <span>
-              <b className={view.credibility > 0 ? undefined : "elfred-stat-label"}>{view.credibility > 0 ? `${view.credibility}%` : "待验证"}</b> 记忆可信度
+              <b className="elfred-stat-label">{view.memories.filter(m=>m.status!=="已确认").length}</b> 条待核对
             </span>
           </div>
         </section>

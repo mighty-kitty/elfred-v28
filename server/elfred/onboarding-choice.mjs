@@ -3,6 +3,8 @@ import {enumeration} from './policy.mjs';
 import {taskCommand} from './runtime.mjs';
 import {alignmentQuestions,alignmentSummary,choiceVersion,firstValueChoices} from '../../app/v28/core/onboarding-choice.mjs';
 import {provisionInitialDiscovery} from './auto-discovery.mjs';
+import {memoryGroup} from '../../app/v28/core/memory-policy.mjs';
+import {queueMemorySync} from './memory-hub.mjs';
 
 export function onboardingChoiceCommand(store,user,action,input){
  if(!action.startsWith('onboarding.choice.'))return null;
@@ -27,6 +29,7 @@ export function onboardingChoiceCommand(store,user,action,input){
   const summary=alignmentSummary(answers);
   if(input.auto_discovery!==undefined&&typeof input.auto_discovery!=='boolean')fail('INVALID_INPUT','公开资讯偏好应为开关');
   const autoDiscovery=input.auto_discovery===true;
+  materializeInitialMemories(store,user,summary);
   const discovery=provisionInitialDiscovery(store,user,summary,{start:autoDiscovery});
   if(!autoDiscovery&&discovery?.data.auto_managed&&discovery.data.status==='active')store.update(discovery,{...discovery.data,status:'paused'},user);
   return update({intent:summary.find(item=>item.question_id==='need'&&item.certainty==='selected')?.label||'轻量项目方向待确定',choice_summary:summary,choice_confirmed_at:now(),choice_phase:'handoff',choice_auto_discovery:autoDiscovery,choice_discovery_ref:discovery?.id||null,initial_context:Object.fromEntries(['owner','explore','advise','create','connect','execute'].map(agent=>[agent,{scope:agent,purpose:'初始化选择形成的初始假设，需在真实使用中核对',items:summary.filter(item=>item.agent===agent),alignment:'insufficient'}])),initial_boundaries:{initiative:answers.initiative?.option||'unsure',external:answers.external?.option||'unsure',external_confirmation_required:true,source_access:'ask_when_needed',cross_agent:'minimum_necessary_with_confirmation'}});
@@ -51,4 +54,14 @@ export function onboardingChoiceCommand(store,user,action,input){
   return update({status:'completed',completed_at:data.completed_at||now(),choice_phase:'handoff',skipped:[...new Set([...(data.skipped||[]),...(data.choice_task_ref?[]:['first_task_deferred'])])]});
  }
  fail('UNKNOWN_COMMAND','不支持的初始化操作');
+}
+
+export function materializeInitialMemories(store,user,summary){
+  for(const memory of store.list('memory').filter(m=>m.owner===user&&m.data.origin==='initialization'&&!['deleted','rejected','superseded'].includes(m.data.status))){const row=summary.find(s=>s.question_id===memory.data.question_id);if(!row||row.certainty!=='selected'||row.label!==memory.data.choice_label){const changed=store.update(memory,{...memory.data,status:'needs_review',alignment:'insufficient'},user);queueMemorySync(store,changed);}}
+  for(const row of summary.filter(s=>s.certainty==='selected')){
+    if(store.list('memory').some(m=>m.owner===user&&m.data.origin==='initialization'&&m.data.question_id===row.question_id&&m.data.choice_label===row.label&&!['superseded','needs_review'].includes(m.data.status)))continue;
+    const evidence=store.add('feedback',user,{kind:'initialization_choice',question:row.question,content:row.label,status:'recorded'});
+    const content=row.question+' '+row.label;
+    const memory=store.add('memory',user,{content,scope:row.agent,group:memoryGroup(content),risk:'high',source_refs:[{id:evidence.id,version:evidence.version}],origin:'initialization',question_id:row.question_id,choice_label:row.label,status:'pending_confirmation',alignment:'insufficient',claim_type:'hypothesis',evidence:[],usage_purpose:'本次项目的初始选择，需单独核对适用范围，不能推断为长期稳定事实'});queueMemorySync(store,memory);
+  }
 }

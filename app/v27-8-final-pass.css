@@ -2603,8 +2603,9 @@
   font-weight: 650 !important;
 }
 .v277-reference-conversations {
-  height: 486px !important;
-  max-height: 486px !important;
+  height: auto !important;
+  max-height: none !important;
+  overflow: visible !important;
   margin-top: 11px !important;
   padding: 5px 13px !important;
   border-radius: 24px !important;

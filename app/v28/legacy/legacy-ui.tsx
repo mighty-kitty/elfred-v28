@@ -17,6 +17,7 @@ import {OriginLinks,CalendarDraft,ConversationHandoffs,SharedRecordCard} from '.
 import {AttachmentPicker,AttachmentList,type FileRef} from '../features/live/attachments';
 import {CommunityEntry} from '../features/home/community-entry';
 import {useConversationDraft} from "../core/use-conversation-draft";
+import {usePageState} from '../core/page-memory';
 import {BriefActions,type BriefFact} from '../features/home/brief-actions';
 import {agentAlignment} from '../core/agent-alignment.mjs';
 import {MemoryGovernance,InactiveMemories} from '../features/home/memory-governance';
@@ -6253,11 +6254,12 @@ export function CommunityPage({
   const [playerCollapsed, setPlayerCollapsed] = useState(false);
   const [liked, setLiked] = useState<string[]>([]);
   const [comment, setComment] = useState("");
-  const [communityKind,setCommunityKind]=useState('all');
+  const [communityKind,setCommunityKind]=usePageState('community:kind','all');
   const followed=(author:string)=>Boolean(runtime?.snapshot?.objects.interaction.some(i=>i.data.kind==='follow_author'&&i.data.object_id===author&&i.data.active));
   const visibleWorks=runtime?.snapshot?.objects.release.filter(r=>r.visibility==='public'&&r.data.author_type==='human'&&r.data.status==='published'&&r.data.is_current&&(communityKind!=='following'||followed(r.owner))&&!runtime.snapshot?.objects.interaction.some(i=>i.data.object_id===r.id&&i.data.kind==='hide'&&i.data.active))||[];
   const shownWorks=runtime&&['all','work','following'].includes(communityKind)?visibleWorks:[];
   const visiblePosts:SocialPost[]=runtime?(runtime.snapshot?.objects.post||[]).filter(item=>item.visibility==='public'&&item.data.author_type==='human'&&['published','recruiting','closed'].includes(String(item.data.status))&&!state.hiddenPostIds.includes(item.id)&&(communityKind!=='following'||followed(item.owner))&&(['all','following'].includes(communityKind)||(communityKind==='project'?Boolean(item.data.project_id):communityKind==='post'?!item.data.project_id:false))).map(item=>({id:item.id,name:entityText(item,'author_name')||entityText(item,'title'),date:new Date(item.created).toLocaleDateString('zh-CN'),text:entityText(item,'content'),likes:Number(item.data.likes||0),comments:Number(item.data.comments||0),avatar:'lin'})):communityPosts;
+  const communityDates = new Map([...(runtime?.snapshot?.objects.post || []), ...shownWorks].map(item => [item.id, item.created]));
   const toggleSaved = (id: string) => {
     if(runtime){void runtime.command('post.interact',{id,kind:'save'}).catch(()=>{});return;}
     const saved = state.savedPostIds.includes(id);
@@ -6321,7 +6323,7 @@ export function CommunityPage({
       </>}
       {runtime&&<nav aria-label="社区内容分类" className="community-kind-filters">{[['all','全部'],['post','动态'],['work','作品'],['project','共创'],['following','关注']].map(([v,n])=><button key={v} aria-pressed={communityKind===v} onClick={()=>setCommunityKind(v)}>{n}</button>)}</nav>}
       <section className="v277-social-feed">
-        {[...visiblePosts,...shownWorks.map(r=>({id:r.id,name:entityText(r,'author_name'),date:new Date(r.created).toLocaleDateString('zh-CN'),text:entityText(r,'content'),likes:0,comments:0,avatar:'lin'} as SocialPost))].sort((a,b)=>{if(!runtime)return 0;const all=[...runtime.snapshot!.objects.post,...shownWorks];return (all.find(x=>x.id===b.id)?.created||'').localeCompare(all.find(x=>x.id===a.id)?.created||'')}).map((post) => {
+        {[...visiblePosts,...shownWorks.map(r=>({id:r.id,name:entityText(r,'author_name'),date:new Date(r.created).toLocaleDateString('zh-CN'),text:entityText(r,'content'),likes:0,comments:0,avatar:'lin'} as SocialPost))].sort((a,b)=>runtime?(communityDates.get(b.id)||'').localeCompare(communityDates.get(a.id)||''):0).map((post) => {
           const work=visibleWorks.find(r=>r.id===post.id);if(work)return <CommunityWorkCard key={work.id} release={work} go={go}/>;
           const originalPost=runtime?.snapshot?.objects.post.find(p=>p.id===post.id);
           const isLiked = runtime?runtime.snapshot?.objects.interaction.some(item=>item.data.object_id===post.id&&item.data.kind==='like'&&item.data.active):liked.includes(post.id);

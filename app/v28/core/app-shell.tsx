@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { PageMemoryProvider } from './page-memory';
 import { RuntimeProvider, useRuntime, projectState, entityRef } from './runtime-context';
 import { ConnectedProject, AssetEditor, InboxPage } from './runtime-panels';
 import {OnboardingConversation} from '../features/home/onboarding-conversation';
@@ -92,6 +93,17 @@ export function V277App() {
   const [ready, setReady] = useState(false);
   const [screen, setScreen] = useState<Screen>({ name: "home" });
   const [history, setHistory] = useState<Screen[]>([]);
+  const root = useRef<HTMLDivElement>(null);
+  const scrollPositions = useRef(new Map<string, number>());
+  useLayoutEffect(() => { scrollPositions.current.clear(); }, [runtime?.snapshot?.user.id]);
+  useLayoutEffect(() => {
+    const page = root.current?.querySelector<HTMLElement>(':scope > .v277-page');
+    if (page) page.scrollTop = scrollPositions.current.get(JSON.stringify(screen)) || 0;
+  }, [screen, ready, state.phase]);
+  const rememberScroll = () => {
+    const page = root.current?.querySelector<HTMLElement>(':scope > .v277-page');
+    if (page) scrollPositions.current.set(JSON.stringify(screen), page.scrollTop);
+  };
   const [toast, setToast] = useState("");
   const openedLink=useRef(false);
   useEffect(()=>{
@@ -226,10 +238,14 @@ export function V277App() {
   }, [toast]);
 
   const go = (next: Screen) => {
-    setHistory((items) => screen.name==='create-tool'&&next.name==='tool-detail'?items:[...items.slice(-8), screen]);
+    rememberScroll();
+    const savedCreation = (screen.name==='create-tool'&&next.name==='tool-detail') ||
+      (screen.name==='community-post'&&screen.id==='new'&&next.name==='community-post'&&next.id!=='new');
+    setHistory((items) => savedCreation ? items : [...items.slice(-8), screen]);
     setScreen(next);
   };
   const back = () => {
+    rememberScroll();
     const previous = history[history.length - 1] || { name: "home" as const };
     setHistory((items) => items.slice(0, -1));
     setScreen(previous);
@@ -638,7 +654,7 @@ export function V277App() {
   return (
     <DeviceFrame label="Elfred V28 产品原型" className="v277-device v279-device v280-device">
       <StatusBar />
-      <div className="v277-root">{content}</div>
+      <PageMemoryProvider key={runtime?.snapshot?.user.id || 'local'}><div className="v277-root" ref={root}>{content}</div></PageMemoryProvider>
       {state.phase === "ready" && !fullScreen && (
         <BottomNav
           screen={screen}

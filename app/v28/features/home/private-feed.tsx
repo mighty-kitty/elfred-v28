@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect,useState } from "react";
+import { useEffect,useMemo,useRef,useState } from "react";
+import {usePageState} from '../../core/page-memory';
 import { MoreHorizontal, SlidersHorizontal } from "lucide-react";
 import { agentList } from "../../../v27-7-data";
 import type { V277AgentId } from "../../../v27-7-state";
@@ -8,8 +9,8 @@ import { useRuntime,entityRef } from "../../core/runtime-context";
 import { localDay } from "../../core/local-day.mjs";
 import { Action } from "../../core/runtime-panels";
 import type { Screen } from "../../core/screen";
-import type { Entity } from "../live/types";
 import { text } from "../live/types";
+import { indexPrivateFeed } from "./feed-ranking.mjs";
 import { FeedDetails } from "./feed-details";
 import { InboxSave } from "./inbox-save";
 import { Observations } from "./observations";
@@ -38,46 +39,29 @@ export function PrivateFeed({ go, onDrag }: { go: (screen: Screen) => void; onDr
   const snapshot = runtime.snapshot!;
   const publishPreferences = snapshot.objects.settings[0]?.data.agent_publish as Record<string, { format?: string; format_version?: number }> | undefined;
   const topicSettings = (snapshot.objects.settings[0]?.data.feed_topics || {}) as Record<string, {mode?: string; alias?: string; removed?: boolean}>;
-  const [order, setOrder] = useState<"recommended" | "latest">("recommended");
-  const [system, setSystem] = useState("");
-  const [topic, setTopic] = useState("");
-  const [showHidden, setShowHidden] = useState(false);
-  const [filtersOpen, setFiltersOpen] = useState(false);
+  const [order, setOrder] = usePageState<"recommended" | "latest">("feed:order", "recommended");
+  const [system, setSystem] = usePageState("feed:system", "");
+  const [topic, setTopic] = usePageState("feed:topic", "");
+  const [showHidden, setShowHidden] = usePageState("feed:hidden", false);
+  const [filtersOpen, setFiltersOpen] = usePageState("feed:filters", false);
   const [menuId, setMenuId] = useState<string | null>(null);
   const [detailsId, setDetailsId] = useState<string | null>(null);
-  const [pageSize,setPageSize]=useState(30);
+  const [pageSize,setPageSize]=usePageState("feed:pageSize", 30);
   const [mergeInto, setMergeInto] = useState("");
-  const canonicalTopic = (value: string) => topicSettings[value]?.alias || value;
-  const topicOptions = [...new Set(snapshot.objects.feed.map(item => canonicalTopic(text(item, "topic"))).filter(Boolean))].filter(value => !topicSettings[value]?.removed);
+  const today = localDay();
+  const index = useMemo(() => indexPrivateFeed(snapshot, today), [snapshot, today]);
+  const { isActive: active, topicOptions } = index;
   const managedTopic = topic || topicOptions[0] || "";
   const initialDiscovery=snapshot.objects.observation?.find(item=>item.data.auto_suggested===true);
 
-  const active = (id: string, kind: string) => snapshot.objects.interaction.some(item =>
-    item.data.object_id === id && item.data.kind === kind && item.data.active,
-  );
-  const score = (item: Entity) => {
-    const age = (Date.parse(snapshot.server_time) - Date.parse(item.created)) / 86400000;
-    const task = snapshot.objects.task.find(candidate => candidate.id === item.data.task_id);
-    const affinity = snapshot.objects.feed.filter(candidate =>
-      canonicalTopic(text(candidate,"topic")) === canonicalTopic(text(item,"topic")) && active(candidate.id, "like"),
-    ).length;
-    const reduced = snapshot.objects.feed.some(candidate =>
-      canonicalTopic(text(candidate,"topic")) === canonicalTopic(text(item,"topic")) &&
-      candidate.data.system === item.data.system && active(candidate.id, "less"),
-    );
-    return (task?.data.focus_date === localDay() ? 3 : 0) +
-      (item.data.artifact_id ? 2 : 0) + Math.min(affinity, 2) - age / 7 - (reduced ? 8 : 0) +
-      (topicSettings[canonicalTopic(text(item,"topic"))]?.mode === 'follow' ? 3 : 0) -
-      (topicSettings[canonicalTopic(text(item,"topic"))]?.mode === 'mute' ? 20 : 0);
-  };
-  const items = snapshot.objects.feed.filter(item =>
+  const items = useMemo(() => index[order].filter(item =>
     (showHidden || !active(item.id, "hide")) &&
     (!system || item.data.system === system) &&
-    (!topic || canonicalTopic(text(item,"topic")) === topic),
-  ).sort((a, b) => order === "latest"
-    ? b.created.localeCompare(a.created)
-    : score(b) - score(a) || b.created.localeCompare(a.created));
-  useEffect(()=>setPageSize(30),[order,system,topic,showHidden]);
+    (!topic || index.topics.get(item.id) === topic),
+  ), [index, order, showHidden, system, topic, active]);
+  const filterKey = JSON.stringify([order,system,topic,showHidden]);
+  const previousFilter = useRef(filterKey);
+  useEffect(()=>{if(previousFilter.current!==filterKey){previousFilter.current=filterKey;setPageSize(30)}},[filterKey,setPageSize]);
 
   return <section className={styles.feed} aria-label="Agent 朋友圈">
     <header className={styles.sectionHeader}>
@@ -106,7 +90,7 @@ export function PrivateFeed({ go, onDrag }: { go: (screen: Screen) => void; onDr
     {initialDiscovery && ['draft','paused','blocked'].includes(text(initialDiscovery,'status')) && items.length>0 &&
       <div className={styles.discoveryPrompt}><span>按初始选择发现公开资讯</span><Action run={()=>runtime.command('observation.start',{...entityRef(initialDiscovery),confirm:true})}>开始发现</Action></div>}
     <div className={styles.list}>
-      {!items.length && <div className={styles.empty}>{system||topic||showHidden?<><p>当前筛选下没有动态。</p><button type="button" onClick={()=>{setSystem('');setTopic('');setShowHidden(false)}}>重置筛选</button></>:initialDiscovery?<><b>探索 Agent 已根据你的初始选择准备关注方向</b><p>{text(initialDiscovery,'goal')}</p>{['draft','paused','blocked'].includes(text(initialDiscovery,'status'))?<Action run={()=>runtime.command('observation.start',{...entityRef(initialDiscovery),confirm:true})}>开始从公开资讯自动发现</Action>:<p>{initialDiscovery.data.status==='active'?'正在从匹配方向的公开资讯寻找真实来源；找到后会在这里显示。':'当前自动发现已结束；可在筛选设置中重新设定关注。'}</p>}</>:<p>这里还没有动态。Agent 的真实发现或你验收的成果，会出现在这里。</p>}</div>}
+      {!items.length && <div className={styles.empty}>{system||topic||showHidden?<><p>当前筛选下没有动态。</p><button type="button" onClick={()=>{setSystem('');setTopic('');setShowHidden(false)}}>重置筛选</button></>:initialDiscovery?<><b>关注方向已就绪</b><p>{initialDiscovery.data.status==='active'?'正在寻找相关公开资讯，找到后会出现在这里。':'还没有新动态，可在筛选中调整关注方向。'}</p>{['draft','paused','blocked'].includes(text(initialDiscovery,'status'))&&<Action run={()=>runtime.command('observation.start',{...entityRef(initialDiscovery),confirm:true})}>开始发现</Action>}</>:<p>这里还没有动态。Agent 的真实发现或你验收的成果，会出现在这里。</p>}</div>}
       {items.slice(0,pageSize).map(item => {
         const agentId = (item.data.system === "advise" ? "advisor" : item.data.system) as V277AgentId;
         const agent = agentList.find(candidate => candidate.id === agentId);
@@ -151,7 +135,7 @@ export function PrivateFeed({ go, onDrag }: { go: (screen: Screen) => void; onDr
           {detailsId === item.id && <div className={styles.details}><FeedDetails item={item} go={go} /></div>}
         </article>;
       })}
-      {items.length>pageSize&&<button type="button" className={styles.filterButton} onClick={()=>setPageSize(count=>count+30)}>加载更多 · 已显示 {pageSize} / {items.length}</button>}
+      {items.length>pageSize&&<button type="button" className={styles.loadMore} onClick={()=>setPageSize(count=>count+30)}>加载更多 · 已显示 {pageSize} / {items.length}</button>}
     </div>
   </section>;
 }

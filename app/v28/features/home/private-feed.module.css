@@ -147,6 +147,30 @@
   text-align: center;
   font-size: 14px;
 }
+.empty p {
+  margin: 8px 0;
+  line-height: 1.6;
+}
+.empty button {
+  margin-top: 8px;
+  padding: 8px 16px;
+  border: 1px solid #e6eaee;
+  border-radius: 20px;
+  background: #f6f8fa;
+  color: #435767;
+}
+.loadMore {
+  width: 100%;
+  min-height: 44px;
+  margin-top: 12px;
+  padding: 12px;
+  border: 0;
+  border-radius: 12px;
+  background: #f5f7f9;
+  color: #5c6875;
+  font-size: 13px;
+  cursor: pointer;
+}
 
 .post {
   padding: 18px 0 17px;

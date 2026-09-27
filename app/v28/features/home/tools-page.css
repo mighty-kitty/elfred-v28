@@ -1,0 +1,39 @@
+.elfred-tools-connected .v281-recent-tools > .v277-empty {
+  min-height: 0;
+  padding: 20px 12px;
+}
+.elfred-tools-connected .v281-recent-card {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  height: auto !important;
+  min-height: 110px;
+}
+.elfred-tools-connected .v281-recent-card > span {
+  position: static;
+  flex-shrink: 0;
+}
+.elfred-tools-connected .v281-recent-card > div {
+  position: static !important;
+  flex: 1;
+  min-width: 0;
+}
+.elfred-tools-connected .v281-recent-card h3 {
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+.elfred-tools-connected .v281-recent-card p {
+  width: auto;
+  white-space: normal;
+}
+.elfred-tools-connected .elfred-tool-detail {
+  scroll-margin-top: 12px;
+  overflow-wrap: anywhere;
+}
+.elfred-tools-connected .v281-all-tools > div > button h3 {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
+  overflow-wrap: anywhere;
+}

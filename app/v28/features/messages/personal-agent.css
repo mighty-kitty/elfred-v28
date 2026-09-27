@@ -21,7 +21,7 @@
 .v280-device .elfred-mention-composer>textarea:focus-visible{outline:none!important;box-shadow:none!important}
 
 .v280-device .v279-human-composer{height:var(--elfred-composer-height,64px);align-items:end}
-.v280-device .v279-human-composer>textarea{box-sizing:border-box;display:block;width:100%;min-width:0;height:48px;min-height:48px;max-height:144px;resize:none;border:0;background:transparent;color:inherit;font:inherit;font-size:14px;line-height:24px;padding:12px 4px;outline:none;box-shadow:none;white-space:pre-wrap;overflow-wrap:anywhere}
+.v280-device .v279-human-composer>textarea{box-sizing:border-box;display:block;width:100%;min-width:0;height:48px;min-height:48px;max-height:144px;resize:none;border:0;background:transparent;color:inherit;font:inherit;font-size:16px;line-height:24px;padding:12px 4px;outline:none;box-shadow:none;white-space:pre-wrap;overflow-wrap:anywhere}
 .v280-device .v279-human-composer>textarea:focus-visible{outline:none!important}
 .v280-device .v279-human-composer>button{align-self:end;margin-bottom:4px}
 .v280-device .v279-human-chat-stream{padding-bottom:calc(var(--elfred-composer-height,64px) + 32px)}

@@ -23,7 +23,6 @@ import {InboxSave} from './inbox-save';
 import {useRuntime} from "../../core/runtime-context";
 import {briefIndex as indexForTimezone,dailyTasks,localDay} from '../../core/local-day.mjs';
 import {agentAlignment} from '../../core/agent-alignment.mjs';
-import type {V277AgentId} from "../../../v27-7-state";
 import {
   AgentMomentCard,
   BriefSettingsSheet,
@@ -70,7 +69,7 @@ export function HomePage({
   const eventSeen=useRef('');
   const pendingToday=todayTasks.filter(task=>task.data.status!=='completed').length;
   const completedToday=todayTasks.filter(task=>task.data.status==='completed').length;
-  const moments=runtime?(runtime.snapshot?.objects.feed||[]).filter(item=>!state.hiddenPostIds.includes(item.id)).map(item=>({id:item.id,agent:(item.data.system==="advise"?"advisor":item.data.system) as V277AgentId,variant:"brief" as const,type:"观点动态" as const,period:(localDay(item.created,timezone)===today?"今天":"本月") as "今天"|"本月",time:new Date(item.created).toLocaleDateString("zh-CN"),title:String(item.data.title),summary:String(item.data.summary),target:{name:"task" as const,id:String(item.data.task_id)}})):agentMoments;
+  const moments=runtime?[]:agentMoments;
   const [briefIndex, setBriefIndex] = useState(() =>
     getCurrentBriefIndex(readBriefPreferences()),
   );

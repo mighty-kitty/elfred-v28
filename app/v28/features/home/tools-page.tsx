@@ -1,5 +1,5 @@
 "use client";
-import {useState} from 'react';
+import {useEffect,useRef,useState} from 'react';
 import {ArrowLeft,ChevronRight,Plus,Pin,Play,Layers3} from 'lucide-react';
 import {useRuntime,entityRef} from '../../core/runtime-context';
 import {Action,Field} from '../../core/runtime-panels';
@@ -8,11 +8,15 @@ import type {Screen} from '../../core/screen';
 import {ParameterEditor,ToolRunInputs,ToolGovernance,type ToolParameter} from './tool-inputs';
 import {ToolWorkflow,type ToolStep} from './tool-workflow';
 import {BuiltinCapabilities} from './builtin-capabilities';
+import './tools-page.css';
 type Go=(screen:Screen)=>void;
 export function ToolsPage({onBack,go,initialId}:{onBack:()=>void;go:Go;initialId?:string}){
  const runtime=useRuntime()!,snapshot=runtime.snapshot!;
  const [tab,setTab]=useState(text(snapshot.objects.skill.find(item=>item.id===initialId),'kind')||'Skill'),[order,setOrder]=useState('recent'),[archived,setArchived]=useState(false),[open,setOpen]=useState<Entity|null>(snapshot.objects.skill.find(item=>item.id===initialId)||null),[goal,setGoal]=useState(''),[preview,setPreview]=useState('');
  const [query,setQuery]=useState('');
+ const detail=useRef<HTMLElement>(null);
+ const openedToolId=open?.id;
+ useEffect(()=>{if(openedToolId)detail.current?.scrollIntoView({block:'start',behavior:'smooth'})},[openedToolId]);
  const pinned=(id:string)=>snapshot.objects.shortcut.some(item=>item.data.skill_id===id&&item.data.pinned);
  const tools=snapshot.objects.skill.filter(item=>(text(item,'title')+' '+text(item,'instructions')).toLowerCase().includes(query.toLowerCase())).filter(item=>(text(item,'kind')||'Skill')===tab&&(archived?item.data.status==='archived':item.data.status!=='archived')).slice().sort((a,b)=>Number(pinned(b.id))-Number(pinned(a.id))||(order==='frequent'?Number(b.data.uses||0)-Number(a.data.uses||0):text(b,'last_used_at').localeCompare(text(a,'last_used_at'))));
  const recent=tools.filter(item=>item.data.last_used_at).sort((a,b)=>text(b,'last_used_at').localeCompare(text(a,'last_used_at')));
@@ -23,7 +27,7 @@ export function ToolsPage({onBack,go,initialId}:{onBack:()=>void;go:Go;initialId
  {tab==='Skill'&&!archived&&<BuiltinCapabilities go={go}/>}
  <section className="v281-recent-tools"><header><h2>最近使用</h2><button onClick={()=>setOrder(order==='recent'?'frequent':'recent')}>{order==='recent'?'按常用排序':'按最近排序'}<ChevronRight size={18}/></button></header>{recent.length?recent.map(item=><button key={item.id} className="v281-recent-card" onClick={()=>{setOpen(item);setGoal('')}}><span><Layers3 size={28}/></span><div><h3>{text(item,'title')}</h3><p>{text(item,'instructions').slice(0,70)}</p><small>{new Date(text(item,'last_used_at')).toLocaleString('zh-CN')}</small></div></button>):<p className="v277-empty">使用后会自动出现在这里。</p>}</section>
  <section className="v281-all-tools"><h2>{archived?'已归档':'全部工具'}</h2><button className="v277-secondary" onClick={()=>setArchived(!archived)}>{archived?'查看有效工具':'查看归档'}</button><div>{tools.map(item=><button key={item.id} onClick={()=>{setOpen(item);setGoal('')}}><span>{pinned(item.id)?<Pin size={27}/>:<Layers3 size={27}/>}</span><h3>{text(item,'title')}</h3><p>{text(item,'status')==='active'?'已启用':text(item,'status')==='archived'?'已归档':'草稿'} · 使用 {Number(item.data.uses||0)} 次{item.data.activity==='idle'?' · 闲置':''}{item.data.mastery==='frequent'?' · 常用':item.data.mastery==='proficient'?' · 熟练':''}</p><ChevronRight size={20}/></button>)}</div>{!tools.length&&<button className="v277-secondary" onClick={()=>go({name:'create-tool'})}>创建第一个{tab}</button>}</section>
- {open&&(()=>{const item=snapshot.objects.skill.find(item=>item.id===open.id)!;return <section className="v277-edit-card"><h3>{text(item,'title')}</h3><p>{text(item,'instructions')}</p><p>版本 {String(item.data.revision||1)} · {Number(item.data.uses||0)} 次使用</p><ToolRunInputs key={item.id+':'+item.data.version_id} tool={item} goal={goal} setGoal={setGoal} go={go} onPreview={setPreview}/><ToolGovernance key={item.id+':'+item.version} tool={item}/><button className="v277-secondary" onClick={()=>go({name:'create-tool',id:item.id})}>编辑新版本</button><Action run={()=>runtime.command('shortcut.pin',{skill_id:item.id})}>{pinned(item.id)?'取消固定':'固定到顶部'}</Action><Action run={()=>runtime.command(item.data.status==='active'?'tool.archive':'tool.activate',entityRef(item))}>{item.data.status==='active'?'归档':'启用'}</Action><details><summary>版本与使用记录</summary>{snapshot.objects.skill_version.filter(version=>version.data.tool_id===item.id).map(version=><p key={version.id}>版本 {String(version.data.revision)} · {new Date(version.created).toLocaleString('zh-CN')} · {text(version,'instructions').slice(0,100)}</p>)}</details></section>})()}
+ {open&&(()=>{const item=snapshot.objects.skill.find(item=>item.id===open.id);if(!item)return null;return <section ref={detail} className="v277-edit-card elfred-tool-detail" aria-label="工具详情"><h3>{text(item,'title')}</h3><p>{text(item,'instructions')}</p><p>版本 {String(item.data.revision||1)} · {Number(item.data.uses||0)} 次使用</p><ToolRunInputs key={item.id+':'+item.data.version_id} tool={item} goal={goal} setGoal={setGoal} go={go} onPreview={setPreview}/><ToolGovernance key={item.id+':'+item.version} tool={item}/><button className="v277-secondary" onClick={()=>go({name:'create-tool',id:item.id})}>编辑新版本</button><Action run={()=>runtime.command('shortcut.pin',{skill_id:item.id})}>{pinned(item.id)?'取消固定':'固定到顶部'}</Action><Action run={()=>runtime.command(item.data.status==='active'?'tool.archive':'tool.activate',entityRef(item))}>{item.data.status==='active'?'归档':'启用'}</Action><details><summary>版本与使用记录</summary>{snapshot.objects.skill_version.filter(version=>version.data.tool_id===item.id).map(version=><p key={version.id}>版本 {String(version.data.revision)} · {new Date(version.created).toLocaleString('zh-CN')} · {text(version,'instructions').slice(0,100)}</p>)}</details></section>})()}
  {preview&&<section className="v277-edit-card"><h3>Mini App</h3><iframe title="Mini App 预览" sandbox="allow-scripts" src={`/api/elfred/preview/${preview}`} style={{width:'100%',height:400,border:0}}/><button onClick={()=>setPreview('')}>关闭预览</button></section>}
  </main>;
 }

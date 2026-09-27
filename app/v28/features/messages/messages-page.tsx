@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
+import {usePageState} from '../../core/page-memory';
 import { Plus, Search, UserPlus } from "lucide-react";
 import type { V277State } from "../../../v27-7-state";
 import type { Screen } from "../../core/screen";
@@ -14,9 +15,19 @@ export function MessagesPage({
   go: (screen: Screen) => void;
 }) {
   const runtime=useRuntime();
-  const [filter, setFilter] = useState("全部");
+  const [filter, setFilter] = usePageState("messages:filter", "全部");
   const [searching, setSearching] = useState(false);
-  const contacts = runtime?(runtime.snapshot?.objects.conversation||[]).filter(item=>item.data.kind!=='agent').slice().sort((a,b)=>b.updated.localeCompare(a.updated)).map(item=>({id:item.id,name:String(item.data.title),text:String(runtime.snapshot?.objects.message.filter(message=>message.space===item.id).sort((a,b)=>Number(b.data.seq)-Number(a.data.seq))[0]?.data.text||"暂无消息"),time:new Date(item.updated).toLocaleTimeString("zh-CN",{hour:"2-digit",minute:"2-digit"}),badge:item.unread||0,kind:item.data.kind==="group"?"群聊":"私聊",avatar:item.data.kind==="group"?"avatar-group":"avatar-lin"})):[
+  const latestMessages = useMemo(() => {
+    const latest = new Map<string, {seq: number; text: string}>();
+    for (const message of runtime?.snapshot?.objects.message || []) {
+      const space = message.space;
+      if (!space) continue;
+      const seq = Number(message.data.seq);
+      if (!latest.has(space) || seq > latest.get(space)!.seq) latest.set(space, {seq, text: String(message.data.text || '')});
+    }
+    return latest;
+  }, [runtime?.snapshot?.objects.message]);
+  const contacts = runtime?(runtime.snapshot?.objects.conversation||[]).filter(item=>item.data.kind!=='agent').slice().sort((a,b)=>b.updated.localeCompare(a.updated)).map(item=>({id:item.id,name:String(item.data.title),text:latestMessages.get(item.id)?.text||"暂无消息",time:new Date(item.updated).toLocaleTimeString("zh-CN",{hour:"2-digit",minute:"2-digit"}),badge:item.unread||0,kind:item.data.kind==="group"?"群聊":"私聊",avatar:item.data.kind==="group"?"avatar-group":"avatar-lin"})):[
     {
       id: "group-danbasa",
       name: "丹巴萨餐厅",
@@ -138,7 +149,7 @@ export function MessagesPage({
           ))}
         </nav>
       </div>
-      <section className="v277-conversations v277-reference-conversations">{runtime&&visible.length===0&&<div className="v277-empty"><p>尚无真人会话。添加好友后由对方确认。</p></div>}
+      <section className="v277-conversations v277-reference-conversations">{runtime&&visible.length===0&&<div className="v277-empty"><p>{filter==='群聊'?'暂无群聊。添加好友后可发起群聊。':filter==='私聊'?'暂无私聊。添加好友后由对方确认。':'尚无真人会话。添加好友后由对方确认。'}</p></div>}
         {visible.map((item) => (
           <button
             type="button"

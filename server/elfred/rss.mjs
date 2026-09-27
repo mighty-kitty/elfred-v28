@@ -11,7 +11,7 @@ export function validatedFeedUrl(value){
   return url.href;
 }
 
-function publicIPv4(address){
+export function publicIPv4(address){
   if(isIP(address)!==4)return false;
   const [a,b,c]=address.split('.').map(Number);
   if(a===0||a===10||a===127||a>=224||a===169&&b===254||a===172&&b>=16&&b<=31||a===100&&b>=64&&b<=127)return false;
@@ -47,13 +47,13 @@ export function parseRss(xml,sourceUrl){
   }).filter(Boolean);
 }
 
-export async function readRss(sourceUrl,redirects=0){
+export async function readRss(sourceUrl,redirects=0,signal){
   const url=new URL(validatedFeedUrl(sourceUrl));
   const records=await lookup(url.hostname,{family:4,all:true});
   const address=records.find(record=>publicIPv4(record.address))?.address;
   if(!address)fail('FEED_UNAVAILABLE','订阅源没有可用的公开 IPv4 地址');
   const result=await new Promise((resolve,reject)=>{
-    const request=https.request(url,{method:'GET',timeout:10000,autoSelectFamily:false,headers:{Accept:'application/rss+xml, application/atom+xml, application/xml, text/xml','User-Agent':'ElfredRSS/1.0'},lookup:(_host,options,callback)=>options?.all?callback(null,[{address,family:4}]):callback(null,address,4)},response=>{
+    const request=https.request(url,{method:'GET',signal,timeout:10000,autoSelectFamily:false,headers:{Accept:'application/rss+xml, application/atom+xml, application/xml, text/xml','User-Agent':'ElfredRSS/1.0'},lookup:(_host,options,callback)=>options?.all?callback(null,[{address,family:4}]):callback(null,address,4)},response=>{
       if([301,302,307,308].includes(response.statusCode)&&response.headers.location){response.resume();resolve({redirect:new URL(response.headers.location,url).href});return;}
       if(response.statusCode!==200){response.resume();reject(new Error('HTTP '+response.statusCode));return;}
       if(response.headers['content-encoding']&&response.headers['content-encoding']!=='identity'){response.resume();reject(new Error('Unsupported encoding'));return;}
@@ -67,7 +67,7 @@ export async function readRss(sourceUrl,redirects=0){
   });
   if(result.redirect){
     if(redirects>=2)fail('FEED_UNAVAILABLE','RSS 重定向次数过多');
-    return readRss(validatedFeedUrl(result.redirect),redirects+1);
+    return readRss(validatedFeedUrl(result.redirect),redirects+1,signal);
   }
   return parseRss(result.xml,url.href);
 }

@@ -1,6 +1,10 @@
 # 上游服务
 
-主应用（Next + Node 服务）不依赖这里的任何一个进程就能跑：这三个是可选的独立服务，配了地址就在设置页显示已连接，没配就如实显示尚未配置。源码在本目录下，各自都带自己的说明与测试。
+主应用（Next + Node 服务）不依赖这里的任何一个进程就能跑。地址可达与业务接通分别验证；健康检查不能代替同步或执行回执。源码在本目录下，各自都带自己的说明与测试。
+
+当前 Elfred 部署使用 `emos-memory/src/memory_system/api/elfred_bridge.py` 作为受限适配入口，启动时由 `scripts/emos-process.mjs` 管理。它使用 EMOS 原生 SQLite 存储，只开放带服务端令牌的 `/v1/memories/:id` 同步契约，保留应用的用户、分配、阶段和证据规则。原生 `/memory/*` 接口不在这个部署入口开放；不宣称已启用其自动抽取、反思或原生召回。遗忘回执也持久保存，旧写入不能恢复已删除内容。
+
+配置：`ELFRED_MEMORY_HUB_URL=http://127.0.0.1:8200`、`ELFRED_MEMORY_HUB_TOKEN`（至少 32 位服务端随机令牌）、`ELFRED_MEMORY_HUB_AUTOSTART=true`、`ELFRED_PYTHON`（Python 3.11+）。数据库固定在应用数据目录的 `emos-memory.sqlite`，不随重启换文件；令牌只放私有环境配置。Skill Foundry 与 PA 网关尚未参与本应用执行，不能只凭健康检查称为接通。
 
 | 目录 | 是什么 | 默认地址 | 健康检查 | 启动 |
 | --- | --- | --- | --- | --- |

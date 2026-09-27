@@ -4,6 +4,7 @@ version = "0.1.0"
 dependencies = [
     "fastapi",
     "uvicorn",
+    "python-multipart",
     # runtime config from .env (secrets never live in the repo)
     "python-dotenv",
     # WP-02: database migrations

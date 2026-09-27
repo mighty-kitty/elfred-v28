@@ -2,12 +2,14 @@ import { fail, hash, id, DomainError } from './store.mjs';
 import {EmbeddingProvider} from './embedding-provider.mjs';
 import {JevProvider} from './jev-provider.mjs';
 import {ExternalProvider} from './external-provider.mjs';
+import {PublicWeb} from './public-web.mjs';
 
 // Server-only OpenAI-compatible chat-completions adapter. No credentials enter returned status/errors.
 export class ModelProvider {
   constructor(config=process.env, fetcher=fetch) { this.config={...config,ELFRED_MODEL_BASE_URL:config.ELFRED_MODEL_BASE_URL||'https://api.openai.com/v1',ELFRED_MODEL_NAME:config.ELFRED_MODEL_NAME||'gpt-4.1-mini',ELFRED_AUDIO_MODEL:config.ELFRED_AUDIO_MODEL||'gpt-4o-mini-transcribe',ELFRED_MODEL_API_KEY:config.ELFRED_MODEL_API_KEY||config.OPENAI_API_KEY}; this.fetcher=fetcher; this.jev=new JevProvider(config,fetcher); this.embedding=new EmbeddingProvider(config,fetcher); this.external=new ExternalProvider(config,fetcher); }
+  get publicWeb(){return this._publicWeb||(this._publicWeb=new PublicWeb(this.config));}
   status() {
-    return {web_search:this.external.status().configured?'configured':'not_configured',image_generate:this.external.status().configured?'configured':'not_configured',provider:'chat-completions-compatible',configured:Boolean(this.config.ELFRED_MODEL_BASE_URL && this.config.ELFRED_MODEL_NAME && this.config.ELFRED_MODEL_API_KEY),model:this.config.ELFRED_MODEL_NAME||null,embedding:this.embedding.status().configured?'configured':'not_configured',embedding_model:this.embedding.model,judge:'rule-baseline',jev:this.jev.status().configured?'configured':'not_configured'};
+    return {public_web:this.publicWeb.enabled?'available':'disabled',web_search:this.external.status().configured?'configured':'not_configured',image_generate:this.external.status().configured?'configured':'not_configured',provider:'chat-completions-compatible',configured:Boolean(this.config.ELFRED_MODEL_BASE_URL && this.config.ELFRED_MODEL_NAME && this.config.ELFRED_MODEL_API_KEY),model:this.config.ELFRED_MODEL_NAME||null,embedding:this.embedding.status().configured?'configured':'not_configured',embedding_model:this.embedding.model,judge:'rule-baseline',jev:this.jev.status().configured?'configured':'not_configured'};
   }
   research(input){return this.external.research(input);}
   allowedModels(){return this.modelCatalog?.items?.map(item=>item.id)||[this.config.ELFRED_MODEL_NAME];}

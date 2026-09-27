@@ -1,4 +1,5 @@
 "use client";
+import {AccountForm} from '../core/account-form';
 import {displayTitle,displayError} from "../core/display-labels";
 import {MarkdownContent} from '../core/markdown-content';
 import {PlayerRunLog} from '../features/home/player-run-log';
@@ -1933,11 +1934,11 @@ export function LoginPage({
         }}
       >
         <label>
-          <span>手机号或邮箱</span>
+          <span>账号（手机号、邮箱或用户名）</span>
           <input
             value={identifier}
             onChange={(event) => setIdentifier(event.target.value)}
-            placeholder="输入手机号或邮箱"
+            placeholder="输入手机号、邮箱或用户名"
             inputMode="email"
             autoComplete="username"
           />
@@ -1991,7 +1992,7 @@ export function VerifyPage({
     return () => window.clearInterval(timer);
   }, [cooldown]);
   const complete = code.every(Boolean);
-  if(runtime)return <main className="v280-onboarding-page"><AppHeader title={register?'创建本地账号':'登录本地账号'} onBack={()=>setState(current=>({...current,phase:'auth'}))}/><section className="v280-step-copy"><h1>确认这是你的账号</h1><p>{state.account.identifier}</p><p>本地模式使用密码。短信、微信与 Apple 登录尚未接通。</p></section><form className="v280-login-form" onSubmit={async event=>{event.preventDefault();setBusy(true);try{await runtime.login(state.account.identifier,password,register)}catch{}finally{setBusy(false)}}}><label><span>密码（10—128 位）</span><input type="password" aria-label="账号密码" minLength={10} maxLength={128} required value={password} autoComplete={register?'new-password':'current-password'} onChange={event=>setPassword(event.target.value)}/></label><button className="v277-primary" disabled={busy||password.length<10}>{busy?'正在处理…':register?'创建账号并继续':'登录并继续'}</button><button type="button" className="v277-secondary" onClick={()=>setRegister(!register)}>{register?'已有账号，去登录':'首次使用，创建账号'}</button></form></main>;
+  if(runtime)return <AccountForm identifier={state.account.identifier} onBack={()=>setState(current=>({...current,phase:'auth'}))}/>;
   return (
     <main className="v280-onboarding-page">
       <AppHeader

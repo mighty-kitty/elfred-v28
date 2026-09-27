@@ -6,6 +6,8 @@ export const TOOLS = Object.freeze({
   'search.local':{scope:'read',effect:'none',version:'1'},
   'context.read':{scope:'read',effect:'none',version:'1'},
   'document.read':{scope:'read',effect:'none',version:'1'},
+  'web.search':{scope:'read_public',effect:'none',version:'1'},
+  'web.read':{scope:'read_public',effect:'none',version:'1'},
   'text.compose':{scope:'model',effect:'generation',version:'1'},
 });
 export function string(value, name, max=10000, optional=false) {

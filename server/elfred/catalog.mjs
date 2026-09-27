@@ -24,7 +24,7 @@ export const DEFINITIONS=SYSTEMS.flatMap(system=>system.roles.map((name,index)=>
  const id=`${system.id}-${index}`,spec=specs[id];
  return {id,system:system.id,name,version:2,status:'registered',instance_policy:'load_on_demand',...spec,
   input_schema:{type:'object',required:['goal'],properties:{goal:{type:'string'},source_refs:{type:'array',description:'仅本次明确选择且有权读取的资料'},constraints:{type:'string'}}},
-  output_schema:{format:'markdown',sections:spec.outputs},tool_allowlist:['text.compose','context.read','document.read','search.local'],
+  output_schema:{format:'markdown',sections:spec.outputs},tool_allowlist:['text.compose','context.read','document.read','search.local','web.search','web.read'],
   context_scope:'selected_sources_only',review_policy:spec.review||'conditional',limitations:spec.limitations||null,
  };
 }));

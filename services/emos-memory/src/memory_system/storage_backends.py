@@ -30,7 +30,7 @@ def _empty_state_payload() -> dict[str, Any]:
 def _payload_has_state(payload: dict[str, Any]) -> bool:
     return any(
         bool(payload.get(key))
-        for key in ("episodic", "semantic", "dreams", "memory_blocks")
+        for key in ("episodic", "semantic", "dreams", "memory_blocks", "idempotency_records")
     )
 
 
@@ -206,7 +206,7 @@ class SQLiteStateStore(BaseStateStore):
                 ("idempotency_records",),
             ).fetchone()
 
-        if not memory_rows and not semantic_rows and not dream_rows and not memory_block_rows:
+        if not memory_rows and not semantic_rows and not dream_rows and not memory_block_rows and (idempotency_row is None or not json.loads(idempotency_row["meta_value_json"])):
             return default
 
         episodic = []

@@ -96,7 +96,7 @@ export class Service {
         for(const approval of s.visible(user,'approval').filter(item=>item.data.task_id===task.id&&item.data.status==='approved'))s.update(approval,{...approval.data,status:'revoked'},user);
         return {id:s.update(task,{...task.data,model_name:model,review_mode:reviewMode,status:'draft',execution_revision:Number(task.data.execution_revision||0)+1},user).id};
       }
-      for(const handler of [swarmCommand,agentChatCommand,observationCommand,externalToolCommand,feedCommand,reflectionCommand,semanticCommand,contextCommand,handoffCommand,projectWorkCommand,searchCommand,taskCommand,knowledgeCommand,socialCommand,communityCommand,improvementCommand,homeCommand,onboardingChoiceCommand,onboardingCommand,attachmentCommand,toolLibraryCommand,groupCommand]) {const result=handler(s,user,action,input);if(result) return result;}
+      for(const handler of [swarmCommand,agentChatCommand,observationCommand,externalToolCommand,feedCommand,reflectionCommand,semanticCommand,contextCommand,handoffCommand,projectWorkCommand,searchCommand,taskCommand,knowledgeCommand,socialCommand,communityCommand,improvementCommand,homeCommand,onboardingChoiceCommand,onboardingCommand,attachmentCommand,toolLibraryCommand,groupCommand]) {const result=handler(s,user,action,input,this.provider);if(result) return result;}
       const owned=(type)=>s.expect(s.owned(user,input.id,type),input.version);
       if(action==='onboarding.save' || action==='onboarding.complete') {
         const object=owned('onboarding');

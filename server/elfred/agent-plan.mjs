@@ -5,6 +5,8 @@ const responsibilities={explore:'调研和核验：区分资料事实、推断�
 export function roleFor(system,goal){return selectCapability(system,goal).capability;}
 export {reviewPolicy} from './review-policy.mjs';
 export function composePlan(task,capability=task.data.capability||roleFor(task.data.system,task.data.goal)){
+ if(task.data.local_lookup)return [{id:'lookup',phase:'context',tool:'search.local',depends:[]},{id:'work',phase:'work',tool:'text.compose',depends:['lookup']}];
+ if(task.data.web_lookup)return [{id:'lookup',phase:'context',tool:task.data.web_lookup.tool,depends:[]},{id:'work',phase:'work',tool:'text.compose',depends:['lookup']}];
  if(['web_search','image_generate'].includes(task.data.media_operation))return [{id:'work',phase:'work',tool:'text.compose',depends:[]}];
  if(task.data.media_operation==='embedding_search')return task.data.semantic_plan.batches;
  const review=reviewPolicy(task,capability);

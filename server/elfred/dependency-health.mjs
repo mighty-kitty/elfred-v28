@@ -7,7 +7,7 @@ const SERVICES = [
     key: 'emos',
     env: 'ELFRED_MEMORY_HUB_URL',
     path: '/health',
-    configured: ['独立记忆服务可达', '记忆中枢已连接'],
+    configured: ['独立记忆服务可达', '服务可达；记忆同步状态以同步回执为准'],
     missing: ['尚未配置独立记忆服务', '当前记忆保存在应用数据库，跨服务同步尚未配置'],
     down: ['独立记忆服务不可达', '应用内记忆仍可使用，未同步到记忆中枢'],
   },
@@ -15,7 +15,7 @@ const SERVICES = [
     key: 'skill_foundry',
     env: 'ELFRED_SKILL_FOUNDRY_URL',
     path: '/v1/elfred/health',
-    configured: ['独立能力服务可达', '能力卡组由 Skill Foundry 提供'],
+    configured: ['独立能力服务可达', '服务可达；当前仍使用应用内已保存的工具'],
     missing: ['尚未配置独立能力服务', '当前使用应用内已保存的工具与专业能力，独立能力服务尚未配置'],
     down: ['独立能力服务不可达', '当前仍使用应用内能力'],
   },
@@ -23,7 +23,7 @@ const SERVICES = [
     key: 'gateway',
     env: 'ELFRED_PA_GATEWAY_URL',
     path: '/health',
-    configured: ['独立规划网关可达', '规划与执行走 PA 网关'],
+    configured: ['独立规划网关可达', '服务可达；当前任务由应用内运行时执行'],
     missing: ['尚未配置独立规划网关', '当前任务由应用内运行时执行，独立规划网关尚未配置'],
     down: ['独立规划网关不可达', '当前任务由应用内运行时执行'],
   },
@@ -52,6 +52,8 @@ async function probe(value, path, fetcher) {
   if (!response.ok) throw new Error('unhealthy');
   const raw = await response.text();
   if (raw.length > 20000) throw new Error('oversized');
+  const result=JSON.parse(raw);
+  if(result.status==='degraded'||result.status==='error'||result.ok===false)throw new Error('degraded');
   return true;
 }
 

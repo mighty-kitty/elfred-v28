@@ -1,0 +1,9 @@
+.v283-agent-chat-composer button.elfred-chat-network,
+.v283-agent-chat-composer button.elfred-chat-tool { width:34px;height:40px;background:transparent;color:#8b939b;border-radius:14px; }
+.v283-agent-chat-composer button.selected {color:#2462cb;background:#edf3ff;}
+.v283-agent-chat-bubble .elfred-markdown {white-space:normal;font:inherit;line-height:inherit;}
+.v283-agent-chat-bubble .elfred-markdown p {margin:0 0 .65em;}
+.v283-agent-chat-bubble .elfred-markdown p:last-child {margin-bottom:0;}
+.elfred-chat-sources {margin-top:8px;font-size:12px;color:#697582;}
+.elfred-chat-sources a {display:block;margin-top:6px;color:#2462cb;overflow-wrap:anywhere;}
+.v283-agent-chat-bubble>small {display:block;margin-top:8px;color:#697582;font-size:12px;}

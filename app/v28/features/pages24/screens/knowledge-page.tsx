@@ -369,15 +369,19 @@ export function KnowledgePage({
         {cardsEmpty ? (
           /* 空态就放"一张和真卡同尺寸的引导卡"：它就是卡轨里的第一张卡，
              卡片长出来时位置不会跳；整张卡可点，不再在大虚线块里塞一个黑按钮。 */
-          /* 空态外观照图 2：圆图标 + 标题 + 一行说明 + 黑色胶囊按钮（动作和以前一样） */
+          /* 空态外观照图 2：圆图标 + 标题 + 一行说明 + 黑色胶囊按钮 */
           <section className={styles.emptyBlock}>
             <i className={styles.emptyBlockIcon}>
+              {/* 图标是对话气泡：这一屏唯一的动作是"去和它说"，不是"新建一份" */}
               <MessageCircle size={26} />
             </i>
-            <b>还没有可用工具</b>
-            <p>创建并启用工具后，这里会显示它的能力卡</p>
-            <button type="button" onClick={() => go({ name: "create-tool" })}>
-              创建工具
+            <b>Elfred 还没替你干过活</b>
+            {/* 用户视角：不是"创建一张卡"，而是"让 Agent 替你干一件事"——干过一次、干成了，
+                才会沉淀成一张能力卡（卡是资产，不是入口）。「创建工具」那一屏是首页
+                「我的工具」的创建入口，语义不对，不走它。 */}
+            <p>跟它说一句你想让它做的事，它做过一次，就会变成你的能力</p>
+            <button type="button" onClick={() => go({ name: "chat", id: "elfred" })}>
+              去和 Elfred 说
             </button>
           </section>
         ) : visibleCards.length === 0 ? (

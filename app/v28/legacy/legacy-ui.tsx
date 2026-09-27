@@ -5891,10 +5891,25 @@ export function ChatPage({
               time: "刚刚",
             },
           ]
-        : [];
+        : id === "elfred" && !conversation
+          // 「我的 Elfred」是本机入口（没有服务端会话对象）。带运行时时它以前是一片空白，
+          // 用户不知道该说什么；这里留一句开场：说一件事 → task.create → 跳到任务/Agent 屏。
+          ? [
+              {
+                id: "welcome-elfred",
+                role: "assistant" as const,
+                text: "我是 Elfred。说一件你想让它替你做的事，我先整理成任务，再交给对应的 Agent。",
+                time: "刚刚",
+              },
+            ]
+          : [];
+  const storedMessages = state.messages[id] ?? [];
   const messages =
-    state.messages[id] ||
-    (runtime?[]:defaultMessages);
+    storedMessages.length
+      ? storedMessages
+      : conversation
+        ? []
+        : defaultMessages;
   const send = (event?: FormEvent) => {
     event?.preventDefault();
     if(mention){if(isGroup){if(groupAgentReady&&/^elfred$/i.test(mention.query.trim()))chooseGroupAgent();else if(mention.query.trim()&&groupMembers.length===1)chooseMember(groupMembers[0])}else openMentionPersonal();return;}

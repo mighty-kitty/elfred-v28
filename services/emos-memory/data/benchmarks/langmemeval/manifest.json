@@ -1,0 +1,1 @@
+﻿{"dataset":"langmemeval-style","description":"Expanded local benchmark aligned with language-driven memory evaluation tasks.","splits":["dev","test"],"version":"2026-04-14","sample_counts":{"dev":6,"test":6}}

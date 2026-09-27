@@ -1,0 +1,14 @@
+{
+  "jobs": {
+    "recorder": {"enabled": false},
+    "auto_todo_detection": {"enabled": false},
+    "todo_recorder": {"enabled": false},
+    "ocr": {"enabled": false},
+    "audio_recording": {"enabled": false},
+    "activity_aggregator": {"enabled": false},
+    "clean_data": {"enabled": false},
+    "deadline_reminder": {"enabled": false},
+    "proactive_ocr": {"enabled": false}
+  },
+  "observability": {"enabled": false}
+}

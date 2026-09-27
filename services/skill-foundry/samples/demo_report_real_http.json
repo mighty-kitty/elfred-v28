@@ -1,0 +1,52 @@
+{
+  "mode": "real_http",
+  "database": "E:\\Observer\\.runtime\\adapter_demo\\elfred_adapter.db",
+  "cleaned_before_run": {
+    "todos": 0,
+    "journals": 0
+  },
+  "submitted": 21,
+  "result_counts": {
+    "privacy_blocked": 1,
+    "duplicate": 1,
+    "synced": 19
+  },
+  "adapter_status": {
+    "database": "E:\\Observer\\.runtime\\adapter_demo\\elfred_adapter.db",
+    "counts": {
+      "events": 20,
+      "jobs": 20,
+      "todos": 15,
+      "journals": 19,
+      "activities": 19,
+      "topics": 6,
+      "memory_outbox": 19,
+      "personal_agent_outbox": 19
+    },
+    "event_states": {
+      "privacy_blocked": 1,
+      "synced": 19
+    },
+    "active_backend": "freetodo",
+    "freetodo_base_url": "http://127.0.0.1:8001"
+  },
+  "remote_counts": {
+    "todos": 15,
+    "journals": 1
+  },
+  "checks": {
+    "twenty_events_submitted": true,
+    "duplicate_is_idempotent": true,
+    "sensitive_event_blocked": true,
+    "sensitive_secret_absent_remote": true,
+    "pii_redacted_remote": true,
+    "todo_created": true,
+    "single_daily_journal": true,
+    "idea_oriented_journal": true,
+    "topic_alias_stable": true,
+    "memory_outbox_idempotent": true,
+    "pa_outbox_idempotent": true,
+    "weekly_is_synthesis": true
+  },
+  "passed": true
+}

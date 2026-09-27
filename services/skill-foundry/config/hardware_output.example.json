@@ -1,0 +1,9 @@
+{
+  "schemaVersion": "1.0",
+  "devices": {
+    "pendant": {
+      "transport": "mock",
+      "capabilities": ["notify", "stop"]
+    }
+  }
+}

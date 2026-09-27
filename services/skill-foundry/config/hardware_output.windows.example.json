@@ -1,0 +1,25 @@
+{
+  "schemaVersion": "1.0",
+  "devices": {
+    "pendant": {
+      "transport": "mock",
+      "capabilities": ["notify", "stop"]
+    },
+    "base": {
+      "transport": "mock",
+      "capabilities": ["play_scene", "stop"]
+    },
+    "arm": {
+      "transport": "mock",
+      "capabilities": ["run_preset", "stop"]
+    },
+    "printer": {
+      "transport": "bluetooth-spp",
+      "port": "COM7",
+      "baudRate": 115200,
+      "encoding": "gb18030",
+      "lineWidth": 32,
+      "maxCharacters": 12000
+    }
+  }
+}

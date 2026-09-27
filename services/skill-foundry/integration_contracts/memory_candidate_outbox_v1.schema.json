@@ -1,0 +1,21 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://elfred.local/contracts/memory-candidate-outbox-v1.schema.json",
+  "title": "Elfred Memory Candidate v1",
+  "type": "object",
+  "required": ["contract_version", "kind", "candidate_id", "source_event_id", "created_at", "delivery_gate", "cloud_allowed"],
+  "properties": {
+    "contract_version": {"const": "1.0"},
+    "kind": {"const": "memory_candidate"},
+    "candidate_id": {"type": "string"},
+    "source_event_id": {"type": "string"},
+    "created_at": {"type": "string", "format": "date-time"},
+    "title": {"type": ["string", "null"]},
+    "summary": {"type": ["string", "null"]},
+    "detail": {"type": ["string", "null"]},
+    "topics": {"type": "array", "items": {"type": "string"}},
+    "delivery_gate": {"enum": ["eligible", "confirm_required", "blocked"]},
+    "cloud_allowed": {"type": "boolean"}
+  },
+  "additionalProperties": true
+}

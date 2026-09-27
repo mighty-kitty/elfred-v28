@@ -1,0 +1,30 @@
+﻿{
+  "records": [
+    {
+      "id": "locomo-official-test-001",
+      "user_id": "bench-user-official-a",
+      "conversation_id": "locomo-official-session-c",
+      "dialogue": [
+        {"role": "user", "text": "我情绪差的时候总会循环听五月天。"},
+        {"role": "user", "text": "听熟悉的歌会让我稳定下来。"}
+      ],
+      "question": "今天又有点低落，我想听那支我总提起的乐队。",
+      "supporting_hints": ["五月天", "乐队"],
+      "task": "habit-recall",
+      "difficulty": "medium"
+    },
+    {
+      "id": "locomo-official-test-002",
+      "user_id": "bench-user-official-a",
+      "conversation_id": "locomo-official-session-d",
+      "dialogue": [
+        {"role": "user", "text": "连续加班到凌晨那段时间，我整个人都很疲惫。"},
+        {"role": "user", "text": "后来休了几天才缓过来。"}
+      ],
+      "question": "这周工作量又堆上来，我一下想到之前最熬人的日子。",
+      "supporting_hints": ["加班", "凌晨"],
+      "task": "workload-recall",
+      "difficulty": "hard"
+    }
+  ]
+}

@@ -1,0 +1,29 @@
+﻿{
+  "version": 2,
+  "backend": "embedding_rerank",
+  "weights": {
+    "lexical": 1.0,
+    "fuzzy": 0.35,
+    "semantic": 0.45,
+    "concept": 0.3,
+    "tag": 0.12,
+    "phrase": 0.22,
+    "question": 0.18,
+    "emotion": 0.15,
+    "recency": 0.08,
+    "profile": 0.1,
+    "abstraction": 0.2,
+    "embedding": 0.6
+  },
+  "embedding": {
+    "dimensions": 96,
+    "candidate_pool": 16
+  },
+  "prefilter": {
+    "enabled": false,
+    "min_records": 512,
+    "candidate_pool": 128,
+    "recency_pool": 16
+  },
+  "history": []
+}

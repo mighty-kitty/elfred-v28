@@ -1,0 +1,12 @@
+﻿app:
+  name: memory-system
+  mode: local
+memory:
+  stm_max_turns: 6
+  reflection_interval: 3
+  emotion_threshold: 0.45
+  recall_top_k: 3
+benchmarks:
+  enabled:
+    - locomo
+    - langmemeval

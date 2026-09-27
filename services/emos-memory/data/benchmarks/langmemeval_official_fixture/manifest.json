@@ -1,0 +1,17 @@
+﻿{
+  "benchmark_id": "langmemeval_official_fixture",
+  "dataset": "langmemeval-official-adapter-fixture",
+  "family": "langmemeval",
+  "description": "Official-format adapter fixture for LangMemEval-style imports.",
+  "loader": "official_langmemeval_v1",
+  "splits": ["dev", "test"],
+  "split_files": {
+    "dev": "raw_dev.jsonl",
+    "test": "raw_test.jsonl"
+  },
+  "version": "2026-04-14",
+  "sample_counts": {
+    "dev": 2,
+    "test": 2
+  }
+}

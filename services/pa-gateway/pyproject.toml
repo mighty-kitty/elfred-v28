@@ -1,0 +1,18 @@
+[project]
+name = "elfred-pa-gateway"
+version = "0.1.0"
+dependencies = [
+    "fastapi",
+    "uvicorn",
+    # runtime config from .env (secrets never live in the repo)
+    "python-dotenv",
+    # WP-02: database migrations
+    "alembic",
+    "sqlalchemy",
+    # connectors
+    "httpx",
+    # WP-07 document parsing (real parsers, not a stub)
+    "pypdf",
+    "python-pptx",
+    "python-docx",
+]

@@ -1,0 +1,17 @@
+﻿{
+  "benchmark_id": "locomo_official_fixture",
+  "dataset": "locomo-official-adapter-fixture",
+  "family": "locomo",
+  "description": "Official-format adapter fixture for LoCoMo-style imports.",
+  "loader": "official_locomo_v1",
+  "splits": ["dev", "test"],
+  "split_files": {
+    "dev": "raw_dev.json",
+    "test": "raw_test.json"
+  },
+  "version": "2026-04-14",
+  "sample_counts": {
+    "dev": 2,
+    "test": 2
+  }
+}

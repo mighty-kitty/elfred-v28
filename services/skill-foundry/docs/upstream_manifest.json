@@ -1,0 +1,25 @@
+{
+  "audit_date": "2026-07-13",
+  "source_archive": "C:/Users/Y/Downloads/FreeTodo-main.zip",
+  "source_archive_sha256": "726A08DAEB6A15FFBE44427112F5FAC67E5AC81E68388C539A0A86CC4578A145",
+  "local_read_only_source": "E:/Observer/third_party/FreeTodo",
+  "runtime_copy": "E:/Observer/.runtime/FreeTodo",
+  "project_version": "0.1.2",
+  "upstream_repository": "https://github.com/FreeU-group/FreeTodo",
+  "upstream_tag": "0.1.2",
+  "upstream_commit": "800cd27344fe1eb99f429d0aec22e99ed189d921",
+  "upstream_commit_date_utc": "2026-02-06T07:55:45Z",
+  "tree_verification": {
+    "remote_blobs": 1172,
+    "local_files": 1172,
+    "missing": 0,
+    "different": 0,
+    "extra": 0,
+    "result": "exact_match"
+  },
+  "legacy_archive": "E:/Observer/elfred_context_organizer.zip",
+  "legacy_archive_sha256": "9B3DE46DC3BB1570EDC59DE5801E0C40395C8B26F01D411259B79E78BAC65828",
+  "legacy_copy": "E:/Observer/elfred_context_organizer_legacy",
+  "legacy_file_count": 107,
+  "legacy_equals_existing_organizer": true
+}

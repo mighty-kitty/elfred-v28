@@ -1,0 +1,286 @@
+{
+  "schemaVersion": "skill-foundry-maturity-eval-v1",
+  "description": "Privacy-safe synthetic trajectories for evaluating dynamic Skill Foundry maturity. No record represents a real person, file, contact, or task.",
+  "workflow": {
+    "steps": [
+      {
+        "sourceAction": "read_document",
+        "action": "read_text_input",
+        "tool": "reader"
+      },
+      {
+        "sourceAction": "write_summary",
+        "action": "compose_summary",
+        "tool": "writer"
+      }
+    ]
+  },
+  "variants": {
+    "stable_summary": {
+      "intent": "summarize a demo document",
+      "summary": "create a concise demo summary",
+      "inputs": {
+        "sourceText": "Synthetic source text with no personal information."
+      },
+      "steps": [
+        {
+          "actionType": "read_document",
+          "tool": "reader",
+          "result": "success"
+        },
+        {
+          "actionType": "write_summary",
+          "tool": "writer",
+          "result": "success"
+        }
+      ],
+      "outputs": [
+        {
+          "value": "Synthetic verified summary."
+        }
+      ],
+      "successSignals": [
+        "summary saved"
+      ],
+      "sourceQuality": "captured",
+      "taskType": "document_summary",
+      "safeReplay": true
+    },
+    "missing_output": {
+      "intent": "summarize a demo document",
+      "summary": "attempt to create a demo summary",
+      "inputs": {
+        "sourceText": "Synthetic source text with no personal information."
+      },
+      "steps": [
+        {
+          "actionType": "read_document",
+          "tool": "reader",
+          "result": "success"
+        },
+        {
+          "actionType": "write_summary",
+          "tool": "writer",
+          "result": "success"
+        }
+      ],
+      "outputs": [],
+      "successSignals": [],
+      "sourceQuality": "captured",
+      "taskType": "document_summary",
+      "safeReplay": false
+    },
+    "conflicting_notification": {
+      "intent": "notify a demo channel about database state",
+      "summary": "fetch a synthetic record and send a synthetic message",
+      "inputs": {
+        "sourceText": "Synthetic status with no personal information."
+      },
+      "steps": [
+        {
+          "actionType": "fetch_database",
+          "tool": "database",
+          "result": "success"
+        },
+        {
+          "actionType": "send_message",
+          "tool": "messenger",
+          "result": "success"
+        }
+      ],
+      "outputs": [
+        {
+          "value": "Synthetic notification."
+        }
+      ],
+      "successSignals": [
+        "message sent"
+      ],
+      "sourceQuality": "captured",
+      "taskType": "document_summary",
+      "safeReplay": false
+    }
+  },
+  "scenarios": [
+    {
+      "id": "no_history",
+      "samples": [],
+      "evidence": {
+        "coverage": 0,
+        "complete": false,
+        "missingEvidence": [
+          "completed_task_evidence"
+        ]
+      },
+      "executable": true,
+      "expected": {
+        "ready": false,
+        "stage": "observing",
+        "minimumReadiness": 0,
+        "maximumReadiness": 0,
+        "blockers": [
+          "need_independent_examples",
+          "evidence_incomplete"
+        ]
+      }
+    },
+    {
+      "id": "one_rich_example",
+      "samples": [
+        {
+          "variant": "stable_summary",
+          "count": 1
+        }
+      ],
+      "evidence": {
+        "coverage": 100,
+        "complete": true,
+        "missingEvidence": []
+      },
+      "executable": true,
+      "expected": {
+        "ready": false,
+        "stage": "observing",
+        "minimumReadiness": 1,
+        "maximumReadiness": 49,
+        "blockers": [
+          "need_independent_examples"
+        ]
+      }
+    },
+    {
+      "id": "two_stable_examples",
+      "samples": [
+        {
+          "variant": "stable_summary",
+          "count": 2
+        }
+      ],
+      "evidence": {
+        "coverage": 100,
+        "complete": true,
+        "missingEvidence": []
+      },
+      "executable": true,
+      "expected": {
+        "ready": true,
+        "stage": "review_ready",
+        "minimumReadiness": 100,
+        "maximumReadiness": 100,
+        "blockers": []
+      }
+    },
+    {
+      "id": "two_examples_missing_outputs",
+      "samples": [
+        {
+          "variant": "missing_output",
+          "count": 2
+        }
+      ],
+      "evidence": {
+        "coverage": 58,
+        "complete": false,
+        "missingEvidence": [
+          "outputs",
+          "success_signals"
+        ]
+      },
+      "executable": true,
+      "expected": {
+        "ready": false,
+        "stage": "evidence_gap",
+        "minimumReadiness": 1,
+        "maximumReadiness": 69,
+        "blockers": [
+          "evidence_incomplete",
+          "historical_replay_insufficient",
+          "held_out_replay_insufficient"
+        ]
+      }
+    },
+    {
+      "id": "twelve_conflicting_examples",
+      "samples": [
+        {
+          "variant": "stable_summary",
+          "count": 6
+        },
+        {
+          "variant": "conflicting_notification",
+          "count": 6
+        }
+      ],
+      "evidence": {
+        "coverage": 100,
+        "complete": true,
+        "missingEvidence": []
+      },
+      "executable": true,
+      "expected": {
+        "ready": false,
+        "stage": "pattern_forming",
+        "minimumReadiness": 1,
+        "maximumReadiness": 84,
+        "blockers": [
+          "cluster_uncertain",
+          "workflow_not_converged"
+        ]
+      }
+    },
+    {
+      "id": "mature_pattern_receives_conflicting_evidence",
+      "samples": [
+        {
+          "variant": "stable_summary",
+          "count": 2
+        },
+        {
+          "variant": "conflicting_notification",
+          "count": 1
+        }
+      ],
+      "evidence": {
+        "coverage": 100,
+        "complete": true,
+        "missingEvidence": []
+      },
+      "executable": true,
+      "expected": {
+        "ready": false,
+        "stage": "pattern_forming",
+        "minimumReadiness": 1,
+        "maximumReadiness": 84,
+        "blockers": [
+          "cluster_uncertain",
+          "workflow_not_converged"
+        ],
+        "readinessBelowScenario": "two_stable_examples"
+      }
+    },
+    {
+      "id": "execution_adapter_missing",
+      "samples": [
+        {
+          "variant": "stable_summary",
+          "count": 2
+        }
+      ],
+      "evidence": {
+        "coverage": 100,
+        "complete": true,
+        "missingEvidence": []
+      },
+      "executable": false,
+      "expected": {
+        "ready": false,
+        "stage": "validating_reproduction",
+        "minimumReadiness": 1,
+        "maximumReadiness": 94,
+        "blockers": [
+          "execution_adapter_missing"
+        ]
+      }
+    }
+  ]
+}

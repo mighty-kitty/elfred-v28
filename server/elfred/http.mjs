@@ -101,6 +101,8 @@ export function apiHandler(service,{origin='http://127.0.0.1:3000'}={}) {
       if(method==='GET' && route==='/export') {send(200,service.export(user.id),{'Content-Disposition':'attachment; filename="elfred-export.json"'});return true;}
       fail('NOT_FOUND','接口不存在',404);
     } catch(error) {
+      // A failed or disconnected event stream cannot be changed into a JSON response.
+      if(response.headersSent){response.end();return true;}
       send(error instanceof DomainError?error.status:500,{error:{code:error instanceof DomainError?error.code:'INTERNAL_ERROR',message:error instanceof DomainError?error.message:'内部错误，操作未完成'}});
       return true;
     }

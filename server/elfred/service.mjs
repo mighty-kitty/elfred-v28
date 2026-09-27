@@ -187,9 +187,17 @@ export class Service {
   search(user,input) {return search(this.store,user,input);}
   events(user,after=0) {
     const visible=[];
-    for(const event of this.store.db.prepare('SELECT * FROM events WHERE seq>? ORDER BY seq').iterate(after)) {
-      if(this.store.canRead(user,this.store.get(event.object_id)))visible.push({...event,metadata:JSON.parse(event.metadata)});
-      if(visible.length===300)break;
+    let cursor=after;
+    // Materialize bounded batches: Node 22's SQLite iterator can outlive its statement.
+    const statement=this.store.db.prepare('SELECT * FROM events WHERE seq>? ORDER BY seq LIMIT 300');
+    while(true){
+      const batch=statement.all(cursor);
+      for(const event of batch){
+        cursor=event.seq;
+        if(this.store.canRead(user,this.store.get(event.object_id)))visible.push({...event,metadata:JSON.parse(event.metadata)});
+        if(visible.length===300)return visible;
+      }
+      if(batch.length<300)break;
     }
     return visible;
   }

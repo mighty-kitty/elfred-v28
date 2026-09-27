@@ -8,7 +8,7 @@
 
 | 目录 | 是什么 | 默认地址 | 健康检查 | 启动 |
 | --- | --- | --- | --- | --- |
-| `emos-memory/` | 记忆中枢：记忆的抽取、存储、检索与反馈 | `http://127.0.0.1:8200` | `GET /health` | `python -m src.memory_system.api.server` |
+| `emos-memory/` | 记忆中枢：记忆的抽取、存储、检索与反馈 | 原生 `http://127.0.0.1:8000`；Elfred 适配部署 `8200` | `GET /health` | 原生：`python -m src.memory_system.api.server`；Elfred：由主应用管理 |
 | `skill-foundry/` | 能力卡组的来源：从真实上下文生成、版本化并交付 skill | `http://127.0.0.1:8765` | `GET /v1/elfred/health` | `python -m adapter` |
 | `pa-gateway/` | 规划与执行的网关：把任务拆成可核对的步骤，接记忆与工具 | `http://127.0.0.1:8790` | `GET /health` | `python -m uvicorn app.main:app --port 8790` |
 

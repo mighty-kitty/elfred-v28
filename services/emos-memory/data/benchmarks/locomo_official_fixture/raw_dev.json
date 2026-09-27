@@ -1,0 +1,30 @@
+﻿{
+  "records": [
+    {
+      "id": "locomo-official-dev-001",
+      "user_id": "bench-user-official-a",
+      "conversation_id": "locomo-official-session-a",
+      "dialogue": [
+        {"role": "user", "text": "我一直想去看五月天下次的演唱会。"},
+        {"role": "user", "text": "上次错过以后我遗憾了很久。"}
+      ],
+      "question": "最近只要提到没看到的那场演出，我还是会惦记。",
+      "supporting_hints": ["五月天", "演唱会"],
+      "task": "future-intent-recall",
+      "difficulty": "hard"
+    },
+    {
+      "id": "locomo-official-dev-002",
+      "user_id": "bench-user-official-a",
+      "conversation_id": "locomo-official-session-b",
+      "dialogue": [
+        {"role": "user", "text": "那次考试没发挥好之后，我总担心类似测试也会失手。"},
+        {"role": "user", "text": "一想到那次成绩我就紧张。"}
+      ],
+      "question": "现在一碰到类似测试，我就会想到之前那次失手。",
+      "supporting_hints": ["考试", "失手"],
+      "task": "stress-generalization-recall",
+      "difficulty": "hard"
+    }
+  ]
+}

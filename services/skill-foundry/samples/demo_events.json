@@ -1,0 +1,1300 @@
+{
+  "events": [
+    {
+      "event_id": "demo-20260713-001",
+      "created_at": "2026-07-13T08:00:00+08:00",
+      "source": "desktop_observer",
+      "app": {
+        "name": "Feishu",
+        "process_name": "Feishu.exe",
+        "window_title": "确认 Elfred 演示范围和联调顺序",
+        "category": "im_collaboration"
+      },
+      "trigger": {
+        "type": "demo",
+        "level": 3,
+        "score": 8,
+        "reasons": [
+          "acceptance_demo"
+        ]
+      },
+      "content": {
+        "content_type": "important",
+        "raw_text": "决定先走独立 Adapter。下一步：准备联调清单，截止：明天。",
+        "clean_text": "决定先走独立 Adapter。下一步：准备联调清单，截止：明天。",
+        "summary": "确认 Elfred 演示范围和联调顺序",
+        "entities": [
+          {
+            "type": "project",
+            "text": "Elfred"
+          }
+        ],
+        "tasks": [
+          {
+            "task": "准备 Elfred 联调清单",
+            "deadline": "明天",
+            "assignee": "unknown",
+            "project": "Elfred",
+            "confidence": 0.92
+          }
+        ]
+      },
+      "privacy": {
+        "is_sensitive": false,
+        "sensitivity_types": [],
+        "action": "allow",
+        "allowed_to_upload": false,
+        "allowed_to_write_long_term_memory": false,
+        "requires_user_confirmation": false
+      },
+      "artifacts": {
+        "screenshot_id": "demo-shot-001"
+      },
+      "suggestions": {
+        "memory_write_suggestions": [],
+        "task_card_suggestions": [
+          {
+            "task": "准备 Elfred 联调清单",
+            "deadline": "明天",
+            "assignee": "unknown",
+            "project": "Elfred",
+            "confidence": 0.92
+          }
+        ],
+        "skill_candidate_suggestions": []
+      },
+      "status": "temporary_context",
+      "demo_unknown_field": {
+        "preserved": true,
+        "index": 0
+      }
+    },
+    {
+      "event_id": "demo-20260713-002",
+      "created_at": "2026-07-13T08:07:00+08:00",
+      "source": "desktop_observer",
+      "app": {
+        "name": "Zotero",
+        "process_name": "Zotero.exe",
+        "window_title": "整理科研资料中的关键论据",
+        "category": "research"
+      },
+      "trigger": {
+        "type": "demo",
+        "level": 3,
+        "score": 8,
+        "reasons": [
+          "acceptance_demo"
+        ]
+      },
+      "content": {
+        "content_type": "important",
+        "raw_text": "发现 Topic Registry 需要稳定别名，决定记录来源索引。",
+        "clean_text": "发现 Topic Registry 需要稳定别名，决定记录来源索引。",
+        "summary": "整理科研资料中的关键论据",
+        "entities": [
+          {
+            "type": "project",
+            "text": "科研"
+          }
+        ],
+        "tasks": [
+          {
+            "task": "整理实验论据与来源",
+            "deadline": null,
+            "assignee": "unknown",
+            "project": "科研",
+            "confidence": 0.84
+          }
+        ]
+      },
+      "privacy": {
+        "is_sensitive": false,
+        "sensitivity_types": [],
+        "action": "allow",
+        "allowed_to_upload": false,
+        "allowed_to_write_long_term_memory": false,
+        "requires_user_confirmation": false
+      },
+      "artifacts": {
+        "screenshot_id": "demo-shot-002"
+      },
+      "suggestions": {
+        "memory_write_suggestions": [],
+        "task_card_suggestions": [
+          {
+            "task": "整理实验论据与来源",
+            "deadline": null,
+            "assignee": "unknown",
+            "project": "科研",
+            "confidence": 0.84
+          }
+        ],
+        "skill_candidate_suggestions": []
+      },
+      "status": "temporary_context",
+      "demo_unknown_field": {
+        "preserved": true,
+        "index": 1
+      }
+    },
+    {
+      "event_id": "demo-20260713-003",
+      "created_at": "2026-07-13T08:14:00+08:00",
+      "source": "desktop_observer",
+      "app": {
+        "name": "Codex",
+        "process_name": "Codex.exe",
+        "window_title": "实现 ContextEvent 到 Todo 的映射",
+        "category": "development"
+      },
+      "trigger": {
+        "type": "demo",
+        "level": 3,
+        "score": 8,
+        "reasons": [
+          "acceptance_demo"
+        ]
+      },
+      "content": {
+        "content_type": "important",
+        "raw_text": "风险：同 ID 不同 payload 可能覆盖数据。决定使用 payload hash。",
+        "clean_text": "风险：同 ID 不同 payload 可能覆盖数据。决定使用 payload hash。",
+        "summary": "实现 ContextEvent 到 Todo 的映射",
+        "entities": [
+          {
+            "type": "project",
+            "text": "开发"
+          }
+        ],
+        "tasks": [
+          {
+            "task": "实现 payload hash 冲突检测",
+            "deadline": "明天",
+            "assignee": "unknown",
+            "project": "开发",
+            "confidence": 0.95
+          }
+        ]
+      },
+      "privacy": {
+        "is_sensitive": false,
+        "sensitivity_types": [],
+        "action": "allow",
+        "allowed_to_upload": false,
+        "allowed_to_write_long_term_memory": false,
+        "requires_user_confirmation": false
+      },
+      "artifacts": {
+        "screenshot_id": "demo-shot-003"
+      },
+      "suggestions": {
+        "memory_write_suggestions": [],
+        "task_card_suggestions": [
+          {
+            "task": "实现 payload hash 冲突检测",
+            "deadline": "明天",
+            "assignee": "unknown",
+            "project": "开发",
+            "confidence": 0.95
+          }
+        ],
+        "skill_candidate_suggestions": []
+      },
+      "status": "temporary_context",
+      "demo_unknown_field": {
+        "preserved": true,
+        "index": 2
+      }
+    },
+    {
+      "event_id": "demo-20260713-004",
+      "created_at": "2026-07-13T09:21:00+08:00",
+      "source": "desktop_observer",
+      "app": {
+        "name": "Edge",
+        "process_name": "Edge.exe",
+        "window_title": "浏览 FreeTodo API 文档",
+        "category": "browser_research"
+      },
+      "trigger": {
+        "type": "demo",
+        "level": 3,
+        "score": 8,
+        "reasons": [
+          "acceptance_demo"
+        ]
+      },
+      "content": {
+        "content_type": "important",
+        "raw_text": "新想法：用 uid 和 Adapter link 双重保证幂等。",
+        "clean_text": "新想法：用 uid 和 Adapter link 双重保证幂等。",
+        "summary": "浏览 FreeTodo API 文档",
+        "entities": [],
+        "tasks": []
+      },
+      "privacy": {
+        "is_sensitive": false,
+        "sensitivity_types": [],
+        "action": "allow",
+        "allowed_to_upload": false,
+        "allowed_to_write_long_term_memory": false,
+        "requires_user_confirmation": false
+      },
+      "artifacts": {
+        "screenshot_id": "demo-shot-004"
+      },
+      "suggestions": {
+        "memory_write_suggestions": [],
+        "task_card_suggestions": [],
+        "skill_candidate_suggestions": []
+      },
+      "status": "temporary_context",
+      "demo_unknown_field": {
+        "preserved": true,
+        "index": 3
+      }
+    },
+    {
+      "event_id": "demo-20260713-005",
+      "created_at": "2026-07-13T09:28:00+08:00",
+      "source": "desktop_observer",
+      "app": {
+        "name": "Calendar",
+        "process_name": "Calendar.exe",
+        "window_title": "安排明天演示前的准备",
+        "category": "life"
+      },
+      "trigger": {
+        "type": "demo",
+        "level": 3,
+        "score": 8,
+        "reasons": [
+          "acceptance_demo"
+        ]
+      },
+      "content": {
+        "content_type": "important",
+        "raw_text": "下一步：演示前检查投屏和网络。",
+        "clean_text": "下一步：演示前检查投屏和网络。",
+        "summary": "安排明天演示前的准备",
+        "entities": [
+          {
+            "type": "project",
+            "text": "生活"
+          }
+        ],
+        "tasks": [
+          {
+            "task": "检查演示投屏和网络",
+            "deadline": "明天",
+            "assignee": "unknown",
+            "project": "生活",
+            "confidence": 0.9
+          }
+        ]
+      },
+      "privacy": {
+        "is_sensitive": false,
+        "sensitivity_types": [],
+        "action": "allow",
+        "allowed_to_upload": false,
+        "allowed_to_write_long_term_memory": false,
+        "requires_user_confirmation": false
+      },
+      "artifacts": {
+        "screenshot_id": "demo-shot-005"
+      },
+      "suggestions": {
+        "memory_write_suggestions": [],
+        "task_card_suggestions": [
+          {
+            "task": "检查演示投屏和网络",
+            "deadline": "明天",
+            "assignee": "unknown",
+            "project": "生活",
+            "confidence": 0.9
+          }
+        ],
+        "skill_candidate_suggestions": []
+      },
+      "status": "temporary_context",
+      "demo_unknown_field": {
+        "preserved": true,
+        "index": 4
+      }
+    },
+    {
+      "event_id": "demo-20260713-006",
+      "created_at": "2026-07-13T09:35:00+08:00",
+      "source": "desktop_observer",
+      "app": {
+        "name": "Notes",
+        "process_name": "Notes.exe",
+        "window_title": "也许需要优化演示讲稿",
+        "category": "work"
+      },
+      "trigger": {
+        "type": "demo",
+        "level": 3,
+        "score": 8,
+        "reasons": [
+          "acceptance_demo"
+        ]
+      },
+      "content": {
+        "content_type": "important",
+        "raw_text": "待确认：演示讲稿是否需要再压缩。",
+        "clean_text": "待确认：演示讲稿是否需要再压缩。",
+        "summary": "也许需要优化演示讲稿",
+        "entities": [
+          {
+            "type": "project",
+            "text": "Elfred"
+          }
+        ],
+        "tasks": [
+          {
+            "task": "优化演示讲稿",
+            "deadline": null,
+            "assignee": "unknown",
+            "project": "Elfred",
+            "confidence": 0.42
+          }
+        ]
+      },
+      "privacy": {
+        "is_sensitive": false,
+        "sensitivity_types": [],
+        "action": "allow",
+        "allowed_to_upload": false,
+        "allowed_to_write_long_term_memory": false,
+        "requires_user_confirmation": false
+      },
+      "artifacts": {
+        "screenshot_id": "demo-shot-006"
+      },
+      "suggestions": {
+        "memory_write_suggestions": [],
+        "task_card_suggestions": [
+          {
+            "task": "优化演示讲稿",
+            "deadline": null,
+            "assignee": "unknown",
+            "project": "Elfred",
+            "confidence": 0.42
+          }
+        ],
+        "skill_candidate_suggestions": []
+      },
+      "status": "temporary_context",
+      "demo_unknown_field": {
+        "preserved": true,
+        "index": 5
+      }
+    },
+    {
+      "event_id": "demo-20260713-007",
+      "created_at": "2026-07-13T10:42:00+08:00",
+      "source": "desktop_observer",
+      "app": {
+        "name": "Feishu",
+        "process_name": "Feishu.exe",
+        "window_title": "技术路线评审",
+        "category": "im_collaboration"
+      },
+      "trigger": {
+        "type": "demo",
+        "level": 3,
+        "score": 8,
+        "reasons": [
+          "acceptance_demo"
+        ]
+      },
+      "content": {
+        "content_type": "important",
+        "raw_text": "决定保留 legacy 作为回退，不删除旧 Organizer。",
+        "clean_text": "决定保留 legacy 作为回退，不删除旧 Organizer。",
+        "summary": "技术路线评审",
+        "entities": [],
+        "tasks": []
+      },
+      "privacy": {
+        "is_sensitive": false,
+        "sensitivity_types": [],
+        "action": "allow",
+        "allowed_to_upload": false,
+        "allowed_to_write_long_term_memory": false,
+        "requires_user_confirmation": false
+      },
+      "artifacts": {
+        "screenshot_id": "demo-shot-007"
+      },
+      "suggestions": {
+        "memory_write_suggestions": [],
+        "task_card_suggestions": [],
+        "skill_candidate_suggestions": []
+      },
+      "status": "temporary_context",
+      "demo_unknown_field": {
+        "preserved": true,
+        "index": 6
+      }
+    },
+    {
+      "event_id": "demo-20260713-008",
+      "created_at": "2026-07-13T10:49:00+08:00",
+      "source": "desktop_observer",
+      "app": {
+        "name": "Terminal",
+        "process_name": "Terminal.exe",
+        "window_title": "运行 FreeTodo 基线",
+        "category": "development"
+      },
+      "trigger": {
+        "type": "demo",
+        "level": 3,
+        "score": 8,
+        "reasons": [
+          "acceptance_demo"
+        ]
+      },
+      "content": {
+        "content_type": "important",
+        "raw_text": "风险：全局 Python 的 pth 编码错误会影响启动。",
+        "clean_text": "风险：全局 Python 的 pth 编码错误会影响启动。",
+        "summary": "运行 FreeTodo 基线",
+        "entities": [
+          {
+            "type": "project",
+            "text": "开发"
+          }
+        ],
+        "tasks": [
+          {
+            "task": "记录 Python pth 环境风险",
+            "deadline": null,
+            "assignee": "unknown",
+            "project": "开发",
+            "confidence": 0.81
+          }
+        ]
+      },
+      "privacy": {
+        "is_sensitive": false,
+        "sensitivity_types": [],
+        "action": "allow",
+        "allowed_to_upload": false,
+        "allowed_to_write_long_term_memory": false,
+        "requires_user_confirmation": false
+      },
+      "artifacts": {
+        "screenshot_id": "demo-shot-008"
+      },
+      "suggestions": {
+        "memory_write_suggestions": [],
+        "task_card_suggestions": [
+          {
+            "task": "记录 Python pth 环境风险",
+            "deadline": null,
+            "assignee": "unknown",
+            "project": "开发",
+            "confidence": 0.81
+          }
+        ],
+        "skill_candidate_suggestions": []
+      },
+      "status": "temporary_context",
+      "demo_unknown_field": {
+        "preserved": true,
+        "index": 7
+      }
+    },
+    {
+      "event_id": "demo-20260713-009",
+      "created_at": "2026-07-13T10:56:00+08:00",
+      "source": "desktop_observer",
+      "app": {
+        "name": "Observer",
+        "process_name": "Observer.exe",
+        "window_title": "重复截图被 Observer 去重",
+        "category": "work"
+      },
+      "trigger": {
+        "type": "demo",
+        "level": 3,
+        "score": 8,
+        "reasons": [
+          "acceptance_demo"
+        ]
+      },
+      "content": {
+        "content_type": "important",
+        "raw_text": "重复截图只记录诊断，不产生新任务。",
+        "clean_text": "重复截图只记录诊断，不产生新任务。",
+        "summary": "重复截图被 Observer 去重",
+        "entities": [],
+        "tasks": []
+      },
+      "privacy": {
+        "is_sensitive": false,
+        "sensitivity_types": [],
+        "action": "allow",
+        "allowed_to_upload": false,
+        "allowed_to_write_long_term_memory": false,
+        "requires_user_confirmation": false
+      },
+      "artifacts": {
+        "screenshot_id": "demo-shot-009"
+      },
+      "suggestions": {
+        "memory_write_suggestions": [],
+        "task_card_suggestions": [],
+        "skill_candidate_suggestions": []
+      },
+      "status": "temporary_context",
+      "demo_unknown_field": {
+        "preserved": true,
+        "index": 8
+      }
+    },
+    {
+      "event_id": "demo-20260713-010",
+      "created_at": "2026-07-13T11:03:00+08:00",
+      "source": "desktop_observer",
+      "app": {
+        "name": "PasswordManager",
+        "process_name": "PasswordManager.exe",
+        "window_title": "私密凭据页面",
+        "category": "private"
+      },
+      "trigger": {
+        "type": "demo",
+        "level": 3,
+        "score": 8,
+        "reasons": [
+          "acceptance_demo"
+        ]
+      },
+      "content": {
+        "content_type": "important",
+        "raw_text": "password=DEMO-SECRET-MUST-NOT-LEAVE",
+        "clean_text": "password=DEMO-SECRET-MUST-NOT-LEAVE",
+        "summary": "私密凭据页面",
+        "entities": [
+          {
+            "type": "project",
+            "text": "工作"
+          }
+        ],
+        "tasks": [
+          {
+            "task": "复制私密 token",
+            "deadline": null,
+            "assignee": "unknown",
+            "project": "工作",
+            "confidence": 0.99
+          }
+        ]
+      },
+      "privacy": {
+        "is_sensitive": true,
+        "sensitivity_types": [
+          "credential",
+          "token"
+        ],
+        "action": "block",
+        "allowed_to_upload": false,
+        "allowed_to_write_long_term_memory": false,
+        "requires_user_confirmation": false
+      },
+      "artifacts": {
+        "screenshot_id": "demo-shot-010"
+      },
+      "suggestions": {
+        "memory_write_suggestions": [],
+        "task_card_suggestions": [
+          {
+            "task": "复制私密 token",
+            "deadline": null,
+            "assignee": "unknown",
+            "project": "工作",
+            "confidence": 0.99
+          }
+        ],
+        "skill_candidate_suggestions": []
+      },
+      "status": "temporary_context",
+      "demo_unknown_field": {
+        "preserved": true,
+        "index": 9
+      }
+    },
+    {
+      "event_id": "demo-20260713-011",
+      "created_at": "2026-07-13T11:10:00+08:00",
+      "source": "desktop_observer",
+      "app": {
+        "name": "Feishu",
+        "process_name": "Feishu.exe",
+        "window_title": "联系演示同事 13800138000",
+        "category": "im_collaboration"
+      },
+      "trigger": {
+        "type": "demo",
+        "level": 3,
+        "score": 8,
+        "reasons": [
+          "acceptance_demo"
+        ]
+      },
+      "content": {
+        "content_type": "important",
+        "raw_text": "把日程发给 demo.owner@example.com。",
+        "clean_text": "把日程发给 demo.owner@example.com。",
+        "summary": "联系演示同事 13800138000",
+        "entities": [
+          {
+            "type": "project",
+            "text": "Elfred"
+          }
+        ],
+        "tasks": [
+          {
+            "task": "发送演示日程给 demo.owner@example.com",
+            "deadline": null,
+            "assignee": "unknown",
+            "project": "Elfred",
+            "confidence": 0.88
+          }
+        ]
+      },
+      "privacy": {
+        "is_sensitive": false,
+        "sensitivity_types": [],
+        "action": "allow",
+        "allowed_to_upload": false,
+        "allowed_to_write_long_term_memory": false,
+        "requires_user_confirmation": false
+      },
+      "artifacts": {
+        "screenshot_id": "demo-shot-011"
+      },
+      "suggestions": {
+        "memory_write_suggestions": [],
+        "task_card_suggestions": [
+          {
+            "task": "发送演示日程给 demo.owner@example.com",
+            "deadline": null,
+            "assignee": "unknown",
+            "project": "Elfred",
+            "confidence": 0.88
+          }
+        ],
+        "skill_candidate_suggestions": []
+      },
+      "status": "temporary_context",
+      "demo_unknown_field": {
+        "preserved": true,
+        "index": 10
+      }
+    },
+    {
+      "event_id": "demo-20260713-012",
+      "created_at": "2026-07-13T11:17:00+08:00",
+      "source": "desktop_observer",
+      "app": {
+        "name": "GitHub",
+        "process_name": "GitHub.exe",
+        "window_title": "核对上游 commit",
+        "category": "development"
+      },
+      "trigger": {
+        "type": "demo",
+        "level": 3,
+        "score": 8,
+        "reasons": [
+          "acceptance_demo"
+        ]
+      },
+      "content": {
+        "content_type": "important",
+        "raw_text": "依赖：等待接口合同最终确认。",
+        "clean_text": "依赖：等待接口合同最终确认。",
+        "summary": "核对上游 commit",
+        "entities": [
+          {
+            "type": "project",
+            "text": "开发"
+          }
+        ],
+        "tasks": [
+          {
+            "task": "固定 FreeTodo commit",
+            "deadline": null,
+            "assignee": "unknown",
+            "project": "开发",
+            "confidence": 0.94
+          }
+        ]
+      },
+      "privacy": {
+        "is_sensitive": false,
+        "sensitivity_types": [],
+        "action": "allow",
+        "allowed_to_upload": false,
+        "allowed_to_write_long_term_memory": false,
+        "requires_user_confirmation": false
+      },
+      "artifacts": {
+        "screenshot_id": "demo-shot-012"
+      },
+      "suggestions": {
+        "memory_write_suggestions": [],
+        "task_card_suggestions": [
+          {
+            "task": "固定 FreeTodo commit",
+            "deadline": null,
+            "assignee": "unknown",
+            "project": "开发",
+            "confidence": 0.94
+          }
+        ],
+        "skill_candidate_suggestions": []
+      },
+      "status": "temporary_context",
+      "demo_unknown_field": {
+        "preserved": true,
+        "index": 11
+      }
+    },
+    {
+      "event_id": "demo-20260713-013",
+      "created_at": "2026-07-13T12:24:00+08:00",
+      "source": "desktop_observer",
+      "app": {
+        "name": "Teams",
+        "process_name": "Teams.exe",
+        "window_title": "Memory 接口讨论",
+        "category": "im_collaboration"
+      },
+      "trigger": {
+        "type": "demo",
+        "level": 3,
+        "score": 8,
+        "reasons": [
+          "acceptance_demo"
+        ]
+      },
+      "content": {
+        "content_type": "important",
+        "raw_text": "等待 Memory 团队提供正式 endpoint 和认证方式。",
+        "clean_text": "等待 Memory 团队提供正式 endpoint 和认证方式。",
+        "summary": "Memory 接口讨论",
+        "entities": [],
+        "tasks": []
+      },
+      "privacy": {
+        "is_sensitive": false,
+        "sensitivity_types": [],
+        "action": "allow",
+        "allowed_to_upload": false,
+        "allowed_to_write_long_term_memory": false,
+        "requires_user_confirmation": false
+      },
+      "artifacts": {
+        "screenshot_id": "demo-shot-013"
+      },
+      "suggestions": {
+        "memory_write_suggestions": [],
+        "task_card_suggestions": [],
+        "skill_candidate_suggestions": []
+      },
+      "status": "temporary_context",
+      "demo_unknown_field": {
+        "preserved": true,
+        "index": 12
+      }
+    },
+    {
+      "event_id": "demo-20260713-014",
+      "created_at": "2026-07-13T12:31:00+08:00",
+      "source": "desktop_observer",
+      "app": {
+        "name": "VSCode",
+        "process_name": "VSCode.exe",
+        "window_title": "补齐 Adapter API",
+        "category": "development"
+      },
+      "trigger": {
+        "type": "demo",
+        "level": 3,
+        "score": 8,
+        "reasons": [
+          "acceptance_demo"
+        ]
+      },
+      "content": {
+        "content_type": "important",
+        "raw_text": "下一步包含 forget 和 reconcile。",
+        "clean_text": "下一步包含 forget 和 reconcile。",
+        "summary": "补齐 Adapter API",
+        "entities": [
+          {
+            "type": "project",
+            "text": "Elfred"
+          },
+          {
+            "type": "project",
+            "text": "Elfred"
+          }
+        ],
+        "tasks": [
+          {
+            "task": "实现 forget",
+            "deadline": null,
+            "assignee": "unknown",
+            "project": "Elfred",
+            "confidence": 0.96
+          },
+          {
+            "task": "实现 reconcile",
+            "deadline": null,
+            "assignee": "unknown",
+            "project": "Elfred",
+            "confidence": 0.95
+          }
+        ]
+      },
+      "privacy": {
+        "is_sensitive": false,
+        "sensitivity_types": [],
+        "action": "allow",
+        "allowed_to_upload": false,
+        "allowed_to_write_long_term_memory": false,
+        "requires_user_confirmation": false
+      },
+      "artifacts": {
+        "screenshot_id": "demo-shot-014"
+      },
+      "suggestions": {
+        "memory_write_suggestions": [],
+        "task_card_suggestions": [
+          {
+            "task": "实现 forget",
+            "deadline": null,
+            "assignee": "unknown",
+            "project": "Elfred",
+            "confidence": 0.96
+          },
+          {
+            "task": "实现 reconcile",
+            "deadline": null,
+            "assignee": "unknown",
+            "project": "Elfred",
+            "confidence": 0.95
+          }
+        ],
+        "skill_candidate_suggestions": []
+      },
+      "status": "temporary_context",
+      "demo_unknown_field": {
+        "preserved": true,
+        "index": 13
+      }
+    },
+    {
+      "event_id": "demo-20260713-015",
+      "created_at": "2026-07-13T12:38:00+08:00",
+      "source": "desktop_observer",
+      "app": {
+        "name": "Notes",
+        "process_name": "Notes.exe",
+        "window_title": "阿福项目名称统一",
+        "category": "work"
+      },
+      "trigger": {
+        "type": "demo",
+        "level": 3,
+        "score": 8,
+        "reasons": [
+          "acceptance_demo"
+        ]
+      },
+      "content": {
+        "content_type": "important",
+        "raw_text": "决定阿福、Elfred项目都归并为 Elfred。",
+        "clean_text": "决定阿福、Elfred项目都归并为 Elfred。",
+        "summary": "阿福项目名称统一",
+        "entities": [
+          {
+            "type": "project",
+            "text": "阿福"
+          }
+        ],
+        "tasks": [
+          {
+            "task": "核对阿福 Topic alias",
+            "deadline": null,
+            "assignee": "unknown",
+            "project": "阿福",
+            "confidence": 0.86
+          }
+        ]
+      },
+      "privacy": {
+        "is_sensitive": false,
+        "sensitivity_types": [],
+        "action": "allow",
+        "allowed_to_upload": false,
+        "allowed_to_write_long_term_memory": false,
+        "requires_user_confirmation": false
+      },
+      "artifacts": {
+        "screenshot_id": "demo-shot-015"
+      },
+      "suggestions": {
+        "memory_write_suggestions": [],
+        "task_card_suggestions": [
+          {
+            "task": "核对阿福 Topic alias",
+            "deadline": null,
+            "assignee": "unknown",
+            "project": "阿福",
+            "confidence": 0.86
+          }
+        ],
+        "skill_candidate_suggestions": []
+      },
+      "status": "temporary_context",
+      "demo_unknown_field": {
+        "preserved": true,
+        "index": 14
+      }
+    },
+    {
+      "event_id": "demo-20260713-016",
+      "created_at": "2026-07-13T13:45:00+08:00",
+      "source": "desktop_observer",
+      "app": {
+        "name": "Agent",
+        "process_name": "Agent.exe",
+        "window_title": "Personal Agent 上下文出口",
+        "category": "work"
+      },
+      "trigger": {
+        "type": "demo",
+        "level": 3,
+        "score": 8,
+        "reasons": [
+          "acceptance_demo"
+        ]
+      },
+      "content": {
+        "content_type": "important",
+        "raw_text": "新想法：通过版本化 Outbox 解耦。",
+        "clean_text": "新想法：通过版本化 Outbox 解耦。",
+        "summary": "Personal Agent 上下文出口",
+        "entities": [
+          {
+            "type": "project",
+            "text": "Personal Agent项目"
+          }
+        ],
+        "tasks": [
+          {
+            "task": "验证 Personal Agent Outbox",
+            "deadline": null,
+            "assignee": "unknown",
+            "project": "Personal Agent项目",
+            "confidence": 0.91
+          }
+        ]
+      },
+      "privacy": {
+        "is_sensitive": false,
+        "sensitivity_types": [],
+        "action": "allow",
+        "allowed_to_upload": false,
+        "allowed_to_write_long_term_memory": false,
+        "requires_user_confirmation": false
+      },
+      "artifacts": {
+        "screenshot_id": "demo-shot-016"
+      },
+      "suggestions": {
+        "memory_write_suggestions": [],
+        "task_card_suggestions": [
+          {
+            "task": "验证 Personal Agent Outbox",
+            "deadline": null,
+            "assignee": "unknown",
+            "project": "Personal Agent项目",
+            "confidence": 0.91
+          }
+        ],
+        "skill_candidate_suggestions": []
+      },
+      "status": "temporary_context",
+      "demo_unknown_field": {
+        "preserved": true,
+        "index": 15
+      }
+    },
+    {
+      "event_id": "demo-20260713-017",
+      "created_at": "2026-07-13T13:52:00+08:00",
+      "source": "desktop_observer",
+      "app": {
+        "name": "PowerShell",
+        "process_name": "PowerShell.exe",
+        "window_title": "导出 OpenAPI 和依赖清单",
+        "category": "development"
+      },
+      "trigger": {
+        "type": "demo",
+        "level": 3,
+        "score": 8,
+        "reasons": [
+          "acceptance_demo"
+        ]
+      },
+      "content": {
+        "content_type": "important",
+        "raw_text": "已完成 94 paths 的审计。",
+        "clean_text": "已完成 94 paths 的审计。",
+        "summary": "导出 OpenAPI 和依赖清单",
+        "entities": [],
+        "tasks": []
+      },
+      "privacy": {
+        "is_sensitive": false,
+        "sensitivity_types": [],
+        "action": "allow",
+        "allowed_to_upload": false,
+        "allowed_to_write_long_term_memory": false,
+        "requires_user_confirmation": false
+      },
+      "artifacts": {
+        "screenshot_id": "demo-shot-017"
+      },
+      "suggestions": {
+        "memory_write_suggestions": [],
+        "task_card_suggestions": [],
+        "skill_candidate_suggestions": []
+      },
+      "status": "temporary_context",
+      "demo_unknown_field": {
+        "preserved": true,
+        "index": 16
+      }
+    },
+    {
+      "event_id": "demo-20260713-018",
+      "created_at": "2026-07-13T13:59:00+08:00",
+      "source": "desktop_observer",
+      "app": {
+        "name": "Calendar",
+        "process_name": "Calendar.exe",
+        "window_title": "安排验收会议",
+        "category": "work"
+      },
+      "trigger": {
+        "type": "demo",
+        "level": 3,
+        "score": 8,
+        "reasons": [
+          "acceptance_demo"
+        ]
+      },
+      "content": {
+        "content_type": "important",
+        "raw_text": "下一步：在 2026-07-14T10:00:00+08:00 前完成检查。",
+        "clean_text": "下一步：在 2026-07-14T10:00:00+08:00 前完成检查。",
+        "summary": "安排验收会议",
+        "entities": [
+          {
+            "type": "project",
+            "text": "Elfred"
+          }
+        ],
+        "tasks": [
+          {
+            "task": "完成演示验收检查",
+            "deadline": "2026-07-14T10:00:00+08:00",
+            "assignee": "unknown",
+            "project": "Elfred",
+            "confidence": 0.93
+          }
+        ]
+      },
+      "privacy": {
+        "is_sensitive": false,
+        "sensitivity_types": [],
+        "action": "allow",
+        "allowed_to_upload": false,
+        "allowed_to_write_long_term_memory": false,
+        "requires_user_confirmation": false
+      },
+      "artifacts": {
+        "screenshot_id": "demo-shot-018"
+      },
+      "suggestions": {
+        "memory_write_suggestions": [],
+        "task_card_suggestions": [
+          {
+            "task": "完成演示验收检查",
+            "deadline": "2026-07-14T10:00:00+08:00",
+            "assignee": "unknown",
+            "project": "Elfred",
+            "confidence": 0.93
+          }
+        ],
+        "skill_candidate_suggestions": []
+      },
+      "status": "temporary_context",
+      "demo_unknown_field": {
+        "preserved": true,
+        "index": 17
+      }
+    },
+    {
+      "event_id": "demo-20260713-019",
+      "created_at": "2026-07-13T14:06:00+08:00",
+      "source": "desktop_observer",
+      "app": {
+        "name": "FreeTodo",
+        "process_name": "FreeTodo.exe",
+        "window_title": "验证手工修改保护",
+        "category": "work"
+      },
+      "trigger": {
+        "type": "demo",
+        "level": 3,
+        "score": 8,
+        "reasons": [
+          "acceptance_demo"
+        ]
+      },
+      "content": {
+        "content_type": "important",
+        "raw_text": "风险：不能悄悄覆盖用户在 Todo 中的手工修改。",
+        "clean_text": "风险：不能悄悄覆盖用户在 Todo 中的手工修改。",
+        "summary": "验证手工修改保护",
+        "entities": [
+          {
+            "type": "project",
+            "text": "开发"
+          }
+        ],
+        "tasks": [
+          {
+            "task": "测试手工修改保护",
+            "deadline": null,
+            "assignee": "unknown",
+            "project": "开发",
+            "confidence": 0.97
+          }
+        ]
+      },
+      "privacy": {
+        "is_sensitive": false,
+        "sensitivity_types": [],
+        "action": "allow",
+        "allowed_to_upload": false,
+        "allowed_to_write_long_term_memory": false,
+        "requires_user_confirmation": false
+      },
+      "artifacts": {
+        "screenshot_id": "demo-shot-019"
+      },
+      "suggestions": {
+        "memory_write_suggestions": [],
+        "task_card_suggestions": [
+          {
+            "task": "测试手工修改保护",
+            "deadline": null,
+            "assignee": "unknown",
+            "project": "开发",
+            "confidence": 0.97
+          }
+        ],
+        "skill_candidate_suggestions": []
+      },
+      "status": "temporary_context",
+      "demo_unknown_field": {
+        "preserved": true,
+        "index": 18
+      }
+    },
+    {
+      "event_id": "demo-20260713-020",
+      "created_at": "2026-07-13T14:13:00+08:00",
+      "source": "desktop_observer",
+      "app": {
+        "name": "Observer",
+        "process_name": "Observer.exe",
+        "window_title": "完成当天上下文回顾",
+        "category": "work"
+      },
+      "trigger": {
+        "type": "demo",
+        "level": 3,
+        "score": 8,
+        "reasons": [
+          "acceptance_demo"
+        ]
+      },
+      "content": {
+        "content_type": "important",
+        "raw_text": "发现日报需要突出 idea、决策、风险和下一步。",
+        "clean_text": "发现日报需要突出 idea、决策、风险和下一步。",
+        "summary": "完成当天上下文回顾",
+        "entities": [
+          {
+            "type": "project",
+            "text": "Elfred"
+          }
+        ],
+        "tasks": [
+          {
+            "task": "检查 idea 导向日报",
+            "deadline": null,
+            "assignee": "unknown",
+            "project": "Elfred",
+            "confidence": 0.89
+          }
+        ]
+      },
+      "privacy": {
+        "is_sensitive": false,
+        "sensitivity_types": [],
+        "action": "allow",
+        "allowed_to_upload": false,
+        "allowed_to_write_long_term_memory": true,
+        "requires_user_confirmation": false
+      },
+      "artifacts": {
+        "screenshot_id": "demo-shot-020"
+      },
+      "suggestions": {
+        "memory_write_suggestions": [],
+        "task_card_suggestions": [
+          {
+            "task": "检查 idea 导向日报",
+            "deadline": null,
+            "assignee": "unknown",
+            "project": "Elfred",
+            "confidence": 0.89
+          }
+        ],
+        "skill_candidate_suggestions": []
+      },
+      "status": "temporary_context",
+      "demo_unknown_field": {
+        "preserved": true,
+        "index": 19
+      }
+    }
+  ]
+}

@@ -1,0 +1,20 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://elfred.local/contracts/personal-agent-context-outbox-v1.schema.json",
+  "title": "Elfred Personal Agent Context v1",
+  "type": "object",
+  "required": ["contract_version", "kind", "context_id", "source_event_id", "created_at", "freshness"],
+  "properties": {
+    "contract_version": {"const": "1.0"},
+    "kind": {"const": "personal_agent_context"},
+    "context_id": {"type": "string"},
+    "source_event_id": {"type": "string"},
+    "created_at": {"type": "string", "format": "date-time"},
+    "app": {"type": "object", "additionalProperties": true},
+    "summary": {"type": ["string", "null"]},
+    "tasks": {"type": "array", "items": {"type": "object", "additionalProperties": true}},
+    "topics": {"type": "array", "items": {"type": "string"}},
+    "freshness": {"enum": ["current", "historical", "expired"]}
+  },
+  "additionalProperties": true
+}

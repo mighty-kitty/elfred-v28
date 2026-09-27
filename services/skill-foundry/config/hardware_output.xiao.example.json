@@ -1,0 +1,32 @@
+{
+  "schemaVersion": "1.0",
+  "devices": {
+    "pendant": {
+      "transport": "xiao",
+      "baseUrl": "http://xiao-a1b2c3.local",
+      "deviceId": "xiao-a1b2c3",
+      "boardProfile": "xiao-esp32s3",
+      "tokenEnv": "XIAO_PENDANT_TOKEN",
+      "statusPath": "/api/status",
+      "commandPath": "/api/hardware/command",
+      "commandStatusPath": "/api/hardware/commands/{commandId}",
+      "stopPath": "/api/hardware/stop",
+      "commandTtlSeconds": 300,
+      "completionTimeoutSeconds": 15,
+      "pollIntervalMs": 250,
+      "capabilities": ["notify", "stop"]
+    },
+    "base": {
+      "transport": "mock",
+      "capabilities": ["play_scene", "stop"]
+    },
+    "arm": {
+      "transport": "mock",
+      "capabilities": ["run_preset", "stop"]
+    },
+    "printer": {
+      "transport": "mock",
+      "capabilities": ["print_journal", "stop"]
+    }
+  }
+}

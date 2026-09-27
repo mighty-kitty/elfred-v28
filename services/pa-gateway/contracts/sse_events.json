@@ -1,0 +1,26 @@
+{
+  "contract": "elfred.sse-events.v1",
+  "source": "execution book 11.1",
+  "required_fields": ["event_id", "event_seq", "run_id", "pa_id", "timestamp", "type", "payload_version", "payload"],
+  "types": [
+    "run.created",
+    "run.status_changed",
+    "context.started",
+    "context.completed",
+    "plan.created",
+    "plan.updated",
+    "tool.requested",
+    "tool.started",
+    "tool.progress",
+    "tool.completed",
+    "tool.failed",
+    "approval.required",
+    "approval.resolved",
+    "artifact.created",
+    "delivery.ready",
+    "acceptance.recorded",
+    "run.completed",
+    "run.failed",
+    "run.cancelled"
+  ]
+}

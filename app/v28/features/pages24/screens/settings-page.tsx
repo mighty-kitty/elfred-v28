@@ -329,8 +329,8 @@ function DepsPanel({ deps, tried }: { deps: LiveDeps | null; tried: boolean }) {
   const rows = [
     ...(deps.memory ? [{label:"应用记忆库",ok:deps.memory.ok,reason:deps.memory.reason,impact:""}] : []),
     { label: "外部记忆服务（EMOS）", ...deps.emos },
-    { label: "Skill Foundry", ...deps.skill_foundry },
-    { label: "应用主服务", ...deps.gateway },
+    { label: "Skill Foundry（能力生成）", ...deps.skill_foundry },
+    { label: "PA 网关（规划与执行）", ...deps.gateway },
   ];
   return (
     <div className={styles.deps}>

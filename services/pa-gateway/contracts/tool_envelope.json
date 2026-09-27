@@ -1,0 +1,31 @@
+{
+  "contract": "elfred.tool-envelope.v1",
+  "source": "execution book 9 (tool envelope)",
+  "fields": {
+    "tool_call_id": "string",
+    "run_id": "string",
+    "status": "started|completed|failed",
+    "started_at": "string|null",
+    "ended_at": "string|null",
+    "result_summary": "string|null",
+    "artifact_refs": "string[]",
+    "evidence_refs": "string[]",
+    "error_code": "string|null",
+    "retryable": "boolean",
+    "emotion": "{\"label\": string, \"score\": number}|null"
+  },
+  "error_codes": [
+    "AUTH_REQUIRED",
+    "CONSENT_REQUIRED",
+    "SERVICE_UNAVAILABLE",
+    "TOOL_UNAVAILABLE",
+    "APPROVAL_REQUIRED",
+    "POLICY_DENIED",
+    "CONFLICT",
+    "TIMEOUT",
+    "RETRYABLE_UPSTREAM",
+    "INVALID_OUTPUT",
+    "CANCELLED",
+    "DATA_REVOKED"
+  ]
+}

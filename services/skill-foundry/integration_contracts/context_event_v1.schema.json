@@ -1,0 +1,30 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://elfred.local/contracts/context-event-v1.schema.json",
+  "title": "Elfred ContextEvent Envelope v1",
+  "type": "object",
+  "required": ["event"],
+  "properties": {
+    "schema_version": {"type": "string", "default": "1.0"},
+    "producer": {"type": "string", "default": "elfred_desktop_observer"},
+    "received_at": {"type": "string", "format": "date-time"},
+    "event": {
+      "type": "object",
+      "required": ["event_id", "created_at"],
+      "properties": {
+        "event_id": {"type": "string", "minLength": 1},
+        "created_at": {"type": "string", "format": "date-time"},
+        "source": {"type": "string"},
+        "app": {"type": "object", "additionalProperties": true},
+        "trigger": {"type": "object", "additionalProperties": true},
+        "content": {"type": "object", "additionalProperties": true},
+        "privacy": {"type": "object", "additionalProperties": true},
+        "artifacts": {"type": "object", "additionalProperties": true},
+        "suggestions": {"type": "object", "additionalProperties": true},
+        "status": {"type": "string"}
+      },
+      "additionalProperties": true
+    }
+  },
+  "additionalProperties": true
+}

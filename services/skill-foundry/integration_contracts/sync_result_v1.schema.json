@@ -1,0 +1,19 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://elfred.local/contracts/sync-result-v1.schema.json",
+  "title": "Elfred FreeTodo Sync Result v1",
+  "type": "object",
+  "required": ["event_id", "status", "payload_hash", "todo_ids", "journal_ids", "outbox_ids", "warnings"],
+  "properties": {
+    "event_id": {"type": "string"},
+    "status": {"enum": ["synced", "duplicate", "conflict", "privacy_blocked", "retry", "rejected"]},
+    "payload_hash": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
+    "job_id": {"type": ["string", "null"]},
+    "todo_ids": {"type": "array", "items": {"type": "integer"}},
+    "journal_ids": {"type": "array", "items": {"type": "integer"}},
+    "activity_state": {"type": ["string", "null"]},
+    "outbox_ids": {"type": "array", "items": {"type": "string"}},
+    "warnings": {"type": "array", "items": {"type": "string"}}
+  },
+  "additionalProperties": false
+}

@@ -1,0 +1,1 @@
+﻿{"dataset":"locomo-style","description":"Expanded local benchmark aligned with conversational long-memory recall tasks.","splits":["dev","test"],"version":"2026-04-14","sample_counts":{"dev":6,"test":6}}

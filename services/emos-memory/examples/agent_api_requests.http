@@ -1,0 +1,80 @@
+﻿@baseUrl = http://127.0.0.1:8000
+
+### Health
+GET {{baseUrl}}/health
+
+### Root discovery
+GET {{baseUrl}}/
+
+### OpenAPI
+GET {{baseUrl}}/openapi.json
+
+### Agent API manifest
+GET {{baseUrl}}/system/agent-api-manifest
+
+### Write plan
+POST {{baseUrl}}/memory/write-plan
+Content-Type: application/json
+
+{
+  "user_id": "demo-user",
+  "session_id": "demo-session",
+  "text": "The user prefers black coffee with no sugar.",
+  "task_type": "chat",
+  "memory_scope": "auto",
+  "source": "agent",
+  "task_goal": "capture durable preference",
+  "context_summary": "personalization update",
+  "working_memory": ["coffee preference surfaced during chat"]
+}
+
+### Durable write
+POST {{baseUrl}}/memory/write
+Content-Type: application/json
+
+{
+  "user_id": "demo-user",
+  "session_id": "demo-session",
+  "text": "The user prefers black coffee with no sugar.",
+  "task_type": "chat",
+  "memory_scope": "auto",
+  "source": "agent",
+  "task_goal": "capture durable preference",
+  "context_summary": "personalization update",
+  "working_memory": ["coffee preference surfaced during chat"]
+}
+
+### Grounded recall
+POST {{baseUrl}}/memory/recall
+Content-Type: application/json
+
+{
+  "user_id": "demo-user",
+  "session_id": "demo-session",
+  "query_text": "What coffee preference should I remember?",
+  "top_k": 5,
+  "include_profile": true,
+  "task_goal": "answer from long-term memory",
+  "context_summary": "agent wants a grounded answer",
+  "working_memory": ["answer briefly"],
+  "response_mode": "execution_surface"
+}
+
+### Memory history
+POST {{baseUrl}}/memory/history
+Content-Type: application/json
+
+{
+  "user_id": "demo-user",
+  "session_id": "demo-session",
+  "memory_id": "replace-with-real-memory-id"
+}
+
+### Agent readiness summary
+GET {{baseUrl}}/system/agent-readiness-summary
+
+### System report
+GET {{baseUrl}}/system/report
+
+### Storage report
+GET {{baseUrl}}/system/storage

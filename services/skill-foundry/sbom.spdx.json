@@ -1,0 +1,28 @@
+{
+  "spdxVersion": "SPDX-2.3",
+  "dataLicense": "CC0-1.0",
+  "SPDXID": "SPDXRef-DOCUMENT",
+  "name": "Elfred-FreeTodo-demo-SBOM",
+  "documentNamespace": "https://elfred.local/sbom/2026-07-13/elfred-freetodo-demo",
+  "creationInfo": {
+    "created": "2026-07-13T08:30:00Z",
+    "creators": ["Tool: Codex local dependency audit"]
+  },
+  "packages": [
+    {"name": "elfred-freetodo-adapter", "SPDXID": "SPDXRef-Adapter", "versionInfo": "0.1.0", "downloadLocation": "NOASSERTION", "licenseConcluded": "NOASSERTION", "licenseDeclared": "NOASSERTION", "filesAnalyzed": false},
+    {"name": "FreeTodo", "SPDXID": "SPDXRef-FreeTodo", "versionInfo": "0.1.2", "downloadLocation": "https://github.com/FreeU-group/FreeTodo", "licenseConcluded": "LicenseRef-FreeU-Community-License", "licenseDeclared": "LicenseRef-FreeU-Community-License", "filesAnalyzed": false, "checksums": [{"algorithm": "SHA256", "checksumValue": "726A08DAEB6A15FFBE44427112F5FAC67E5AC81E68388C539A0A86CC4578A145"}]},
+    {"name": "fastapi", "SPDXID": "SPDXRef-fastapi", "versionInfo": "0.139.0", "downloadLocation": "https://pypi.org/project/fastapi/0.139.0/", "licenseConcluded": "NOASSERTION", "licenseDeclared": "NOASSERTION", "filesAnalyzed": false},
+    {"name": "pydantic", "SPDXID": "SPDXRef-pydantic", "versionInfo": "2.13.4", "downloadLocation": "https://pypi.org/project/pydantic/2.13.4/", "licenseConcluded": "NOASSERTION", "licenseDeclared": "NOASSERTION", "filesAnalyzed": false},
+    {"name": "python-multipart", "SPDXID": "SPDXRef-python-multipart", "versionInfo": "0.0.32", "downloadLocation": "https://pypi.org/project/python-multipart/0.0.32/", "licenseConcluded": "NOASSERTION", "licenseDeclared": "NOASSERTION", "filesAnalyzed": false},
+    {"name": "uvicorn", "SPDXID": "SPDXRef-uvicorn", "versionInfo": "0.51.0", "downloadLocation": "https://pypi.org/project/uvicorn/0.51.0/", "licenseConcluded": "NOASSERTION", "licenseDeclared": "NOASSERTION", "filesAnalyzed": false}
+  ],
+  "relationships": [
+    {"spdxElementId": "SPDXRef-DOCUMENT", "relationshipType": "DESCRIBES", "relatedSpdxElement": "SPDXRef-Adapter"},
+    {"spdxElementId": "SPDXRef-DOCUMENT", "relationshipType": "DESCRIBES", "relatedSpdxElement": "SPDXRef-FreeTodo"},
+    {"spdxElementId": "SPDXRef-Adapter", "relationshipType": "DEPENDS_ON", "relatedSpdxElement": "SPDXRef-fastapi"},
+    {"spdxElementId": "SPDXRef-Adapter", "relationshipType": "DEPENDS_ON", "relatedSpdxElement": "SPDXRef-pydantic"},
+    {"spdxElementId": "SPDXRef-Adapter", "relationshipType": "DEPENDS_ON", "relatedSpdxElement": "SPDXRef-python-multipart"},
+    {"spdxElementId": "SPDXRef-Adapter", "relationshipType": "DEPENDS_ON", "relatedSpdxElement": "SPDXRef-uvicorn"}
+  ],
+  "annotations": [{"annotationDate": "2026-07-13T08:30:00Z", "annotationType": "OTHER", "annotator": "Tool: Codex local dependency audit", "SPDXID": "SPDXRef-DOCUMENT", "comment": "Complete resolved Adapter package list is dependency_inventory.txt; complete 189-package FreeTodo backend environment list is docs/freetodo_integration/freetodo_backend_dependencies.txt."}]
+}

@@ -32,9 +32,9 @@ test('子 Agent 对话可多轮延续，回复留在私有会话，普通聊天�
   const second=command(alice,'agent.chat.send',{id:thread.id,text:'就按我们刚才的目标继续',model_consent:true});
   await new Runtime(store,provider).tick();
   assert.equal(calls.length,2);
-  assert.match(calls[1].goal.goal,/帮我看看首页/);
-  assert.match(calls[1].goal.goal,/先说说你希望达到什么结果/);
-  assert.match(calls[1].goal.goal,/就按我们刚才的目标继续/);
+  assert.deepEqual(calls[1].conversation,[{role:'user',content:'帮我看看首页'},{role:'assistant',content:'先说说你希望达到什么结果。'},{role:'user',content:'就按我们刚才的目标继续'}]);
+  assert.equal(calls[1].goal.goal,'就按我们刚才的目标继续');
+  assert.doesNotMatch(calls[1].systemPrompt,/默认输出使用以下 Markdown 小标题/);
   const sequence=service.list(alice.id,'message').filter(item=>item.data.conversation_id===thread.id).sort((a,b)=>a.data.seq-b.data.seq);
   assert.deepEqual(sequence.map(item=>item.data.actor_type),['human','agent','human','agent']);
   assert.equal(sequence[3].data.trigger_id,second.id);

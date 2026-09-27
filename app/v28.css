@@ -835,3 +835,23 @@
 .v280-device .elfred-tools-backdrop{z-index:80!important}
 .v280-device .elfred-search-backdrop{z-index:90!important}
 .v280-device .elfred-connected-search{z-index:91!important}
+
+/* A deck swipe belongs to the cards, not to the page behind them. */
+.v280-device .v283-brief-deck { touch-action: pan-x pinch-zoom; }
+.v283-agent-thread { overscroll-behavior-y: contain; padding-bottom: calc(var(--agent-composer-height, 58px) + 34px); }
+.v283-agent-chat-task-layer { position: absolute; inset: 0; z-index: 951; }
+.v283-agent-chat-task-form { position: absolute; inset: auto 12px 12px; max-height: calc(100% - 24px); overflow-y: auto; padding: 18px; border-radius: 22px; background: white; color: #20272b; }
+.v283-agent-chat-task-form header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; }
+.v283-agent-chat-task-form header button { border: 0; background: transparent; padding: 8px; color: #73808b; }
+.v283-agent-chat-task-form > label { display: block; margin: 14px 0; font-size: 13px; line-height: 1.6; }
+.v283-agent-chat-task-form textarea, .v283-agent-chat-task-form select { display: block; width: 100%; box-sizing: border-box; margin-top: 8px; padding: 10px; border: 1px solid #dfe4e8; border-radius: 12px; background: white; font: inherit; font-size: 16px; }
+.v283-agent-chat-task-form p { color: #77828b; font-size: 12px; line-height: 1.7; }
+.v283-agent-chat-task-form > .v283-chat-task-consent { display: flex; align-items: flex-start; gap: 8px; }
+.v283-agent-chat-task-form > button { width: 100%; }
+.v283-agent-chat-draft-link > .v283-chat-task-label { flex: 1; min-width: 0; display: block; }
+.v283-chat-task-label b { display: block; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; font-size: 12px; }
+.v283-chat-task-label small { display: block; margin-top: 5px; color: #7f8992; font-size: 11px; font-weight: 400; }
+@media (max-width: 600px), (pointer: coarse) {
+  /* Safari zooms focused text controls below 16px. Preserve pinch zoom. */
+  .v280-device .v277-root :is(input, textarea, select) { font-size: 16px !important; }
+}

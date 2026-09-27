@@ -1045,7 +1045,7 @@
 .v283-agent-chat-drafts .v283-agent-chat-draft-link { width: min(100%, 300px); display: flex; align-items: center; justify-content: space-between; gap: 8px; }
 .v283-agent-chat-draft-link > span { display: flex; align-items: center; flex: none; color: #111; font-weight: 600; }
 .v283-agent-chat-composer { position: absolute; z-index: 50; left: 18px; right: 18px; bottom: 16px; display: flex; align-items: flex-end; gap: 8px; min-height: 58px; padding: 6px; border: 1px solid #e1e5ea; border-radius: 28px; background: white; box-shadow: 0 10px 28px #18233012; }
-.v283-agent-chat-composer textarea { flex: 1; min-width: 0; max-height: 130px; min-height: 42px; resize: none; padding: 11px; border: 0; outline: 0; background: transparent; color: #1d2329; font: inherit; font-size: 14px; line-height: 1.4; }
+.v283-agent-chat-composer textarea { flex: 1; min-width: 0; max-height: 130px; min-height: 42px; resize: none; padding: 11px; border: 0; outline: 0; background: transparent; color: #1d2329; font: inherit; font-size: 16px; line-height: 1.4; }
 .v283-agent-chat-composer button { width: 44px; height: 44px; display: grid; place-items: center; flex: none; border: 0; border-radius: 50%; background: #171a1d; color: white; }
 .v283-agent-chat-composer button:disabled { opacity: .38; }
 .v283-agent-chat-history-layer { position: absolute; z-index: 950; inset: 0; }

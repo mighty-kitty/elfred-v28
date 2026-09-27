@@ -11,6 +11,7 @@ import {bodyFor} from './search-engine.mjs';
 import {checkContextUse} from './context-request.mjs';
 import {groupAgentReady,publishGroupAgentReply} from './group-agent.mjs';
 import {publishAgentChatReply} from './agent-chat.mjs';
+import {chatModelRequest} from './agent-chat-context.mjs';
 
 export function taskCommand(store,user,action,input) {
   if(action==='task.archive'||action==='task.restore') {
@@ -76,7 +77,7 @@ export function taskCommand(store,user,action,input) {
     const plan={steps,role:{id:role.id,name:role.name,version:role.version},review,selection:task.data.capability_selection||{provider:'legacy'},execution_style:'shared-runner',version:(prior?.data.plan.version||0)+1,goal_hash:hash(task.data.goal),parent_run:prior?.id||null,repair_scope:action==='run.replan'?'revise_with_owner_feedback':'retry_unfinished_steps',feedback:action==='run.replan'?task.data.feedback:sameRevision?prior?.data.plan.feedback||null:null};
     const gate=planGate(plan,{stop},approval.data.scopes);
     if(role.tool_allowlist&&steps.some(step=>!role.tool_allowlist.includes(step.tool)))fail('CAPABILITY_TOOL_FORBIDDEN','所选能力不允许该工具',403);
-    const method=input.evaluation_candidate_id?store.owned(user,input.evaluation_candidate_id,'candidate'):store.visible(user,'method').find(item=>item.data.active);
+    const method=task.data.agent_chat?null:input.evaluation_candidate_id?store.owned(user,input.evaluation_candidate_id,'candidate'):store.visible(user,'method').find(item=>item.data.active);
     const receipts=resume?prior.data.receipts.filter(receipt=>receipt.status==='succeeded'):[];
     const run=store.add('run',user,{task_id:task.id,task_execution_revision:task.data.execution_revision||0,access_space:task.data.access_space,status:'queued',goal:{goal:task.data.goal,criteria:task.data.criteria,constraints:task.data.constraints,parameters:task.data.parameter_values||{},stop},plan,gate,source_refs:resume?prior.data.source_refs:[...task.data.source_refs,...(method?[{id:method.id}]:[])],approval_id:approval.id,approval_version:approval.version,version_snapshot:resume?prior.data.version_snapshot:{policy:POLICY_VERSION,tools:TOOLS,system:task.data.system,role,reviewer,preferences:preferences||null,method:method?{id:method.id,version:method.version,prompt:method.data.prompt,prompt_hash:method.data.prompt_hash}:null},receipts,verification:null,checkpoint:receipts.map(receipt=>receipt.step_id),created_at:now()});
     store.db.prepare('INSERT INTO jobs(id,run_id,status) VALUES(?,?,?)').run(id(),run.id,'queued');
@@ -242,6 +243,10 @@ export class Runtime {
           else if (step.tool==='context.read') output=sourceRefs(s,run.owner,run.data.source_refs,128).map(ref=>{const object=s.read(run.owner,ref.id);return String(object.data.content||object.data.text||object.data.instructions||object.data.summary||object.data.name||'').slice(0,12000)}).join('\n\n');
           else if (step.tool==='document.read') output=s.read(run.owner,step.ref.id,'document').data.content;
           else if(['web_search','image_generate'].includes(task.data.media_operation)){providerResult=await this.provider[task.data.media_operation==='web_search'?'research':'image']({goal:task.data.goal,maxTokens:stop.maxTokens-task.data.tokens,signal:AbortSignal.any([this.controller.signal,AbortSignal.timeout(Math.max(1,stop.maxSeconds*1000-task.data.elapsed_ms))])});output=providerResult.output;}
+          else if(task.data.agent_chat){
+            providerResult=await this.provider.generate({...chatModelRequest(s,task.data,{...run.data,owner:run.owner},this.provider.status?.()),goal:run.data.goal,maxTokens:stop.maxTokens-task.data.tokens,signal:AbortSignal.any([this.controller.signal,AbortSignal.timeout(Math.max(1,stop.maxSeconds*1000-task.data.elapsed_ms))])});
+            output=providerResult.output;
+          }
           else if(task.data.media_operation==='embedding_search'){
             sourceRefs(s,run.owner,stepRefs,128);
             providerResult=await this.provider.embed({input:[task.data.search_intent.original,...step.chunks.map(c=>c.text)],maxTokens:stop.maxTokens-task.data.tokens,signal:AbortSignal.any([this.controller.signal,AbortSignal.timeout(Math.max(1,stop.maxSeconds*1000-task.data.elapsed_ms))])});

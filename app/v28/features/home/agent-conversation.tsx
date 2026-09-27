@@ -6,6 +6,7 @@ import {agentList} from '../../../v27-7-data';
 import type {V277AgentId} from '../../../v27-7-state';
 import type {Screen} from '../../core/screen';
 import {useRuntime} from '../../core/runtime-context';
+import {statuses,text as entityText} from '../live/types';
 
 const systemOf=(id:V277AgentId)=>id==='advisor'?'advise':id;
 const prompts:Record<V277AgentId,string>={
@@ -27,7 +28,8 @@ export function AgentConversationPage({id,go,onBack,prefill}:{id:V277AgentId;go:
   const [input,setInput]=useState('');
   const [sending,setSending]=useState(false);
   const [drafting,setDrafting]=useState(false);
-  const bottom=useRef<HTMLDivElement>(null);
+  const thread=useRef<HTMLElement>(null);
+  const [taskOpen,setTaskOpen]=useState(false),[taskGoal,setTaskGoal]=useState(''),[taskMode,setTaskMode]=useState('compose'),[taskConsent,setTaskConsent]=useState(false),[startingTask,setStartingTask]=useState(false);
   const composer=useRef<HTMLTextAreaElement>(null);
   const threads=(runtime?.snapshot?.objects.conversation||[]).filter(item=>item.data.kind==='agent'&&item.data.system===systemOf(id)).sort((a,b)=>b.updated.localeCompare(a.updated));
   const activeId=newThread?null:selectedId||threads[0]?.id||null;
@@ -42,8 +44,8 @@ export function AgentConversationPage({id,go,onBack,prefill}:{id:V277AgentId;go:
 
   useEffect(()=>{if(prefill)setInput(current=>current.trim()?current:prefill);},[prefill]);
 
-  useEffect(()=>{bottom.current?.scrollIntoView({block:'end'});},[activeId,messages.length,pending?.id]);
-  useEffect(()=>{const field=composer.current;if(!field)return;field.style.height='auto';field.style.height=Math.min(field.scrollHeight,130)+'px';},[input]);
+  useEffect(()=>{if(thread.current)thread.current.scrollTop=thread.current.scrollHeight;},[activeId,messages.length,pending?.id]);
+  useEffect(()=>{const field=composer.current;if(!field)return;field.style.height='auto';field.style.height=Math.min(field.scrollHeight,130)+'px';field.closest('main')?.style.setProperty('--agent-composer-height',(field.parentElement?.offsetHeight||58)+'px');},[input]);
 
   const send=async(event?:FormEvent)=>{
     event?.preventDefault();
@@ -54,7 +56,7 @@ export function AgentConversationPage({id,go,onBack,prefill}:{id:V277AgentId;go:
       let conversationId=activeId;
       if(!conversationId){const created=await runtime.command('agent.chat.create',{system:systemOf(id)});conversationId=created.id;setSelectedId(conversationId);setNewThread(false);}
       await runtime.command('agent.chat.send',{id:conversationId,text,model_consent:true});
-      setInput('');
+      setInput(current=>current.trim()===text?'':current);
     }catch(error){runtime.report(error instanceof Error?error.message:'发送失败');}
     finally{setSending(false);}
   };
@@ -65,11 +67,22 @@ export function AgentConversationPage({id,go,onBack,prefill}:{id:V277AgentId;go:
     catch(error){runtime.report(error instanceof Error?error.message:'草稿创建失败');}
     finally{setDrafting(false);}
   };
+  const openTask=()=>{
+    const meaningful=[...messages].reverse().find(item=>item.data.actor_type==='human'&&!/^(你)?(直接|继续)?(执行|做|开始|继续)(吧|啊)?[。！!]?$/u.test(String(item.data.text).trim()));
+    setTaskGoal(String((meaningful||lastHuman)?.data.text||''));setTaskConsent(false);setTaskOpen(true);
+  };
+  const startTask=async()=>{
+    if(!runtime||!activeId||!taskGoal.trim()||!taskConsent||startingTask)return;
+    setStartingTask(true);
+    try{await runtime.command('agent.chat.task',{id:activeId,goal:taskGoal.trim(),mode:taskMode,confirm:true,model_consent:taskMode==='compose'});setTaskOpen(false);}
+    catch(error){runtime.report(error instanceof Error?error.message:'任务未能启动');}
+    finally{setStartingTask(false);}
+  };
   const keyDown=(event:KeyboardEvent<HTMLTextAreaElement>)=>{
     if(event.key==='Enter'&&!event.shiftKey&&!event.nativeEvent.isComposing){event.preventDefault();void send();}
   };
-  const selectThread=(conversationId:string)=>{setSelectedId(conversationId);setNewThread(false);setHistoryOpen(false);setInput('');};
-  const startThread=()=>{setSelectedId(null);setNewThread(true);setHistoryOpen(false);setInput('');};
+  const selectThread=(conversationId:string)=>{setSelectedId(conversationId);setNewThread(false);setHistoryOpen(false);setTaskOpen(false);setInput('');};
+  const startThread=()=>{setSelectedId(null);setNewThread(true);setHistoryOpen(false);setTaskOpen(false);setInput('');};
   const filtered=threads.filter(item=>{
     const first=(runtime?.snapshot?.objects.message||[]).find(message=>message.data.conversation_id===item.id&&message.data.actor_type==='human');
     return `${item.data.title||''} ${first?.data.text||''}`.toLowerCase().includes(query.trim().toLowerCase());
@@ -90,7 +103,7 @@ export function AgentConversationPage({id,go,onBack,prefill}:{id:V277AgentId;go:
         <button type="button" className="v277-icon-button" aria-label="Agent 设置" onClick={()=>go({name:'agent-settings',id})}><Settings2 size={21}/></button>
       </span>
     </header>
-    <section className="v283-agent-thread" aria-label={`${agent.name} Agent 对话`}>
+    <section ref={thread} className="v283-agent-thread" aria-label={`${agent.name} Agent 对话`}>
       {!messages.length&&<div className="v283-agent-chat-welcome">
         <i className={'v283-agent-avatar hero agent-'+id}><Icon size={38}/><em/></i>
         <h1>和{agent.name} Agent 聊聊</h1>
@@ -103,17 +116,29 @@ export function AgentConversationPage({id,go,onBack,prefill}:{id:V277AgentId;go:
         <div className="v283-agent-chat-bubble">{String(message.data.text||'')}</div>
       </div>)}
       {pending&&<div className="v283-agent-chat-row theirs"><i className={'v283-agent-avatar small agent-'+id}><Icon size={18}/></i><div className="v283-agent-chat-bubble subtle">正在回复…</div></div>}
-      {failed&&!pending&&<p className="v283-agent-chat-status">这次回复未完成：{String(failed.data.status)==='blocked'?'模型服务暂不可用，请检查配置。':'请重试发送；已发送的消息仍保留在对话中。'}</p>}
+      {failed&&!pending&&<p className="v283-agent-chat-status">这次回复未完成：{String(((runtime?.snapshot?.objects.run||[]).find(item=>item.id===failed.data.run_id)?.data.error as {message?:string}|undefined)?.message||'请重试发送；已发送的消息仍保留在对话中。')}</p>}
       {!!messages.length&&!pending&&<div className="v283-agent-chat-drafts">
         <button type="button" onClick={()=>void createDraft()} disabled={!lastHuman||drafting}>{drafting?'正在保存…':'将这段对话建为任务草稿'}</button>
-        {drafts.map(draft=><button type="button" className="v283-agent-chat-draft-link" key={draft.id} onClick={()=>go({name:'task',id:draft.id})}>草稿：{String(draft.data.title)} <span>查看草稿 <ChevronRight size={14}/></span></button>)}
+        <button type="button" onClick={openTask} disabled={!lastHuman}>执行任务</button>
+        {drafts.map(draft=><button type="button" className="v283-agent-chat-draft-link" key={draft.id} onClick={()=>go({name:'task',id:draft.id})}><span className="v283-chat-task-label"><b>{String(draft.data.title)}</b><small>{statuses[entityText(draft,'status')]||entityText(draft,'status')}</small></span><span>{draft.data.status==='draft'?'查看草稿':['awaiting_review','awaiting_acceptance','completed'].includes(String(draft.data.status))?'查看结果':'查看任务'} <ChevronRight size={14}/></span></button>)}
       </div>}
-      <div ref={bottom}/>
+
     </section>
     <form className="v283-agent-chat-composer" onSubmit={event=>void send(event)}>
       <textarea ref={composer} value={input} onChange={event=>setInput(event.target.value)} onKeyDown={keyDown} rows={1} placeholder={`问${agent.name} Agent…`} aria-label={`问${agent.name} Agent`}/>
       <button type="submit" disabled={!input.trim()||sending||Boolean(pending)} aria-label="发送消息"><ArrowUp size={20}/></button>
     </form>
+    {taskOpen&&<div className="v283-agent-chat-task-layer">
+      <button type="button" className="v283-agent-chat-mask" aria-label="关闭任务确认" onClick={()=>!startingTask&&setTaskOpen(false)}/>
+      <section role="dialog" aria-modal="true" aria-label="确认执行任务" className="v283-agent-chat-task-form">
+        <header><b>执行任务</b><button type="button" disabled={startingTask} onClick={()=>setTaskOpen(false)}>关闭</button></header>
+        <label>本次要完成什么<textarea value={taskGoal} maxLength={taskMode==='search'?300:6000} onChange={event=>setTaskGoal(event.target.value)} aria-label="任务目标" rows={3}/></label>
+        <label>执行方式<select value={taskMode} onChange={event=>{setTaskMode(event.target.value);setTaskConsent(false);}} aria-label="执行方式"><option value="compose">生成内容、分析或计划</option><option value="search">检索应用内资料</option></select></label>
+        <p>{taskMode==='compose'?'使用当前对话，最多 3 次模型调用；结果在任务中核对。':'请输入不超过 300 字的检索关键词；只检索本人可访问的应用内资料，不调用模型。'} 邮件、网页操作、支付和部署尚未接通。</p>
+        <label className="v283-chat-task-consent"><input type="checkbox" checked={taskConsent} onChange={event=>setTaskConsent(event.target.checked)}/>确认目标与范围{taskMode==='compose'?'，允许把目标及当前对话交给已配置模型，最多 3000 本地额度':''}</label>
+        <button type="button" className="v277-primary" disabled={!taskGoal.trim()||(taskMode==='search'&&taskGoal.trim().length>300)||!taskConsent||startingTask} onClick={()=>void startTask()}>{startingTask?'正在启动…':'确认并开始'}</button>
+      </section>
+    </div>}
     {historyOpen&&<div className="v283-agent-chat-history-layer">
       <button type="button" className="v283-agent-chat-mask" aria-label="关闭过往对话" onClick={()=>setHistoryOpen(false)}/>
       <aside className="v283-agent-chat-history" role="dialog" aria-modal="true" aria-label="过往对话">

@@ -74,15 +74,33 @@ export function HomePage({
     getCurrentBriefIndex(readBriefPreferences()),
   );
   const [briefSettingsOpen, setBriefSettingsOpen] = useState(false);
-  const briefTouch = useRef({ y: 0 });
+  const briefDeck=useRef<HTMLElement>(null);
+  const briefTouch=useRef<{x:number;y:number;id:number}|null>(null);
+  const suppressBriefClick=useRef(0);
+  const briefUnavailable=Boolean(runtime?.snapshot?.module_errors?.task);
+  useEffect(()=>{
+    const deck=briefDeck.current;if(!deck)return;
+    let accumulated=0,lastEvent=0,lastSwitch=0;
+    const wheel=(event:WheelEvent)=>{
+      if(Math.abs(event.deltaY)<=Math.abs(event.deltaX)||event.ctrlKey)return;
+      event.preventDefault();event.stopPropagation();
+      const time=Date.now();if(time-lastEvent>160)accumulated=0;lastEvent=time;
+      if(time-lastSwitch<300)return;
+      accumulated+=event.deltaY*(event.deltaMode===1?16:event.deltaMode===2?deck.clientHeight:1);
+      if(Math.abs(accumulated)<28)return;
+      const direction=accumulated>0?1:-1;accumulated=0;lastSwitch=time;
+      setBriefIndex(current=>(current+direction+3)%3);
+    };
+    deck.addEventListener('wheel',wheel,{passive:false});
+    return()=>deck.removeEventListener('wheel',wheel);
+  },[briefUnavailable]);
   const automaticBriefIndex = useRef(getCurrentBriefIndex(briefPreferences));
   const openTasks = state.tasks.filter((task) => task.status !== "已完成");
   const agentIcons = [Compass, Lightbulb, PenLine, Link2, CheckCircle2];
   const kinds: DailyBriefKind[] = ["morning", "noon", "evening"];
   const selectBrief = (next: number) =>
     setBriefIndex((next + kinds.length) % kinds.length);
-  const cycleBrief = (direction: number) =>
-    selectBrief(briefIndex + direction);
+
 
   useEffect(() => {
     const syncBrief = () => {
@@ -134,18 +152,25 @@ export function HomePage({
       <ModuleStatus types={['task']}><section
         className={`v283-brief-deck ${briefPreferences.style === "简洁" ? "is-simple" : briefPreferences.style === "紧凑" ? "is-compact" : "is-standard"}`}
         aria-label="三时段简报"
-        onWheel={(event) => {
-          if (Math.abs(event.deltaY) < 7) return;
-          event.stopPropagation();
-          cycleBrief(event.deltaY > 0 ? 1 : -1);
+        ref={briefDeck}
+        onPointerDown={event=>{if(event.isPrimary)briefTouch.current={x:event.clientX,y:event.clientY,id:event.pointerId};}}
+        onPointerMove={event=>{
+          const start=briefTouch.current;if(!start||start.id!==event.pointerId)return;
+          if(Math.abs(event.clientY-start.y)>8&&Math.abs(event.clientY-start.y)>Math.abs(event.clientX-start.x)){
+            event.currentTarget.setPointerCapture(event.pointerId);
+            suppressBriefClick.current=Date.now()+400;
+          }
         }}
-        onTouchStart={(event) => {
-          briefTouch.current.y = event.touches[0]?.clientY || 0;
+        onPointerUp={event=>{
+          const start=briefTouch.current;briefTouch.current=null;if(!start||start.id!==event.pointerId)return;
+          const delta=event.clientY-start.y;
+          if(Math.abs(delta)>28&&Math.abs(delta)>Math.abs(event.clientX-start.x)){
+            suppressBriefClick.current=Date.now()+400;
+            setBriefIndex(current=>(current+(delta<0?1:-1)+3)%3);
+          }
         }}
-        onTouchEnd={(event) => {
-          const delta = (event.changedTouches[0]?.clientY || 0) - briefTouch.current.y;
-          if (Math.abs(delta) > 28) cycleBrief(delta < 0 ? 1 : -1);
-        }}
+        onPointerCancel={()=>{briefTouch.current=null;}}
+        onClickCapture={event=>{if(Date.now()<suppressBriefClick.current){event.preventDefault();event.stopPropagation();}}}
       >
         <button
           type="button"

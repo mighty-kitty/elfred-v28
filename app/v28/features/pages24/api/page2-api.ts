@@ -1,6 +1,7 @@
 "use client";
 import {memoryOverview} from '../../../core/agent-alignment.mjs';
 import {memoryAdmitted,memoryActive,memoryGroup,systemNames} from '../../../core/memory-policy.mjs';
+import {dimensionInsight,observationsFromOutcomes,questionnairePaper} from '../../../core/dimensions.mjs';
 import {entityTitle,markdownExcerpt} from '../../../core/display-labels';
 
 // Second/fourth page projection of the authenticated V28 runtime.
@@ -12,8 +13,10 @@ import { useEffect, useSyncExternalStore } from "react";
 import type { Entity, Snapshot } from "../../live/types";
 
 export const PAGE2_API = "/api/elfred";
-// PR #2 does not ship the questionnaire service or its scoring implementation.
-export const QUESTIONNAIRE_AVAILABLE = false;
+// 这份轻量测试的题目、计分和能力估计现在都在本仓库里：
+// 题目与打分是 `app/v28/core/dimensions.mjs`（服务端同一份），作答通过
+// `questionnaire.submit` 落到当前会话的对象表（`dimension_baseline`）。
+export const QUESTIONNAIRE_AVAILABLE = true;
 
 /**
  * 预留功能的开关（**默认关，界面不展示**）。
@@ -204,6 +207,30 @@ const list = (snapshot: Snapshot, type: string) => snapshot.objects[type] ?? [];
 const active = (item: Entity) => !["archived", "deleted", "superseded", "rejected"].includes(field(item, "status"));
 const agentName: Record<string, string> = { explore: "探索", advise: "参谋", create: "创作", connect: "连接", execute: "执行" };
 
+function baselineOf(snapshot: Snapshot) {
+  const row = list(snapshot, "dimension_baseline").filter(active)[0];
+  if (!row) return null;
+  return {
+    axes: (row.data.axes as Record<string, number>) ?? {},
+    guard: Number(row.data.guard || 0),
+    version: Number(row.data.questionnaire_version || 1),
+    takenAt: String(row.data.taken_at || row.created),
+  };
+}
+
+/** 验收过的成果折成各维观测：维度优先看 skill 自己声明的，其次看这件活的主责 Agent。 */
+function observationsOf(outcomes: Entity[], tasks: Map<string, Entity>, skills: Entity[]) {
+  return observationsFromOutcomes(outcomes.map(outcome => {
+    const task = tasks.get(field(outcome, "task_id"));
+    return {
+      dimension: field(skills.find(item => item.id === field(task, "skill_id")), "dimension"),
+      system: field(task, "system"),
+      satisfaction: field(task, "satisfaction"),
+      at: outcome.created,
+    };
+  }));
+}
+
 function projectSnapshot(snapshot: Snapshot): Page2Data {
   const tools = list(snapshot, "skill").filter(active);
   const outcomes = list(snapshot, "outcome").filter(item => item.data.verdict === "accepted");
@@ -214,7 +241,7 @@ function projectSnapshot(snapshot: Snapshot): Page2Data {
   const capabilities: LiveCapability[] = tools.map(tool => {
     const uses = list(snapshot, "tool_use").filter(item => item.data.tool_id === tool.id && item.data.kind === "use").length;
     const accepted = outcomes.filter(item => tasks.get(field(item, "task_id"))?.data.skill_id === tool.id).length;
-    return { id: tool.id, type: field(tool, "kind") || "Skill", dimension: "未标注", title: entityTitle(tool),
+    return { id: tool.id, type: field(tool, "kind") || "Skill", dimension: field(tool, "dimension") || "未标注", title: entityTitle(tool),
       copy: markdownExcerpt(field(tool, "instructions"),160), owner: agentName[field(tool, "system")] || "执行",
       score: null, evidence: accepted, level: 1, stage: "待验证", gapLabel: "依据真实使用和验收结果成长", verified: accepted > 0,
       ladder: [{ level: 1, stage: "待验证", gate: 0 }] };
@@ -237,11 +264,13 @@ function projectSnapshot(snapshot: Snapshot): Page2Data {
       source: (item.data.source_refs as unknown[] | undefined)?.length ? "有来源" : "本人记录", status: field(item,"status")==="learned"?"自动记录":field(item, "status") === "validated" ? "已确认" : field(item,"status")==="needs_review"?"需重评":field(item,"status")==="deferred"?"已搁置":"待确认" });
   }
   const confirmed = memories.filter(item => memoryAdmitted(item)).length;
+  // 外部验证 = 成果挂到了可核对的来源上（任务带导入的材料或链接），不是"做过就算"
+  const externalChecks = outcomes.filter(item => ((tasks.get(field(item, "task_id"))?.data.source_refs as unknown[] | undefined)?.length ?? 0) > 0).length;
   const friends = list(snapshot, "friend").filter(item => item.data.status === "accepted");
   return { capabilities, todayEvidence: evidence.filter(item => item.day === "今天").map(item => ({ id: item.id, title: item.title, note: item.note,
       kind: item.kind, verdict: item.verdict, day: item.day })), evidence,
-    insight: { axes: ["洞察", "判断", "表达", "链接", "交付"].map(label => ({ label, value: null, previous: null })), composite: null,
-      previousComposite: null, outcomeCount: outcomes.length, externalChecks: 0, trend: null },
+    insight: dimensionInsight({ baseline: baselineOf(snapshot), observations: observationsOf(outcomes, tasks, tools),
+      outcomeCount: outcomes.length, externalChecks }),
     alignment: { alignment: null, level: null, stage: memoryOverview(memories).label, nextGate: null, confirmedMemories: confirmed, credibility: 0, externalChecks: 0 },
     memory: { headline: "Elfred 对你的当前理解", totalCount: confirmed, coveredGroups: Object.values(groups).filter(rows=>rows.length).length,
       groupCount: 4, daysTracked: new Set(memories.filter(m=>memoryAdmitted(m)&&memoryActive(m)).map(m=>m.updated.slice(0,10))).size, credibility: 0, groups,
@@ -323,20 +352,36 @@ export type Questionnaire = {
 };
 
 export async function fetchQuestionnaire(): Promise<Questionnaire | null> {
-  return request<Questionnaire>("/page2/questionnaire", undefined, 15000);
+  // 题目以后端为准（GET /page2/questionnaire，同一份 core/dimensions.mjs）；
+  // 取不到就退回本地那份同样的题，不把"网络抖一下"变成"这份测试做不了"。
+  try {
+    const response = await fetch(`${PAGE2_API}/page2/questionnaire`, { credentials: "same-origin" });
+    if (response.ok) {
+      const paper = (await response.json()) as Questionnaire;
+      if (paper?.items?.length) return paper;
+    }
+  } catch {
+    /* 下面退回本地同一份题库 */
+  }
+  const local = questionnairePaper() as Questionnaire;
+  return local?.items?.length ? local : null;
 }
 
-/** 提交作答 → 后端建/覆盖那份起点，并把最新的洞察估计一起带回来。 */
-export async function submitQuestionnaire(answers: { id: string; choice: number }[]) {
-  const result = await post<{
-    ok: boolean;
-    reason?: string;
-    note?: string;
-    axes?: Record<string, number>;
-    guard?: number;
-  }>("/page2/questionnaire", { answers }, 30000);
-  if (result?.ok) await loadPage2(true);      // 提交完让第二页立刻按新数据重画
-  return result;
+/** 提交作答 → 服务端建/覆盖那份起点；返回后让第二页立刻按新数据重画。 */
+export async function submitQuestionnaire(answers: { id: string; choice: number }[]): Promise<{
+  ok: boolean;
+  axes?: Record<string, number>;
+  guard?: number;
+  note?: string;
+}> {
+  if (!activeCommand) return { ok: false, note: "请先登录再答这份测试" };
+  try {
+    const result = (await activeCommand("questionnaire.submit", { answers })) as { ok: boolean; axes?: Record<string, number>; guard?: number };
+    if (result?.ok) await loadPage2(true);
+    return result;
+  } catch (error) {
+    return { ok: false, note: error instanceof Error ? error.message : "提交没成功，稍后再试" };
+  }
 }
 
 /**

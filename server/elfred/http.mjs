@@ -8,6 +8,7 @@ import {playerLogs} from './player-logs.mjs';
 import {dependencyHealth} from './dependency-health.mjs';
 import {recallMemories} from './memory-learning.mjs';
 import {memoryHubStatus} from './memory-hub.mjs';
+import {questionnaireView} from './questionnaire.mjs';
 import {memorySystems} from '../../app/v28/core/memory-policy.mjs';
 
 async function readBody(request) {
@@ -65,6 +66,7 @@ export function apiHandler(service,{origin='http://127.0.0.1:3000'}={}) {
         send(200,{items:items.reverse(),has_more:all.length>limit,next_before:items.length?Math.min(...items.map(item=>item.data.seq)):null});return true;
       }
       if(method==='GET' && route==='/bootstrap') {send(200,service.bootstrap(user.id));return true;}
+      if(method==='GET'&&route==='/page2/questionnaire'){send(200,questionnaireView(s,user.id));return true;}
       if(method==='GET'&&route==='/memory/hub'){send(200,memoryHubStatus(s,user.id,service.provider.config||process.env));return true;}
       if(method==='GET'&&route==='/memory/recall'){
         const scope=url.searchParams.get('scope'),query=url.searchParams.get('q')||'';

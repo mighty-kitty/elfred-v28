@@ -30,8 +30,9 @@ import {swarmCommand} from './swarm.mjs';
 import {memoryHubStatus,queueMemorySync} from './memory-hub.mjs';
 import {projectMemory} from './memory-validity.mjs';
 import {migrateAutomaticMemories} from './memory-learning.mjs';
+import {questionnaireCommand} from './questionnaire.mjs';
 
-export const READ_TYPES=['observation','context_request','context_grant','handoff','project_stage','attachment','skill_version','tool_use','shared_record','project_slot','profile','settings','onboarding','task','run','attempt','approval','document','knowledge','memory','outcome','feed','interaction','inbox','notification','friend','conversation','message','draft','assist','commitment','project','post','comment','claim','copy','contribution','release','feedback','resource','connector','data_request','brief','skill','shortcut','trace','candidate','evaluation','method','rollout'];
+export const READ_TYPES=['observation','context_request','context_grant','handoff','project_stage','attachment','skill_version','tool_use','shared_record','project_slot','profile','settings','onboarding','task','run','attempt','approval','document','knowledge','memory','outcome','feed','interaction','inbox','notification','friend','conversation','message','draft','assist','commitment','project','post','comment','claim','copy','contribution','release','feedback','resource','connector','data_request','brief','skill','shortcut','trace','candidate','evaluation','method','rollout','dimension_baseline'];
 export class Service {
   constructor(store,provider) {this.store=store;this.provider=provider;}
   initialize(user) {
@@ -79,7 +80,7 @@ export class Service {
     if(onboarding?.data.choice_confirmed_at&&Array.isArray(onboarding.data.choice_summary)&&!this.store.visible(user,'observation').some(item=>item.data.auto_suggested))this.store.transaction(()=>provisionInitialDiscovery(this.store,user,onboarding.data.choice_summary));
     if(onboarding?.data.choice_confirmed_at&&Array.isArray(onboarding.data.choice_summary))this.store.transaction(()=>materializeInitialMemories(this.store,user,onboarding.data.choice_summary));
     this.store.transaction(()=>migrateAutomaticMemories(this.store,user));
-    const types=['observation','context_request','context_grant','handoff','project_stage','attachment','skill_version','tool_use','shared_record','project_slot','profile','settings','onboarding','task','run','knowledge','document','memory','feed','notification','friend','conversation','message','post','comment','project','draft','assist','commitment','copy','contribution','release','feedback','claim','interaction','approval','resource','connector','brief','skill','shortcut','inbox','candidate','evaluation','outcome','method','rollout','trace'];
+    const types=['observation','context_request','context_grant','handoff','project_stage','attachment','skill_version','tool_use','shared_record','project_slot','profile','settings','onboarding','task','run','knowledge','document','memory','feed','notification','friend','conversation','message','post','comment','project','draft','assist','commitment','copy','contribution','release','feedback','claim','interaction','approval','resource','connector','brief','skill','shortcut','inbox','candidate','evaluation','outcome','method','rollout','trace','dimension_baseline'];
     const module_errors={},objects=Object.fromEntries(types.map(type=>{try{return [type,this.list(user,type)];}catch(error){if(['profile','settings','onboarding'].includes(type))throw error;module_errors[type]='此模块暂时加载失败，请重试';return [type,[]];}}));
     return {memory_hub:memoryHubStatus(this.store,user,this.provider.config||process.env),user:this.store.user(user),provider:this.provider.status(),systems:SYSTEMS,definitions:DEFINITIONS,objects,module_errors,budget:this.store.db.prepare('SELECT * FROM budget_accounts WHERE owner=?').get(user),usage:this.store.db.prepare('SELECT * FROM usage WHERE owner=? ORDER BY created DESC LIMIT 100').all(user),server_time:now(),storage:'local-sqlite',production_ready:false};
   }
@@ -96,7 +97,7 @@ export class Service {
         for(const approval of s.visible(user,'approval').filter(item=>item.data.task_id===task.id&&item.data.status==='approved'))s.update(approval,{...approval.data,status:'revoked'},user);
         return {id:s.update(task,{...task.data,model_name:model,review_mode:reviewMode,status:'draft',execution_revision:Number(task.data.execution_revision||0)+1},user).id};
       }
-      for(const handler of [swarmCommand,agentChatCommand,observationCommand,externalToolCommand,feedCommand,reflectionCommand,semanticCommand,contextCommand,handoffCommand,projectWorkCommand,searchCommand,taskCommand,knowledgeCommand,socialCommand,communityCommand,improvementCommand,homeCommand,onboardingChoiceCommand,onboardingCommand,attachmentCommand,toolLibraryCommand,groupCommand]) {const result=handler(s,user,action,input);if(result) return result;}
+      for(const handler of [swarmCommand,agentChatCommand,observationCommand,externalToolCommand,feedCommand,reflectionCommand,semanticCommand,contextCommand,handoffCommand,projectWorkCommand,searchCommand,questionnaireCommand,taskCommand,knowledgeCommand,socialCommand,communityCommand,improvementCommand,homeCommand,onboardingChoiceCommand,onboardingCommand,attachmentCommand,toolLibraryCommand,groupCommand]) {const result=handler(s,user,action,input);if(result) return result;}
       const owned=(type)=>s.expect(s.owned(user,input.id,type),input.version);
       if(action==='onboarding.save' || action==='onboarding.complete') {
         const object=owned('onboarding');

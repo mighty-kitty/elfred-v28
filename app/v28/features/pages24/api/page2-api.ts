@@ -618,20 +618,21 @@ export function fetchRelationships() {
 /** 上游服务状态（我们后端 /health/deps）：设置页那一栏用它把"为什么记忆库是空的"说清楚 */
 export type LiveDeps = {
   allGreen: boolean;
+  memory?: {ok:boolean;count:number;reason:string};
   emos: { ok: boolean; reason: string; impact: string };
   skill_foundry: { ok: boolean; reason: string; impact: string };
   gateway: { ok: boolean; reason: string; impact: string };
   jev: { configured: boolean; baseUrl: string; model: string; hint: string };
 };
 
-export function fetchHealthDeps() {
-  if (!activeSnapshot) return Promise.resolve(null);
-  return Promise.resolve<LiveDeps>({ allGreen: false,
-    emos: { ok: false, reason: "未接入独立服务", impact: "当前记忆保存在应用数据库" },
-    skill_foundry: { ok: false, reason: "未接入独立服务", impact: "当前使用已保存的工具说明" },
-    gateway: { ok: true, reason: "当前登录会话已连接", impact: "" },
-    jev: { configured: activeSnapshot.provider.jev === "configured", baseUrl: "", model: "", hint: "以服务端配置为准，真实调用效果仍需验收" }
-  });
+export async function fetchHealthDeps():Promise<LiveDeps|null> {
+  const user=activeSnapshot?.user.id;if(!user)return null;
+  try{
+    const response=await fetch('/api/elfred/health/deps',{credentials:'same-origin',cache:'no-store'});
+    if(!response.ok)return null;
+    const result=await response.json() as LiveDeps;
+    return activeSnapshot?.user.id===user?result:null;
+  }catch{return null;}
 }
 
 /** 记忆体检：长期未用 / 低置信 / 没标签 / 冲突（只读，不改任何东西） */

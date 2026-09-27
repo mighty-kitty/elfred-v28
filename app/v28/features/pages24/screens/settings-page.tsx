@@ -327,6 +327,7 @@ function DepsPanel({ deps, tried }: { deps: LiveDeps | null; tried: boolean }) {
     );
   }
   const rows = [
+    ...(deps.memory ? [{label:"应用记忆库",ok:deps.memory.ok,reason:deps.memory.reason,impact:""}] : []),
     { label: "外部记忆服务（EMOS）", ...deps.emos },
     { label: "Skill Foundry", ...deps.skill_foundry },
     { label: "应用主服务", ...deps.gateway },
@@ -338,7 +339,7 @@ function DepsPanel({ deps, tried }: { deps: LiveDeps | null; tried: boolean }) {
           <b>
             {row.ok ? "✅" : "⚠️"} {row.label}
           </b>
-          <small>{row.ok ? "正常" : row.impact || row.reason || "没起"}</small>
+          <small>{row.reason || "状态未知"}{row.impact ? " · "+row.impact : ""}</small>
         </div>
       ))}
       <div className={styles.depRow}>

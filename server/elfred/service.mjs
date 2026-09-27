@@ -79,6 +79,15 @@ export class Service {
     const s=this.store;
     return s.command(user,key,{action,input},()=>{
       if(input.evaluation_candidate_id) fail('INTERNAL_ONLY','候选方法仅能通过离线评估入口运行',403);
+      if(action==='task.model_settings'){
+        const task=s.expect(s.owned(user,input.id,'task'),input.version);
+        if(!['draft','ready','blocked','failed','partial','paused','cancelled'].includes(task.data.status)||task.data.mode!=='compose'||task.data.media_operation)fail('INVALID_STATE','当前任务不能修改模型，请先停止运行并核对现有成果',409);
+        const model=string(input.model,'模型',120),reviewMode=enumeration(input.review_mode,['auto','single','independent'],'复核方式');
+        if(!(this.provider.allowedModels?.()||[this.provider.status().model]).includes(model))fail('MODEL_NOT_AVAILABLE','模型不在当前服务可用列表中，请重新打开模型设置',409);
+        if(task.data.model_name===model&&task.data.review_mode===reviewMode)return {id:task.id};
+        for(const approval of s.visible(user,'approval').filter(item=>item.data.task_id===task.id&&item.data.status==='approved'))s.update(approval,{...approval.data,status:'revoked'},user);
+        return {id:s.update(task,{...task.data,model_name:model,review_mode:reviewMode,status:'draft',execution_revision:Number(task.data.execution_revision||0)+1},user).id};
+      }
       for(const handler of [swarmCommand,agentChatCommand,observationCommand,externalToolCommand,feedCommand,reflectionCommand,semanticCommand,contextCommand,handoffCommand,projectWorkCommand,searchCommand,taskCommand,knowledgeCommand,socialCommand,communityCommand,improvementCommand,homeCommand,onboardingChoiceCommand,onboardingCommand,attachmentCommand,toolLibraryCommand,groupCommand]) {const result=handler(s,user,action,input);if(result) return result;}
       const owned=(type)=>s.expect(s.owned(user,input.id,type),input.version);
       if(action==='onboarding.save' || action==='onboarding.complete') {

@@ -3,6 +3,7 @@ import {entityTitle,objectNames} from './display-labels';
 
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { PageMemoryProvider } from './page-memory';
+import {useBackSwipe} from './use-back-swipe';
 import { RuntimeProvider, useRuntime, projectState, entityRef } from './runtime-context';
 import { ConnectedProject, AssetEditor, InboxPage } from './runtime-panels';
 import {OnboardingConversation} from '../features/home/onboarding-conversation';
@@ -252,6 +253,7 @@ export function V277App() {
     setHistory((items) => items.slice(0, -1));
     setScreen(previous);
   };
+  useBackSwipe(root,back,ready&&state.phase==='ready'&&screen.name!=='home',runtime?.snapshot?.user.id||'local');
   const notify = (text: string) => setToast(text);
 
   const finishOnboarding = () => {
@@ -603,7 +605,7 @@ export function V277App() {
           runtime={runtime}
         />
       );
-    return (
+    if(screen.name==='settings')return (
       <SettingsPage
         state={state}
         go={go}
@@ -622,6 +624,7 @@ export function V277App() {
         }}
       />
     );
+    return <main className="v277-page"><p className="v277-empty">当前入口不可用，请返回上一页。</p><button className="v277-secondary" onClick={back}>返回上一页</button></main>;
   }, [ready, state, screen, history, toast, runtime]);
 
   const fullScreen = screen.name === "onboarding-chat" || Boolean(runtime?.snapshot&&screen.name==='home'&&runtime.snapshot.objects.onboarding[0]?.data.status!=='completed'&&!runtime.snapshot.objects.onboarding[0]?.data.deferred_at) ||

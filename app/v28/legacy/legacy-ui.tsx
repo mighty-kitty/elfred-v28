@@ -1,6 +1,8 @@
 "use client";
-import {displayTitle} from "../core/display-labels";
+import {displayTitle,displayError} from "../core/display-labels";
 import {MarkdownContent} from '../core/markdown-content';
+import {PlayerRunLog} from '../features/home/player-run-log';
+import {PlayerModelSettings} from '../features/home/player-model-settings';
 import {FollowAuthor,RecruitmentSummary} from '../features/home/community-author';
 import {Observations} from '../features/home/observations';
 import {ContextRecovery} from '../features/home/context-recovery';
@@ -1374,8 +1376,8 @@ export function TaskPlayerPage({
     playable.find((task) => task.status === "进行中") ||
     playable.find((task) => task.status === "待确认") ||
     playable[0];
-  const [activeId, setActiveId] = useState(first?.id || "");
-  const [tab, setTab] = useState<"SOP" | "实时日志">("SOP");
+  const [activeId, setActiveId] = usePageState("player-active-task",first?.id || "");
+  const [tab, setTab] = usePageState<"SOP" | "实时日志">("player-process-tab","SOP");
   const [speed, setSpeed] = useState(1);
   const [model, setModel] = useState("GPT-5.6");
   const [saved, setSaved] = useState(false);
@@ -1503,7 +1505,7 @@ export function TaskPlayerPage({
               </button>
             </nav>
           </header>
-          {runtime?<ol>{steps.map((step,index)=>{const receipt=receipts.find(r=>r.step_id===step.id),started=playing&&!receipt&&steps.slice(0,index).every(previous=>receipts.some(r=>r.step_id===previous.id));return <li key={step.id} className={receipt?'done':started?'current':''}><i>{receipt&&<Check size={14}/>}</i><div><span>{phaseNames[step.phase||step.id]||toolNames[step.tool]||'执行步骤'}</span><small>{tab==='实时日志'?receipt?new Date(receipt.at).toLocaleTimeString('zh-CN',{hour:'2-digit',minute:'2-digit'})+' · '+(receipt.provider==='conditional-skip'||receipt.status==='skipped'?'无需修订，已跳过':'已记录结果'):started?'正在处理':'尚未执行':receipt?(receipt.provider==='conditional-skip'||receipt.status==='skipped'?'无需修订，已跳过':'已完成'):started?'正在处理':'等待执行'}</small></div></li>})}{!steps.length&&<li><span>确认并启动任务后，执行过程会出现在这里。</span></li>}{Boolean(liveRun?.data.error)&&<li><span>{String((liveRun!.data.error as {message:string}).message)}</span></li>}</ol>:tab === "SOP" ? (
+          {runtime?(tab==="实时日志"?<PlayerRunLog run={liveRun}/>:<ol>{steps.map((step,index)=>{const receipt=receipts.find(r=>r.step_id===step.id),started=playing&&!receipt&&steps.slice(0,index).every(previous=>receipts.some(r=>r.step_id===previous.id));return <li key={step.id} className={receipt?'done':started?'current':''}><i>{receipt&&<Check size={14}/>}</i><div><span>{phaseNames[step.phase||step.id]||toolNames[step.tool]||'执行步骤'}</span><small>{receipt?(receipt.provider==='conditional-skip'||receipt.status==='skipped'?'无需修订，已跳过':'已完成'):started?'正在处理':'等待执行'}</small></div></li>})}{!steps.length&&<li><span>确认并启动任务后，执行过程会出现在这里。</span></li>}{Boolean(liveRun?.data.error)&&<li><span>{displayError((liveRun!.data.error as {message:string}).message)}</span></li>}</ol>):tab === "SOP" ? (
             <ol>
               <li className="done">
                 <i>
@@ -1595,7 +1597,6 @@ export function TaskPlayerPage({
               className="v278-model"
               aria-expanded={modelOpen}
               onClick={() => {
-                if(runtime){go({name:"settings"});return;}
                 setModelOpen((value) => !value);
                 setSpeedOpen(false);
               }}
@@ -1603,7 +1604,7 @@ export function TaskPlayerPage({
               {runtime?"模型设置":model}
               <ChevronDown size={17} />
             </button>
-            {modelOpen && (
+            {modelOpen && !runtime && (
               <div className="v279-control-popover model-options">
                 {["GPT-5.6", "GPT-5.6 深度", "GPT-5.6 快速"].map((value) => (
                   <button
@@ -1623,6 +1624,7 @@ export function TaskPlayerPage({
           </div>
         </footer>
       </section>
+      {runtime&&modelOpen&&<RootPortal><button className="v278-sheet-backdrop" aria-label="关闭任务模型设置" onClick={()=>setModelOpen(false)}/><PlayerModelSettings key={activeId} task={liveTask} onClose={()=>setModelOpen(false)}/></RootPortal>}
       <form className="v278-player-composer" onSubmit={ask}>
         <button
           type="button"

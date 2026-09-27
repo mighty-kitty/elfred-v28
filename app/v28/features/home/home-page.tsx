@@ -83,11 +83,11 @@ export function HomePage({
     const deck=briefDeck.current;if(!deck)return;
     let accumulated=0,lastEvent=0,lastSwitch=0;
     const wheel=(event:WheelEvent)=>{
-      if(Math.abs(event.deltaY)<=Math.abs(event.deltaX)||event.ctrlKey)return;
+      if(event.ctrlKey)return;
       event.preventDefault();event.stopPropagation();
       const time=Date.now();if(time-lastEvent>160)accumulated=0;lastEvent=time;
       if(time-lastSwitch<300)return;
-      accumulated+=event.deltaY*(event.deltaMode===1?16:event.deltaMode===2?deck.clientHeight:1);
+      accumulated+=(Math.abs(event.deltaX)>Math.abs(event.deltaY)?event.deltaX:event.deltaY)*(event.deltaMode===1?16:event.deltaMode===2?deck.clientHeight:1);
       if(Math.abs(accumulated)<28)return;
       const direction=accumulated>0?1:-1;accumulated=0;lastSwitch=time;
       setBriefIndex(current=>(current+direction+3)%3);
@@ -157,15 +157,16 @@ export function HomePage({
         onPointerDown={event=>{if(event.isPrimary)briefTouch.current={x:event.clientX,y:event.clientY,id:event.pointerId};}}
         onPointerMove={event=>{
           const start=briefTouch.current;if(!start||start.id!==event.pointerId)return;
-          if(Math.abs(event.clientY-start.y)>8&&Math.abs(event.clientY-start.y)>Math.abs(event.clientX-start.x)){
+          if(Math.max(Math.abs(event.clientY-start.y),Math.abs(event.clientX-start.x))>8){
             event.currentTarget.setPointerCapture(event.pointerId);
             suppressBriefClick.current=Date.now()+400;
           }
         }}
         onPointerUp={event=>{
           const start=briefTouch.current;briefTouch.current=null;if(!start||start.id!==event.pointerId)return;
-          const delta=event.clientY-start.y;
-          if(Math.abs(delta)>28&&Math.abs(delta)>Math.abs(event.clientX-start.x)){
+          const dx=event.clientX-start.x,dy=event.clientY-start.y;
+          const delta=Math.abs(dx)>Math.abs(dy)?dx:dy;
+          if(Math.abs(delta)>28){
             suppressBriefClick.current=Date.now()+400;
             setBriefIndex(current=>(current+(delta<0?1:-1)+3)%3);
           }

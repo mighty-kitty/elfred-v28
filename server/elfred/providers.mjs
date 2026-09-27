@@ -10,10 +10,27 @@ export class ModelProvider {
     return {web_search:this.external.status().configured?'configured':'not_configured',image_generate:this.external.status().configured?'configured':'not_configured',provider:'chat-completions-compatible',configured:Boolean(this.config.ELFRED_MODEL_BASE_URL && this.config.ELFRED_MODEL_NAME && this.config.ELFRED_MODEL_API_KEY),model:this.config.ELFRED_MODEL_NAME||null,embedding:this.embedding.status().configured?'configured':'not_configured',embedding_model:this.embedding.model,judge:'rule-baseline',jev:this.jev.status().configured?'configured':'not_configured'};
   }
   research(input){return this.external.research(input);}
+  allowedModels(){return this.modelCatalog?.items?.map(item=>item.id)||[this.config.ELFRED_MODEL_NAME];}
+  async models(){
+    const fallback={items:[{id:this.config.ELFRED_MODEL_NAME}],available:this.status().configured};
+    if(!fallback.available)return {...fallback,items:[],reason:'模型服务尚未配置'};
+    const configured=this.config.ELFRED_ALLOWED_MODELS?.split(',').map(value=>value.trim()).filter(Boolean);
+    if(configured?.length){this.modelCatalog={items:[...new Set([this.config.ELFRED_MODEL_NAME,...configured])].map(id=>({id})),available:true};return this.modelCatalog;}
+    if(this.modelCatalog&&Date.now()-this.modelCatalogAt<900000)return this.modelCatalog;
+    try{
+      const base=new URL(this.config.ELFRED_MODEL_BASE_URL);
+      if((base.protocol!=='https:'&&!(base.protocol==='http:'&&['localhost','127.0.0.1','[::1]'].includes(base.hostname)))||base.username||base.password||base.search||base.hash)throw new Error();
+      const response=await this.fetcher(base.href.replace(/\/$/,'')+'/models',{headers:{Authorization:`Bearer ${this.config.ELFRED_MODEL_API_KEY}`},redirect:'error',signal:AbortSignal.timeout(6000)});
+      if(!response.ok)throw new Error();const raw=await response.text();if(raw.length>1000000)throw new Error();
+      const data=JSON.parse(raw);if(!Array.isArray(data.data))throw new Error();
+      const names=data.data.slice(0,3000).map(item=>item.id).filter(value=>typeof value==='string'&&/^[\w.:/+-]{1,120}$/.test(value));
+      this.modelCatalog={items:[...new Set([this.config.ELFRED_MODEL_NAME,...names])].map(id=>({id})),available:true};this.modelCatalogAt=Date.now();return this.modelCatalog;
+    }catch{return {...fallback,reason:'暂时无法读取其他模型，当前默认模型仍可使用'};}
+  }
   image(input){return this.external.image(input);}
   embed(input){return this.embedding.embed(input);}
   judge(input){return this.jev.judge(input);}
-  async generate({goal,context,systemPrompt,maxTokens=4096,signal,images=[],conversation}) {
+  async generate({goal,context,systemPrompt,maxTokens=4096,signal,images=[],conversation,model}) {
     if (!this.status().configured) fail('PROVIDER_NOT_CONFIGURED','模型服务尚未配置，请在本机 .env.local 配置后恢复任务',503);
     const base=new URL(this.config.ELFRED_MODEL_BASE_URL);
     if (base.protocol!=='https:' && !(base.protocol==='http:' && ['localhost','127.0.0.1','[::1]'].includes(base.hostname))) fail('PROVIDER_CONFIG_INVALID','模型地址需为 HTTPS 或本机服务',503);
@@ -36,7 +53,7 @@ export class ModelProvider {
       response=await this.fetcher(base.href.replace(/\/$/,'')+'/chat/completions',{
         method:'POST',redirect:'error',signal:AbortSignal.any([signal||new AbortController().signal,AbortSignal.timeout(45000)]),
         headers:{'Content-Type':'application/json',Authorization:`Bearer ${this.config.ELFRED_MODEL_API_KEY}`,'X-Request-ID':requestId},
-        body:JSON.stringify({model:this.config.ELFRED_MODEL_NAME,messages,max_tokens:completionBudget,stream:false})
+        body:JSON.stringify({model:model||this.config.ELFRED_MODEL_NAME,messages,max_tokens:completionBudget,stream:false})
       });
     } catch (error) {
       if (signal?.aborted) fail('CANCELLED','已停止模型请求',409);
@@ -52,7 +69,7 @@ export class ModelProvider {
     const usage=result.usage;
     if(!usage||!Number.isSafeInteger(usage.total_tokens)||usage.total_tokens<0)fail('PROVIDER_USAGE_UNKNOWN','模型未提供可核对的 token 用量，请先核对供应商记录',502);
     if(usage.total_tokens>maxTokens){const error=new DomainError('TOKEN_BUDGET_EXCEEDED','供应商报告的用量超出本次预算，已停止继续调用，请核对用量',409);error.usage=usage;throw error;}
-    return {output,output_hash:hash(output),provider_operation_id:typeof result.id==='string'?result.id:requestId,model:this.config.ELFRED_MODEL_NAME,usage:usage||null,cost_status:'unreconciled'};
+    return {output,output_hash:hash(output),provider_operation_id:typeof result.id==='string'?result.id:requestId,model:model||this.config.ELFRED_MODEL_NAME,usage:usage||null,cost_status:'unreconciled'};
   }
   async transcribe({bytes,name,signal}){
     if(!this.status().configured)fail('PROVIDER_NOT_CONFIGURED','请先配置 API Key',503);

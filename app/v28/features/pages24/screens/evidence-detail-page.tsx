@@ -1,4 +1,5 @@
 "use client";
+import {displayTitle} from "../../../core/display-labels";
 
 import {
   ArrowUpRight,
@@ -53,7 +54,7 @@ export function EvidenceDetailPage({
       <div className={styles.screen}>
         <section className={styles.block}>
           <h3>
-            {record.title}
+            {displayTitle(record.title,'')}
             {record.verified && (
               <small>
                 <BadgeCheck size={13} /> 已验收

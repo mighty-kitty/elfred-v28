@@ -1,4 +1,5 @@
 "use client";
+import {displayTitle} from "../core/display-labels";
 import {MarkdownContent} from '../core/markdown-content';
 import {FollowAuthor,RecruitmentSummary} from '../features/home/community-author';
 import {Observations} from '../features/home/observations';
@@ -1189,7 +1190,7 @@ export function TaskPlayer({
         </span>
         <span>
           <small>{current ? `Agent ${current.runtimeStatus?runtimeStatuses[current.runtimeStatus]||current.status:current.status}` : "Agent 空闲"}</small>
-          <b>{current?.title || "点击查看任务播放器"}</b>
+          <b>{displayTitle(current?.title,'') || "点击查看任务播放器"}</b>
         </span>
       </button>
       <i className="v277-player-progress">
@@ -1258,7 +1259,7 @@ export function AgentMomentCard({
           </div>
           <MoreHorizontal size={20} />
         </header>
-        <h3>{moment.title}</h3>
+        <h3>{displayTitle(moment.title,'')}</h3>
         <p>{moment.summary}</p>
         <ol>
           {moment.lines?.map((line, index) => (
@@ -1346,7 +1347,7 @@ export function AgentMomentCard({
           <b>{agent.name} Agent</b>
           <small>{moment.time}</small>
         </header>
-        <h3>{moment.title}</h3>
+        <h3>{displayTitle(moment.title,'')}</h3>
         <p>{moment.summary}</p>
       </div>
       <ChevronRight size={18} />
@@ -1721,7 +1722,7 @@ export function PlayerQueueSheet({
               >
                 <i />
                 <span>
-                  <b>{task.title}</b>
+                  <b>{displayTitle(task.title,'')}</b>
                   <small>
                     {agentList.find((agent) => agent.id === task.agent)?.name}{" "}
                     Agent · {task.runtimeStatus?runtimeStatuses[task.runtimeStatus]||task.status:task.status}
@@ -1786,7 +1787,7 @@ export function TodayHighlights({
             >
               <em>0{index + 1}</em>
               <span>
-                <b>{task.title}</b>
+                <b>{displayTitle(task.title,'')}</b>
                 <small>
                   {task.status} · {task.nextStep}
                 </small>
@@ -1816,7 +1817,7 @@ export function TodayHighlights({
         >
           <em>01</em>
           <span>
-            <b>{v277Posts[0].title}</b>
+            <b>{displayTitle(v277Posts[0].title,'')}</b>
             <small>探索 Agent · 与当前目标相关</small>
           </span>
           <ChevronRight size={19} />
@@ -2630,7 +2631,7 @@ export function DailyBriefPage({
       <div className="v283-brief-scroll">
         <section className="v283-brief-conclusion">
           <small>{dailyBriefs[kind].label}</small>
-          <h2>{runtime?({morning:"从今天的重点开始",noon:"核对进展与待处理事项",evening:"核对今日成果与理解"}[kind]):dailyBriefs[kind].title}</h2>
+          <h2>{runtime?({morning:"从今天的重点开始",noon:"核对进展与待处理事项",evening:"核对今日成果与理解"}[kind]):displayTitle(dailyBriefs[kind].title,'')}</h2>
           <p>{runtime?"依据当前真实任务记录，请核对今天的重点与进展。":dailyBriefs[kind].summary}</p>
           <strong>{runtime?((brief?.data.facts||[]) as BriefFact[]).length+" 项今日任务 · "+((brief?.data.facts||[]) as BriefFact[]).filter(task=>task.status==="completed").length+" 项已验收":dailyBriefs[kind].stats}</strong>
         </section>
@@ -2971,7 +2972,7 @@ export function GlobalSearchSheet({
                 <button type="button" key={item.key} onClick={item.action}>
                   <span>{item.type}</span>
                   <div>
-                    <b>{item.title}</b>
+                    <b>{displayTitle(item.title,'')}</b>
                     <p>{item.copy}</p>
                   </div>
                   <ChevronRight size={18} />
@@ -3597,7 +3598,7 @@ export function TasksPage({
                       <em>↓</em>
                     </time>
                     <article>
-                      <h3>{item.title}</h3>
+                      <h3>{displayTitle(item.title,'')}</h3>
                       <p>{item.meta}</p>
                       <div>
                         {people.map((photo) => (
@@ -3654,7 +3655,7 @@ export function TasksPage({
                   <i />
                   {runtime?"项目":"受阻"}
                 </em>
-                <h2>{item.title}</h2>
+                <h2>{displayTitle(item.title,'')}</h2>
                 <p>{item.copy}</p>
                 <div className="v277-project-progress">
                   <span>完成进度</span>
@@ -3791,7 +3792,7 @@ export function NewTaskPage({
           ))}
         </nav>
       </section>
-      {runtime&&<section className="v277-edit-card"><h3>选择已有资料（最多 20 项）</h3>{[...(runtime.snapshot?.objects.document||[]),...(runtime.snapshot?.objects.knowledge||[])].filter(item=>item.data.status!=='archived').map(item=><label key={item.id}><input type="checkbox" checked={sourceRefs.some(ref=>ref.id===item.id)} onChange={()=>setSourceRefs(prev=>prev.some(ref=>ref.id===item.id)?prev.filter(ref=>ref.id!==item.id):[...prev,entityRef(item)])}/>{entityText(item,'title')}</label>)}</section>}
+      {runtime&&<section className="v277-edit-card"><h3>选择已有资料（最多 20 项）</h3>{[...(runtime.snapshot?.objects.document||[]),...(runtime.snapshot?.objects.knowledge||[])].filter(item=>item.data.status!=='archived').map(item=><label key={item.id}><input type="checkbox" checked={sourceRefs.some(ref=>ref.id===item.id)} onChange={()=>setSourceRefs(prev=>prev.some(ref=>ref.id===item.id)?prev.filter(ref=>ref.id!==item.id):[...prev,entityRef(item)])}/>{displayTitle(entityText(item,'title'),'')}</label>)}</section>}
       <section className="v281-task-settings">
         <h2>任务设置</h2>
         <div>
@@ -3885,7 +3886,7 @@ export function TaskDetail({
         <span className={`v277-status-pill status-${task.status}`}>
           {actual?runtimeStatuses[entityText(actual,'status')]||entityText(actual,'status'):task.status}
         </span>
-        <h1>{task.title}</h1>
+        <h1>{displayTitle(task.title,'')}</h1>
         <p>{task.brief}</p>
         <dl>
           <div>
@@ -3929,7 +3930,7 @@ export function TaskDetail({
               >
                 <BookOpen size={18} />
                 <span>
-                  <b>{item.title}</b>
+                  <b>{displayTitle(item.title,'')}</b>
                   <small>{item.source}</small>
                 </span>
                 <ChevronRight size={18} />
@@ -4141,7 +4142,7 @@ export function AgentPage({
                 <span className={`v277-status-dot status-${task.status}`} />
                 <div>
                   <span>
-                    <b>{task.title}</b>
+                    <b>{displayTitle(task.title,'')}</b>
                     <em className={`v277-status-pill status-${task.status}`}>
                       {task.status}
                     </em>
@@ -4603,7 +4604,7 @@ export function AgentMomentActionSheet({
         <header>
           <span>
             <small>内容操作</small>
-            <h2>{post.title}</h2>
+            <h2>{displayTitle(post.title,'')}</h2>
           </span>
           <button type="button" onClick={onClose} aria-label="关闭">
             <X size={20} />
@@ -4749,7 +4750,7 @@ export function AgentMomentsPage({
                 go(runtime?{name:'feed-detail',id:post.id}:{ name: "agent-moment-detail", id, postId: post.id });
               }}
             >
-              <h3>{post.title}</h3>
+              <h3>{displayTitle(post.title,'')}</h3>
               <p>{post.summary}</p>
               <span>{post.tag}</span>
               {index === 0 && <i className="v283-moment-thumb" aria-hidden="true" />}
@@ -4879,7 +4880,7 @@ export function AgentMomentDetailPage({
       </section>
       <article className="v283-moment-detail-card">
         <span>{post.tag}</span>
-        <h2>{post.title}</h2>
+        <h2>{displayTitle(post.title,'')}</h2>
         <p>{post.summary}</p>
         <div className="v283-moment-detail-visual" aria-hidden="true">
           <i />
@@ -5164,7 +5165,7 @@ export function PostDetail({
       />
       <article className="v277-article">
         <span>{post.label}</span>
-        <h1>{post.title}</h1>
+        <h1>{displayTitle(post.title,'')}</h1>
         <p className="lead">{post.summary}</p>
         <div>
           {post.detail.map((line, index) => (
@@ -5272,7 +5273,7 @@ export function CapabilityDetailSheet({
           </span>
           <div>
             <span>
-              <h2>{card.title}</h2>
+              <h2>{displayTitle(card.title,'')}</h2>
               <em>{card.type}</em>
             </span>
             <p>{card.copy}</p>
@@ -5403,7 +5404,7 @@ export function KnowledgeDetail({
         <span>
           <BookOpen size={22} />
         </span>
-        <h1 id={anchor&&matchLine<0?"knowledge-source-anchor":undefined}>{item.title}</h1>
+        <h1 id={anchor&&matchLine<0?"knowledge-source-anchor":undefined}>{displayTitle(item.title,'')}</h1>
         {runtime&&entity&&<><OriginLinks targetId={entity.id} go={go}/><CalendarDraft item={entity}/><AttachmentList items={(entity.data.attachments||[]) as FileRef[]}/></>}
         {runtime&&entity?.type==='knowledge'&&entity.owner===runtime.snapshot?.user.id&&<KnowledgeEditor item={entity} onArchived={onBack}/>}
         <p>{item.purpose}</p>
@@ -5843,7 +5844,7 @@ export function ChatPage({
   const [searchOpen, setSearchOpen] = useState(false);
   const [moreOpen, setMoreOpen] = useState(false);
   const agent = agentList.find((item) => item.id === id);
-  const contact = conversation?{name:entityText(conversation,'title'),subtitle:conversation.data.kind==='group'?'群聊 · '+conversation.members?.length+' 人':'真人会话',greeting:''}:runtime?undefined:chatDirectory[id];
+  const contact = conversation?{name:displayTitle(entityText(conversation,'title'),'会话'),subtitle:conversation.data.kind==='group'?'群聊 · '+conversation.members?.length+' 人':'真人会话',greeting:''}:runtime?undefined:chatDirectory[id];
   const isHuman = Boolean(conversation || (contact && id.startsWith("person-")));
   const humanPreview: V277Message[] =
     id === "person-linjia"
@@ -6041,7 +6042,7 @@ export function ChatPage({
           ))}
           {runtime&&conversation&&cold&&!iceDismissed&&!agentMode&&!mention&&<div className="elfred-icebreaker"><span>想重新聊起来？Elfred 可以帮你找个开场。</span><button type="button" onClick={()=>{void flushDraft().then(()=>setAgentMode('icebreaker')).catch(()=>{})}}>准备开场</button><button type="button" aria-label="关闭破冰提示" onClick={()=>setIceDismissed(true)}>×</button></div>}
           {runtime&&conversation&&agentMode&&<div ref={agentAnchor}><PersonalAgentPanel ref={agentPanel} conversation={conversation} unreadAfter={unreadEntry?.after} entry={agentMode} onClose={()=>{if(!sending){setAgentMode(false);setSearchHits(null)}}} onFill={async(value,version)=>{setSending(true);try{await runtime.command('draft.save',{conversation_id:id,text:value,version});await reloadDraft(value)}finally{setSending(false)}}} go={go}/></div>}
-          {agentMode&&searchHits&&<section className="elfred-search-results" aria-label="个人智能体搜索结果"><b>搜索结果 · {searchHits.length} 条</b>{!searchHits.length&&<p>未找到匹配资料，试试更具体的关键词。</p>}{searchHits.map(hit=><button type="button" key={hit.id} onClick={()=>{void runtime!.request<import('../features/live/types').Entity>('/objects/'+hit.id).then(item=>go(objectScreen(item))).catch(error=>runtime!.report(error.message))}}><b>{hit.title}</b><p>{hit.excerpt}</p><small>{hit.type} · 查看来源</small></button>)}</section>}
+          {agentMode&&searchHits&&<section className="elfred-search-results" aria-label="个人智能体搜索结果"><b>搜索结果 · {searchHits.length} 条</b>{!searchHits.length&&<p>未找到匹配资料，试试更具体的关键词。</p>}{searchHits.map(hit=><button type="button" key={hit.id} onClick={()=>{void runtime!.request<import('../features/live/types').Entity>('/objects/'+hit.id).then(item=>go(objectScreen(item))).catch(error=>runtime!.report(error.message))}}><b>{displayTitle(hit.title,'')}</b><p>{hit.excerpt}</p><small>{hit.type} · 查看来源</small></button>)}</section>}
         </section>
         {runtime&&conversation&&mention&&!agentMode&&isGroup&&<section id="elfred-mention-picker" className="elfred-mention-picker" aria-label="选择群成员"><p className="elfred-mention-title">提及群成员或群协作 Agent</p><div className="elfred-mention-results">{groupAgentReady&&'Elfred'.toLowerCase().includes(mention.query.toLowerCase())&&<button className="elfred-mention-personal" type="button" onClick={chooseGroupAgent}><span><strong>Elfred · 群协作 Agent</strong><small>AI 身份公开回复 · 使用群内授权上下文</small></span></button>}{groupMembers.map(member=><button className="elfred-mention-personal" type="button" key={member.id} onClick={()=>chooseMember(member)}><span><strong>{member.name}</strong><small>@{member.handle}</small></span></button>)}{!groupMembers.length&&!groupAgentReady&&<p>没有匹配的当前群成员</p>}</div><button type="button" onClick={closeMention}>取消</button></section>}
         {runtime&&conversation&&mention&&!agentMode&&!isGroup&&<MentionPicker query={mention.query} busy={mentionBusy} onPersonal={openMentionPersonal} onDismiss={closeMention} onResource={item=>{if(mentionBusy)return;setMentionBusy(true);const generation=mentionGeneration.current;void flushDraft().then(()=>{if(generation!==mentionGeneration.current)return;setMention(null);go(objectScreen(item))}).catch(()=>{}).finally(()=>{if(generation===mentionGeneration.current)setMentionBusy(false)})}}/>}
@@ -6197,7 +6198,7 @@ export function FriendProfilePage({
 }) {
   const runtime=useRuntime();
   const conversation=runtime?.snapshot?.objects.conversation.find(item=>item.id===id);
-  const contact = runtime?{name:entityText(conversation,'title')||'会话当前不可访问'}:chatDirectory[id] || chatDirectory['person-linjia'];
+  const contact = runtime?{name:displayTitle(entityText(conversation,'title'),'会话')||'会话当前不可访问'}:chatDirectory[id] || chatDirectory['person-linjia'];
   return (
     <main className="v277-page v279-friend-profile-page">
       <AppHeader title="好友信息" onBack={onBack} />
@@ -6260,7 +6261,7 @@ export function CommunityPage({
   const followed=(author:string)=>Boolean(runtime?.snapshot?.objects.interaction.some(i=>i.data.kind==='follow_author'&&i.data.object_id===author&&i.data.active));
   const visibleWorks=runtime?.snapshot?.objects.release.filter(r=>r.visibility==='public'&&r.data.author_type==='human'&&r.data.status==='published'&&r.data.is_current&&(communityKind!=='following'||followed(r.owner))&&!runtime.snapshot?.objects.interaction.some(i=>i.data.object_id===r.id&&i.data.kind==='hide'&&i.data.active))||[];
   const shownWorks=runtime&&['all','work','following'].includes(communityKind)?visibleWorks:[];
-  const visiblePosts:SocialPost[]=runtime?(runtime.snapshot?.objects.post||[]).filter(item=>item.visibility==='public'&&item.data.author_type==='human'&&['published','recruiting','closed'].includes(String(item.data.status))&&!state.hiddenPostIds.includes(item.id)&&(communityKind!=='following'||followed(item.owner))&&(['all','following'].includes(communityKind)||(communityKind==='project'?Boolean(item.data.project_id):communityKind==='post'?!item.data.project_id:false))).map(item=>({id:item.id,name:entityText(item,'author_name')||entityText(item,'title'),date:new Date(item.created).toLocaleDateString('zh-CN'),text:entityText(item,'content'),likes:Number(item.data.likes||0),comments:Number(item.data.comments||0),avatar:'lin'})):communityPosts;
+  const visiblePosts:SocialPost[]=runtime?(runtime.snapshot?.objects.post||[]).filter(item=>item.visibility==='public'&&item.data.author_type==='human'&&['published','recruiting','closed'].includes(String(item.data.status))&&!state.hiddenPostIds.includes(item.id)&&(communityKind!=='following'||followed(item.owner))&&(['all','following'].includes(communityKind)||(communityKind==='project'?Boolean(item.data.project_id):communityKind==='post'?!item.data.project_id:false))).map(item=>({id:item.id,name:entityText(item,'author_name')||displayTitle(entityText(item,'title'),'社区动态'),date:new Date(item.created).toLocaleDateString('zh-CN'),text:entityText(item,'content'),likes:Number(item.data.likes||0),comments:Number(item.data.comments||0),avatar:'lin'})):communityPosts;
   const communityDates = new Map([...(runtime?.snapshot?.objects.post || []), ...shownWorks].map(item => [item.id, item.created]));
   const toggleSaved = (id: string) => {
     if(runtime){void runtime.command('post.interact',{id,kind:'save'}).catch(()=>{});return;}
@@ -6345,7 +6346,7 @@ export function CommunityPage({
                 onClick={() => go({ name: "community-post", id: post.id })}
               >
                 {runtime?.snapshot?.objects.post.find(item=>item.id===post.id)?.data.project_id?<span className="community-cocreation-label">共创帖</span>:null}
-                {originalPost&&<h3>{entityText(originalPost,'title')}</h3>}
+                {originalPost&&<h3>{displayTitle(entityText(originalPost,'title'),'')}</h3>}
                 <p>{post.text}</p>
               </button>
               {originalPost&&<><RecruitmentSummary post={originalPost} onOpen={()=>go({name:"community-post",id:post.id})}/><FollowAuthor post={originalPost}/></>}
@@ -6458,7 +6459,7 @@ export function CommunitySearchSheet({
   onClose: () => void;
 }) {
   const runtime=useRuntime();
-  const posts=runtime?(runtime.snapshot?.objects.post||[]).map(item=>({id:item.id,name:entityText(item,'title'),text:entityText(item,'content'),avatar:'lin'})):communityPosts;
+  const posts=runtime?(runtime.snapshot?.objects.post||[]).map(item=>({id:item.id,name:displayTitle(entityText(item,'title'),'社区动态'),text:entityText(item,'content'),avatar:'lin'})):communityPosts;
   const [query, setQuery] = useState("");
   const normalized = query.trim();
   const results = normalized
@@ -7581,7 +7582,7 @@ export function SettingsPage({
       </button>
       {groups.map((group) => (
         <section className="v279-settings-group" key={group.title}>
-          <h2>{group.title}</h2>
+          <h2>{displayTitle(group.title,'')}</h2>
           <div>
             {group.rows.map(([key, label, Icon, value]) => (
               <button

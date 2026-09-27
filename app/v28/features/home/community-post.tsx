@@ -1,4 +1,5 @@
 "use client";
+import {displayTitle} from "../../core/display-labels";
 import {FollowAuthor} from './community-author';
 import {AttachmentPicker,AttachmentList,type FileRef} from '../live/attachments';
 import {useState} from 'react';
@@ -26,7 +27,7 @@ export function CommunityDiscussion({post,onBack,go}:Props&{post:Entity}){
   const [comment,setComment]=useState(''),[editing,setEditing]=useState(false),[draft,setDraft]=useState({title:text(post,'title'),content:text(post,'content'),version:post.version});
   const [withdraw,setWithdraw]=useState(false);
   const active=(kind:string)=>snapshot.objects.interaction.some(item=>item.data.object_id===post.id&&item.data.kind===kind&&item.data.active);
-  return <main className="v277-page v278-social-detail"><Header title="社区动态" onBack={onBack}/><article className="v278-social-article"><small>{text(post,'author_name')} · {new Date(post.created).toLocaleString('zh-CN')}</small><FollowAuthor post={post}/><h2>{text(post,'title')}</h2><p style={{whiteSpace:'pre-wrap'}}>{text(post,'content')}</p><AttachmentList items={(post.data.attachments||[]) as FileRef[]}/>
+  return <main className="v277-page v278-social-detail"><Header title="社区动态" onBack={onBack}/><article className="v278-social-article"><small>{text(post,'author_name')} · {new Date(post.created).toLocaleString('zh-CN')}</small><FollowAuthor post={post}/><h2>{displayTitle(text(post,'title'),'')}</h2><p style={{whiteSpace:'pre-wrap'}}>{text(post,'content')}</p><AttachmentList items={(post.data.attachments||[]) as FileRef[]}/>
     <div className="v277-social-actions"><Action run={()=>runtime.command('post.interact',{id:post.id,kind:'like'})}>{active('like')?'取消赞':'点赞'} · {Number(post.data.likes||0)}</Action><Action run={()=>runtime.command('post.interact',{id:post.id,kind:'save'})}>{active('save')?'取消收藏':'收藏'}</Action><Action run={()=>runtime.command('post.interact',{id:post.id,kind:'hide'}).then(()=>go({name:'community'}))}>隐藏此动态</Action></div>
     {post.owner===snapshot.user.id&&<><button className="v277-secondary" onClick={()=>{setDraft({title:text(post,'title'),content:text(post,'content'),version:post.version});setEditing(true)}}>编辑动态</button><button className="v277-secondary" onClick={()=>setWithdraw(true)}>撤下动态</button></>}
     {withdraw&&<div role="alert"><p>撤下后，其他人将无法继续查看这条动态与评论。</p><Action run={async()=>{await runtime.command('post.withdraw',{...entityRef(post),confirm:true});go({name:'community'})}}>确认撤下</Action><button className="v277-secondary" onClick={()=>setWithdraw(false)}>保留动态</button></div>}

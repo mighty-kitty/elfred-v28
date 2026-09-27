@@ -1,4 +1,5 @@
 "use client";
+import {displayTitle} from "../../../core/display-labels";
 
 import {
   useEffect,
@@ -269,7 +270,7 @@ export function ProfilePage({
             <ul className={styles.feed}>
               {feed.map((item) => (
                 <li key={`${item.kind}-${item.id}`} className={styles.feedItem}>
-                  <b>{item.title}</b>
+                  <b>{displayTitle(item.title,'')}</b>
                   {item.detail ? <p>{item.detail}</p> : null}
                   <span className={styles.feedMeta}>
                     {item.kind === "evidence" ? "成果" : "记忆"}
@@ -308,7 +309,7 @@ export function ProfilePage({
                         <Icon size={18} />
                       </i>
                       <span>
-                        <b>{card.title}</b>
+                        <b>{displayTitle(card.title,'')}</b>
                         <small>
                           {card.type} · Lv.{card.level} {readStage(card.level)}
                         </small>
@@ -373,7 +374,7 @@ export function ProfilePage({
           onCreateTask={async (card, goal) => {
             // ⚠️ 2026-09-26 对齐你们的新契约：`launchWithSkill` 现在返回 system + prompt，
             //    直接带着可编辑的 prefill 进那个 Agent 的会话（我们原来那版是 conversationId）。
-            const result = await launchWithSkill(runtime, card.title, goal);
+            const result = await launchWithSkill(runtime, card.id||card.title, goal);
             if (result.ok && result.system && result.prompt) {
               setPendingSkill(card.title);
               setSelectedCard(null);

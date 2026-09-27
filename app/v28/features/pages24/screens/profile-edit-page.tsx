@@ -1,4 +1,5 @@
 "use client";
+import {displayTitle} from "../../../core/display-labels";
 
 // 编辑资料（第四页 →「编辑资料」）。
 //
@@ -332,7 +333,7 @@ export function ProfileEditPage({
                 </p>
                 {TAG_GROUPS.map((group) => (
                   <div key={group.title} className={styles.tagGroup}>
-                    <h3>{group.title}</h3>
+                    <h3>{displayTitle(group.title,'')}</h3>
                     <div className={styles.tagOptions}>
                       {group.tags.map((tag) => {
                         const picked = draftTags.includes(tag);

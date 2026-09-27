@@ -1,4 +1,5 @@
 "use client";
+import {displayTitle} from "../../core/display-labels";
 import {useState} from 'react';
 import {useRuntime,entityRef} from '../../core/runtime-context';
 import {Action,Field} from '../../core/runtime-panels';
@@ -14,7 +15,7 @@ export function ResultHandoffs({assist,run,output,conversation,go}:{assist:Entit
  const select=(value:string)=>{setMode(value);setTitle(text(assist,'purpose').slice(0,200));setContent(output);setReviewed(false);setSources([]);setBase({assist:assist.version,run:run.version,runId:run.id})};
  const changed=assist.version!==base.assist||run.version!==base.run||run.id!==base.runId;
  return <details className="elfred-result-handoffs"><summary>送到纪要、日程或共创草稿</summary><div className="elfred-inline-actions">{[['share_record','共享纪要'],['calendar','日程或提醒'],['project_brief','共创 Brief']].map(([v,n])=><button key={v} type="button" onClick={()=>select(v)}>{n}</button>)}</div>{mode&&<section className="v277-edit-card">
- <p>{mode==='share_record'?`接收会话：${text(conversation,'title')}。确认后作为本人消息分享；他人的承诺仍待其确认。`:mode==='calendar'?'目标：本人日程草稿，可导出日历文件。尚未连接外部日历，不会自动写入或通知。':'目标：本人私有共创项目草稿，下一步核对开放任务与公开范围后再发布。'}</p>
+ <p>{mode==='share_record'?`接收会话：${displayTitle(text(conversation,'title'),'')}。确认后作为本人消息分享；他人的承诺仍待其确认。`:mode==='calendar'?'目标：本人日程草稿，可导出日历文件。尚未连接外部日历，不会自动写入或通知。':'目标：本人私有共创项目草稿，下一步核对开放任务与公开范围后再发布。'}</p>
  <Field name="交付标题" value={title} onChange={setTitle}/><Field name="核对并编辑交付正文" area value={content} onChange={setContent}/><p>正文 {content.length}/{mode==='project_brief'?3000:8000} 字；超过上限请自行精简后确认。</p>
  {mode==='calendar'&&<><Field name="开始时间（本机时区）" type="datetime-local" value={start} onChange={setStart}/><Field name="结束时间（本机时区）" type="datetime-local" value={end} onChange={setEnd}/></>}
  {mode==='project_brief'&&<><Field name="验收标准" area value={criteria} onChange={setCriteria}/><Field name="开放任务及范围" area value={openTask} onChange={setOpenTask}/></>}
@@ -31,11 +32,11 @@ export function OriginLinks({targetId,go}:{targetId:string;go:Go}){
 export function ConversationHandoffs({conversation,go}:{conversation:Entity;go:Go}){
  const s=useRuntime()!.snapshot!,all=Object.values(s.objects).flat();
  const links=(s.objects.handoff||[]).filter(h=>h.data.conversation_id===conversation.id);
- return links.length?<section className="v277-edit-card"><h3>本会话的交付对象 · 仅自己可见</h3>{links.map(h=>{const object=all.find(o=>o.id===h.data.target_id);return <div key={h.id}><p>{text(h,'title')}</p><button disabled={!object} onClick={()=>object&&go(h.data.kind==='share_record'?{name:'chat',id:conversation.id,messageId:text(h,'message_id')}:objectScreen(object))}>{object?'打开同一对象':'来源或对象已不可访问'}</button></div>})}</section>:null;
+ return links.length?<section className="v277-edit-card"><h3>本会话的交付对象 · 仅自己可见</h3>{links.map(h=>{const object=all.find(o=>o.id===h.data.target_id);return <div key={h.id}><p>{displayTitle(text(h,'title'),'')}</p><button disabled={!object} onClick={()=>object&&go(h.data.kind==='share_record'?{name:'chat',id:conversation.id,messageId:text(h,'message_id')}:objectScreen(object))}>{object?'打开同一对象':'来源或对象已不可访问'}</button></div>})}</section>:null;
 }
 export function SharedRecordCard({message,go}:{message?:Entity;go:Go}){
  const s=useRuntime()?.snapshot,record=s?.objects.shared_record.find(r=>r.id===message?.data.shared_record_id);if(!record)return null;
- return <details><summary>会话纪要 · v{String(message?.data.record_version||record.version)}</summary><p>由本人确认分享，不代表他人已接受分工或期限。</p>{((message?.data.record_sources||[]) as {id:string;version?:number}[]).map(ref=>{const m=s?.objects.message.find(x=>x.id===ref.id);return m&&m.version===ref.version&&<button key={ref.id} type="button" onClick={()=>go(objectScreen(m))}>原话：{text(m,'text').slice(0,60)}</button>})}</details>;
+ return <details><summary>会话纪要</summary><p>由本人确认分享，不代表他人已接受分工或期限。</p>{((message?.data.record_sources||[]) as {id:string;version?:number}[]).map(ref=>{const m=s?.objects.message.find(x=>x.id===ref.id);return m&&m.version===ref.version&&<button key={ref.id} type="button" onClick={()=>go(objectScreen(m))}>原话：{text(m,'text').slice(0,60)}</button>})}</details>;
 }
 export function CalendarDraft({item}:{item:Entity}){
  const calendar=item.data.calendar as {start:string;end:string}|undefined;if(!calendar)return null;

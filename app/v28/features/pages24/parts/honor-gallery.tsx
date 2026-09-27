@@ -1,4 +1,5 @@
 "use client";
+import {displayTitle} from "../../../core/display-labels";
 
 import { useEffect, useState } from "react";
 import { BadgeCheck, Star, Trophy } from "lucide-react";
@@ -44,7 +45,7 @@ export function HonorGallery({ compact = false }: { compact?: boolean } = {}) {
         <span>
           <Icon size={badge.earned ? 28 : 26} />
         </span>
-        <b>{badge.title}</b>
+        <b>{displayTitle(badge.title,'')}</b>
         <small>{badge.progress}</small>
       </div>
     );

@@ -1,4 +1,5 @@
 "use client";
+import {displayTitle} from "../../core/display-labels";
 import {useState} from 'react';
 import {useRuntime,entityRef} from '../../core/runtime-context';
 import {Action,Field} from '../../core/runtime-panels';
@@ -18,7 +19,7 @@ export function Observations({go,initialGoal=''}:{go:(screen:Screen)=>void;initi
   <Field name="间隔（1—168 小时）" type="number" value={hours} onChange={setHours}/><Field name={`最多检查次数（${mode==='rss'?'2':'1'}—20）`} type="number" value={checks} onChange={setChecks}/><Field name="有效天数（1—30）" type="number" value={days} onChange={setDays}/>
   {mode==='web'&&<p>公开网页搜索需单独配置联网检索服务与模型授权，首次建立来源基线；同一网页的正文变化暂不识别。</p>}
   <Action disabled={!goal.trim()||(mode==='rss'&&(!url.trim()||!keywords.trim()))} run={async()=>{await r.command('observation.create',{goal,interval_hours:Number(hours),max_checks:Number(checks),expires:new Date(Date.now()+Number(days)*86400000).toISOString(),...(mode==='rss'?{source_url:url,keywords,system}:{})});setGoal('');setUrl('');setKeywords('')}}>保存订阅草稿</Action>
-  {watches.map(w=><article key={w.id} style={{borderTop:'1px solid #e5e8eb',padding:'12px 0'}}><b>{text(w,'title')}</b><p>{names[text(w,'status')]} · 已检查 {String(w.data.checks)}{!w.data.auto_managed&&`/${String(w.data.max_checks)}`} 次 · 每 {String(w.data.interval_hours)} 小时</p>
+  {watches.map(w=><article key={w.id} style={{borderTop:'1px solid #e5e8eb',padding:'12px 0'}}><b>{displayTitle(text(w,'title'),'')}</b><p>{names[text(w,'status')]} · 已检查 {String(w.data.checks)}{!w.data.auto_managed&&`/${String(w.data.max_checks)}`} 次 · 每 {String(w.data.interval_hours)} 小时</p>
    {Boolean(w.data.source_url)?<><p>RSS：<a href={text(w,'source_url')} target="_blank" rel="noreferrer">{text(w,'source_url')}</a></p><p>关注词：{((w.data.keywords||[]) as string[]).join('、')} · {r.snapshot!.systems.find(agent=>agent.id===w.data.system)?.name||'探索'} Agent</p><p>{w.data.auto_suggested?'根据已确认的选择筛选公开线索，不需要手工订阅。':'首次检查只建立基线，不发布旧条目。'}</p></>:<p>公开网页 · 总上限 {String(w.data.limit_units)} 本地额度、{String(w.data.max_tokens)} tokens。实际费用以供应商账单为准。</p>}
    <p>{w.data.auto_managed?'持续运行，直到你暂停或结束':`截至 ${new Date(Number(w.data.expires)).toLocaleString('zh-CN')}`}</p>{text(w,'last_error')&&<p role="status">{text(w,'last_error')}</p>}{Boolean(w.data.last_checked_at)&&<p>上次检查：{new Date(text(w,'last_checked_at')).toLocaleString('zh-CN')} · {Number(w.data.last_new_sources)||0} 条新线索</p>}
    {w.data.status==='active'&&<><p>下次检查：{new Date(Number(w.data.next_at)).toLocaleString('zh-CN')}</p><Action run={()=>r.command('observation.pause',entityRef(w))}>暂停</Action></>}

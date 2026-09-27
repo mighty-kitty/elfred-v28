@@ -1,4 +1,5 @@
 "use client";
+import {entityTitle} from '../../core/display-labels';
 
 import { useMemo, useState } from "react";
 import {usePageState} from '../../core/page-memory';
@@ -27,7 +28,7 @@ export function MessagesPage({
     }
     return latest;
   }, [runtime?.snapshot?.objects.message]);
-  const contacts = runtime?(runtime.snapshot?.objects.conversation||[]).filter(item=>item.data.kind!=='agent').slice().sort((a,b)=>b.updated.localeCompare(a.updated)).map(item=>({id:item.id,name:String(item.data.title),text:latestMessages.get(item.id)?.text||"暂无消息",time:new Date(item.updated).toLocaleTimeString("zh-CN",{hour:"2-digit",minute:"2-digit"}),badge:item.unread||0,kind:item.data.kind==="group"?"群聊":"私聊",avatar:item.data.kind==="group"?"avatar-group":"avatar-lin"})):[
+  const contacts = runtime?(runtime.snapshot?.objects.conversation||[]).filter(item=>item.data.kind!=='agent').slice().sort((a,b)=>b.updated.localeCompare(a.updated)).map(item=>({id:item.id,name:entityTitle(item),text:latestMessages.get(item.id)?.text||"暂无消息",time:new Date(item.updated).toLocaleTimeString("zh-CN",{hour:"2-digit",minute:"2-digit"}),badge:item.unread||0,kind:item.data.kind==="group"?"群聊":"私聊",avatar:item.data.kind==="group"?"avatar-group":"avatar-lin"})):[
     {
       id: "group-danbasa",
       name: "丹巴萨餐厅",

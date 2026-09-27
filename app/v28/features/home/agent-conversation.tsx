@@ -1,4 +1,5 @@
 "use client";
+import {displayTitle} from "../../core/display-labels";
 
 import {useEffect,useRef,useState,type FormEvent,type KeyboardEvent} from 'react';
 import {ArrowLeft,ArrowUp,ChevronRight,History,Plus,Search,Settings2} from 'lucide-react';
@@ -120,7 +121,7 @@ export function AgentConversationPage({id,go,onBack,prefill,conversationId,messa
       {!!messages.length&&!pending&&<div className="v283-agent-chat-drafts">
         <button type="button" onClick={()=>void createDraft()} disabled={!lastHuman||drafting}>{drafting?'正在保存…':'将这段对话建为任务草稿'}</button>
         <button type="button" onClick={openTask} disabled={!lastHuman}>执行任务</button>
-        {drafts.map(draft=><button type="button" className="v283-agent-chat-draft-link" key={draft.id} onClick={()=>go({name:'task',id:draft.id})}><span className="v283-chat-task-label"><b>{String(draft.data.title)}</b><small>{statuses[entityText(draft,'status')]||entityText(draft,'status')}</small></span><span>{draft.data.status==='draft'?'查看草稿':['awaiting_review','awaiting_acceptance','completed'].includes(String(draft.data.status))?'查看结果':'查看任务'} <ChevronRight size={14}/></span></button>)}
+        {drafts.map(draft=><button type="button" className="v283-agent-chat-draft-link" key={draft.id} onClick={()=>go({name:'task',id:draft.id})}><span className="v283-chat-task-label"><b>{String(displayTitle(draft.data.title,''))}</b><small>{statuses[entityText(draft,'status')]||entityText(draft,'status')}</small></span><span>{draft.data.status==='draft'?'查看草稿':['awaiting_review','awaiting_acceptance','completed'].includes(String(draft.data.status))?'查看结果':'查看任务'} <ChevronRight size={14}/></span></button>)}
       </div>}
 
     </section>
@@ -146,10 +147,10 @@ export function AgentConversationPage({id,go,onBack,prefill,conversationId,messa
         <label><Search size={18}/><input value={query} onChange={event=>setQuery(event.target.value)} placeholder="搜索对话"/></label>
         <nav>{filtered.map(item=>{
           const first=(runtime?.snapshot?.objects.message||[]).find(message=>message.data.conversation_id===item.id&&message.data.actor_type==='human');
-          return <button type="button" className={item.id===activeId?'active':''} key={item.id} onClick={()=>selectThread(item.id)}><span>{String(first?.data.text||item.data.title).slice(0,32)}</span><small>{new Date(item.updated).toLocaleDateString('zh-CN')}</small></button>;
+          return <button type="button" className={item.id===activeId?'active':''} key={item.id} onClick={()=>selectThread(item.id)}><span>{String(first?.data.text||displayTitle(item.data.title,'')).slice(0,32)}</span><small>{new Date(item.updated).toLocaleDateString('zh-CN')}</small></button>;
         })}</nav>
         {!filtered.length&&<p>还没有相关对话</p>}
-        {!!existingDrafts.length&&<div className="v283-agent-chat-old-drafts"><b>已有任务草稿</b>{existingDrafts.map(draft=><button type="button" key={draft.id} onClick={()=>{setHistoryOpen(false);go({name:'task',id:draft.id});}}><span>{String(draft.data.title)}</span><small>查看草稿 <ChevronRight size={13}/></small></button>)}</div>}
+        {!!existingDrafts.length&&<div className="v283-agent-chat-old-drafts"><b>已有任务草稿</b>{existingDrafts.map(draft=><button type="button" key={draft.id} onClick={()=>{setHistoryOpen(false);go({name:'task',id:draft.id});}}><span>{String(displayTitle(draft.data.title,''))}</span><small>查看草稿 <ChevronRight size={13}/></small></button>)}</div>}
         <button type="button" className="v283-agent-chat-history-close" onClick={()=>setHistoryOpen(false)}>关闭</button>
       </aside>
     </div>}

@@ -1,4 +1,5 @@
 "use client";
+import {displayTitle} from "../../../core/display-labels";
 
 // 第四页最左边那一栏（原来叫「动态」）现在叫 **Agent 动态**：它是**总览**，
 // 不是完整的动态流 —— 口径（用户 2026-09-26 定）：
@@ -120,7 +121,7 @@ export function AgentFeedOverview({
                   <Icon size={18} />
                 </i>
                 <span>
-                  <b>{row.title}</b>
+                  <b>{displayTitle(row.title,'')}</b>
                   <small>
                     {name}
                     {day ? ` · ${day}` : ""}

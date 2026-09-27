@@ -1,4 +1,5 @@
 "use client";
+import {displayTitle} from "../../../core/display-labels";
 
 import { ChevronRight } from "lucide-react";
 import type { Screen } from "../../../core/screen";
@@ -170,10 +171,10 @@ export function AbilityProfilePage({
                   type="button"
                   key={card.title}
                   className={styles.contribRow}
-                  onClick={() => openCard(card.title)}
+                  onClick={() => openCard(card.id||card.title)}
                 >
                   <span className={styles.contribHead}>
-                    <b>{card.title}</b>
+                    <b>{displayTitle(card.title,'')}</b>
                     <i style={{ background: `${tone}1a`, color: tone }}>
                       {card.dimension} · Lv.{card.level}
                     </i>

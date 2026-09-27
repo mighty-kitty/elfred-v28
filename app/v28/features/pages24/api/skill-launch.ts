@@ -1,5 +1,6 @@
 "use client";
 
+import {displayTitle} from '../../../core/display-labels';
 import { fetchContract } from "./page2-api";
 
 type Entity = { id: string; data: Record<string, unknown> };
@@ -32,5 +33,5 @@ export async function launchWithSkill(runtime: unknown, title: string, goal = ""
   if (!contract) return { ok: false, reason: "missing_contract", note: "工具说明尚未就绪，请稍后重试。" };
   const system = String(tool.data.system);
   const agent = system === "advise" ? "advisor" : ["explore", "create", "connect", "execute"].includes(system) ? system as LaunchOutcome["system"] : "execute";
-  return { ok: true, system: agent, prompt: contractPrompt(title, goal, contract) };
+  return { ok: true, system: agent, prompt: contractPrompt(displayTitle(tool.data.title,'工具'), goal, contract) };
 }

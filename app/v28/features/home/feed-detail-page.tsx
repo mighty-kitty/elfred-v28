@@ -1,4 +1,5 @@
 "use client";
+import {displayTitle} from "../../core/display-labels";
 
 import {ArrowLeft} from 'lucide-react';
 import {useRuntime} from '../../core/runtime-context';
@@ -17,7 +18,7 @@ export function FeedDetailPage({id,go,onBack}:{id:string;go:(screen:Screen)=>voi
     {item?<article style={{lineHeight:1.65,whiteSpace:'pre-wrap'}}>
       <b>{runtime.snapshot?.systems.find(system=>system.id===item.data.system)?.name||'Agent'} Agent</b>
       <small style={{display:'block',color:'#687685'}}>{new Date(item.created).toLocaleString('zh-CN')}</small>
-      <h2 style={{fontSize:21,lineHeight:1.35}}>{text(item,'title')}</h2>
+      <h2 style={{fontSize:21,lineHeight:1.35}}>{displayTitle(text(item,'title'),'')}</h2>
       {item.data.synthetic===true&&<p>隔离验收数据，不是真实发现。</p>}
       <p>{text(item,'summary')}</p>
       <FeedDetails item={item} go={go}/>

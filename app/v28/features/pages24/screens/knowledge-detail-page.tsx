@@ -1,4 +1,5 @@
 "use client";
+import {displayTitle} from "../../../core/display-labels";
 
 import {MarkdownContent} from '../../../core/markdown-content';
 import { useState, type Dispatch, type SetStateAction } from "react";
@@ -63,7 +64,7 @@ export function KnowledgeDetailPage({
           <h3>
             <span className={styles.titleInline}>
               <BookOpen size={16} />
-              {item.title}
+              {displayTitle(item.title,'')}
             </span>
           </h3>
           <p className={styles.quote}>{item.purpose}</p>
@@ -126,7 +127,7 @@ export function KnowledgeDetailPage({
             <Plus size={16} />
             <span>
               <b>保存为可用工具</b>
-              名称：{item.title} · 归属探索 Agent · 来源「{item.source}」。能力评分须以真实任务和本人验收的成果核对。
+              名称：{displayTitle(item.title,'')} · 归属探索 Agent · 来源「{item.source}」。能力评分须以真实任务和本人验收的成果核对。
               <span className={styles.actions}>
                 <button type="button" className={styles.actionPrimary} onClick={fixIt}>
                   确认生成

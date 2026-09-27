@@ -1,4 +1,5 @@
 "use client";
+import {displayTitle} from "../../../core/display-labels";
 
 import { useState } from "react";
 import {
@@ -324,10 +325,10 @@ export function CapabilitySheet({
   // 真跑一次：卡片是 skill 的可视化，所以要按"标题 → skill 名"找到后端那条 skill 才能真跑。
   // 映射数据来自 live store 里已经拉好的 `/page2/skills`（不另发请求）。
   const live = usePage2Live();
-  const skillName = (live.data.skills ?? []).find((item) => item.title === card.title)?.name ?? "";
+  const skillName = (live.data.skills ?? []).find((item) => (card.id ? item.name === card.id : item.title === card.title))?.name ?? "";
   // 跑完面板要跟着刷新：面板是用打开时的 card 快照渲染的，所以这里以 live store 里
   // 最新的那份为准（跑完 loadPage2 会把 /capabilities 拉一遍），别让用户看到旧数字。
-  const liveCard = (live.data.capabilities ?? []).find((item) => item.title === card.title);
+  const liveCard = (live.data.capabilities ?? []).find((item) => card.id ? item.id === card.id : item.title === card.title);
   const shownScore = liveCard?.score == null ? "待验证" : liveCard.score;
   const shownEvidence = liveCard?.evidence ?? card.evidence;
   const [running, setRunning] = useState(false);
@@ -375,7 +376,7 @@ export function CapabilitySheet({
   const nextUnlock = unlocks[card.level];
   // 「它能替你做」的来源顺序：**这条 skill 自己的真实步骤** → 类型通用的那套（只有早期演示卡才用得上）。
   // 原来直接按 card.type 取通用那套，导致真 skill 卡显示的是"机会检索"的文案（实测确认的 bug）。
-  const liveSkill = (live.data.skills ?? []).find((item) => item.title === card.title);
+  const liveSkill = (live.data.skills ?? []).find((item) => card.id ? item.name === card.id : item.title === card.title);
   const skillSteps = liveSkill?.steps ?? [];
   // ⚠️ 「它能替你做」的兜底只给**演示卡**用。
   // 真 skill 卡（liveSkill 存在）就算自己没写步骤名，也**绝不能**退回类型通用那套 ——
@@ -424,7 +425,7 @@ export function CapabilitySheet({
           </span>
           <div>
             <span>
-              <h2>{card.title}</h2>
+              <h2>{displayTitle(card.title,'')}</h2>
               <em>{card.type}</em>
             </span>
             <p>{card.copy}</p>
@@ -594,7 +595,7 @@ export function CapabilitySheet({
                   const result = await runSkill(skillName, "试跑：用这张卡做一件小事");
                   setRunNote(
                     result?.ran
-                      ? `跑通了一次（运行 ${result.runId ?? "?"}），分数已更新为 ${result.cardScore ?? "?"}`
+                      ? `跑通了一次，分数已更新为 ${result.cardScore ?? "?"}`
                       : `没跑通：${result?.reason ?? "后端没返回原因"}`,
                   );
                   setRunning(false);
@@ -646,7 +647,7 @@ export function CapabilitySheet({
                 <div className={styles.timeline}>
                   {ownTasks.map((task) => (
                     <div key={task.title} className={styles.recordRow}>
-                      <b>{task.title}</b>
+                      <b>{displayTitle(task.title,'')}</b>
                       <small>
                         {task.status} · {task.updatedAt}
                       </small>
@@ -710,7 +711,7 @@ export function CapabilitySheet({
                     <span className={styles.evidenceTime}>
                       {record.day} {record.time}
                     </span>
-                    <b>{record.title}</b>
+                    <b>{displayTitle(record.title,'')}</b>
                     <small>
                       {record.source.label} · {record.weightLabel}
                     </small>

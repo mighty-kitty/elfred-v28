@@ -1,4 +1,5 @@
 "use client";
+import {displayTitle} from "../../../core/display-labels";
 
 // 设置里那五个面板（账号 / 通知 / 隐私 / 数据 / 帮助）。
 //
@@ -240,7 +241,7 @@ function DataPanel({
             className={styles.panelAction}
             onClick={() => run("task.restore", ref(item), "任务已恢复")}
           >
-            {text(item, "title") || "（没写标题的任务）"}
+            {displayTitle(text(item, "title"),'') || "（没写标题的任务）"}
             <em>恢复</em>
           </button>
         ))

@@ -1,4 +1,5 @@
 "use client";
+import {entityTitle,markdownExcerpt} from '../../../core/display-labels';
 
 // Second/fourth page projection of the authenticated V28 runtime.
 // The independent page2 backend described in the source PR was not shipped.
@@ -211,16 +212,16 @@ function projectSnapshot(snapshot: Snapshot): Page2Data {
   const capabilities: LiveCapability[] = tools.map(tool => {
     const uses = list(snapshot, "tool_use").filter(item => item.data.tool_id === tool.id && item.data.kind === "use").length;
     const accepted = outcomes.filter(item => tasks.get(field(item, "task_id"))?.data.skill_id === tool.id).length;
-    return { id: tool.id, type: field(tool, "kind") || "Skill", dimension: "未标注", title: field(tool, "title"),
-      copy: field(tool, "instructions").slice(0, 160), owner: agentName[field(tool, "system")] || "执行",
+    return { id: tool.id, type: field(tool, "kind") || "Skill", dimension: "未标注", title: entityTitle(tool),
+      copy: markdownExcerpt(field(tool, "instructions"),160), owner: agentName[field(tool, "system")] || "执行",
       score: null, evidence: accepted, level: 1, stage: "待验证", gapLabel: "依据真实使用和验收结果成长", verified: accepted > 0,
       ladder: [{ level: 1, stage: "待验证", gate: 0 }] };
   });
   const evidence: LiveEvidenceDetail[] = outcomes.map(item => {
     const task = tasks.get(field(item, "task_id"));
     const artifact = knowledge.find(entry => entry.data.outcome_id === item.id);
-    const title = field(task, "title") || "已验收成果";
-    return { id: item.id, title, note: field(artifact, "content").slice(0, 240), kind: "outcome", kindLabel: "已验收成果",
+    const title = entityTitle(task,"已验收成果");
+    return { id: item.id, title, note: markdownExcerpt(field(artifact, "content"),240), kind: "outcome", kindLabel: "已验收成果",
       weightLabel: "本人验收", day: new Date(item.created).toDateString() === new Date().toDateString() ? "今天" : new Date(item.created).toLocaleDateString("zh-CN"),
       time: new Date(item.created).toLocaleTimeString("zh-CN", { hour: "2-digit", minute: "2-digit" }),
       source: { label: "真实任务", note: title, ref: { kind: "task", id: task?.id || "" } },
@@ -245,8 +246,8 @@ function projectSnapshot(snapshot: Snapshot): Page2Data {
       identity: { headline: "当前身份", describe: "还没有确认的身份信息", photoLabel: "", rule: "用于机会推荐，可随时纠正" },
       relationships: friends.map(item => ({ id: item.id, name: field(item, "name") || field(item, "handle"), role: "好友", photo: "", chatId: field(item, "conversation_id") })),
       relationshipStats: { longTerm: friends.length, pending: 0 } },
-    documents: [...documents, ...knowledge].map(item => ({ id: item.id, name: field(item, "title"), status: field(item, "status"), excerpt: field(item, "content").slice(0, 200) })),
-    pending: [], skills: tools.map(tool => ({ name: tool.id, title: field(tool, "title"), summary: field(tool, "instructions").slice(0, 160),
+    documents: [...documents, ...knowledge].map(item => ({ id: item.id, name: entityTitle(item), status: field(item, "status"), excerpt: markdownExcerpt(field(item, "content")) })),
+    pending: [], skills: tools.map(tool => ({ name: tool.id, title: entityTitle(tool), summary: markdownExcerpt(field(tool, "instructions"),160),
       ownerAgent: field(tool, "system"), dimension: "", steps: [field(tool, "instructions")].filter(Boolean),
       canDo: [field(tool, "instructions")].filter(Boolean), stepCount: field(tool, "instructions") ? 1 : 0,
       inputs: [], outputs: [], hasExamples: false,
@@ -304,7 +305,7 @@ export async function fetchContract(skillName: string, goal = ""): Promise<TaskC
   if (!tool) return null;
   const instructions = field(tool, "instructions");
   return { ok: true, goal, system: field(tool, "system") || "execute", criteria: "按工具说明交付可核对的结果",
-    constraints: instructions, memories: [], skill: { name: tool.id, title: field(tool, "title"), steps: [], rules: [instructions] },
+    constraints: instructions, memories: [], skill: { name: tool.id, title: entityTitle(tool), steps: [], rules: [instructions] },
     note: "来自本人已保存的工具版本" };
 }
 

@@ -4,6 +4,7 @@ import { readFileSync } from 'node:fs';
 import { randomUUID } from 'node:crypto';
 import ts from 'typescript';
 import {finalReceipts} from '../../app/v28/core/result-output.ts';
+import {entityTitle,displayError} from '../../app/v28/core/display-labels.ts';
 import {createClientId} from '../../app/v28/core/client-id.ts';
 
 const response = value => ({ ok: true, status: 200, json: async () => value });
@@ -44,6 +45,7 @@ function hookHarness(filename, imports = {}, fetcher = async () => { throw new E
     '../../v27-7-state': {},
     './result-output': {finalReceipts},
     './client-id': {createClientId},
+    './display-labels': {entityTitle,displayError},
     '../features/live/types': { text: (entity, key) => entity?.data?.[key] || '' },
     ...imports,
   };

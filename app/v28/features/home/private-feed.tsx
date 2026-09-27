@@ -1,4 +1,5 @@
 "use client";
+import {displayTitle} from "../../core/display-labels";
 
 import { useEffect,useMemo,useRef,useState } from "react";
 import {usePageState} from '../../core/page-memory';
@@ -111,7 +112,7 @@ export function PrivateFeed({ go, onDrag }: { go: (screen: Screen) => void; onDr
             <div className={styles.postMain}>
               <header className={styles.postHeader}><b>{agent?.name || "系统"} <span>Agent</span></b></header>
               <button type="button" className={styles.postContent} onClick={() => setDetailsId(detailsId === item.id ? null : item.id)}>
-                <strong>{text(item, "title")}</strong>
+                <strong>{displayTitle(text(item, "title"),'')}</strong>
                 {item.data.synthetic===true&&<small role="status">隔离验收数据 · 不是真实 Agent 发现</small>}
                 {excerpt && <span className={styles.excerpt}>{excerpt}</span>}
               </button>

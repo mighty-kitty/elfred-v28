@@ -1,4 +1,5 @@
 "use client";
+import {displayTitle} from "../../../core/display-labels";
 
 import { useState } from "react";
 import { ChevronRight, Sparkles } from "lucide-react";
@@ -87,7 +88,7 @@ export function DimensionDetailPage({
                 >
                   <i style={{ background: tone }} />
                   <span>
-                    <b>{card.title}</b>
+                    <b>{displayTitle(card.title,'')}</b>
                     <small>
                       {card.type} · Lv.{card.level} {readStage(card.level)} ·{" "}
                       {card.evidence} 项成果
@@ -120,7 +121,7 @@ export function DimensionDetailPage({
                   <span className={styles.evidenceTime}>
                     {record.day} {record.time}
                   </span>
-                  <b>{record.title}</b>
+                  <b>{displayTitle(record.title,'')}</b>
                   <small>{record.source.label}</small>
                   <ChevronRight size={16} />
                 </button>

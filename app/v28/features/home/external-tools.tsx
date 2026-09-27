@@ -1,4 +1,5 @@
 "use client";
+import {displayTitle} from "../../core/display-labels";
 import {useRuntime} from '../../core/runtime-context';
 import {Action} from '../../core/runtime-panels';
 import {AttachmentList,type FileRef} from '../live/attachments';
@@ -10,5 +11,5 @@ export function ExternalTool({operation,goal,go}:{operation:'web_search'|'image_
 }
 export function ExternalResults({task}:{task:Entity}){
  const s=useRuntime()!.snapshot!,run=s.objects.run.find(r=>r.id===task.data.run_id),receipts=(run?.data.receipts||[]) as {attachment_id?:string;citations?:{url:string;title:string}[]}[],files=receipts.flatMap(r=>{const file=s.objects.attachment.find(a=>a.id===r.attachment_id);return file?[{id:file.id,name:String(file.data.name),mime:String(file.data.mime),size:Number(file.data.size)}]:[]}) as FileRef[],citations=receipts.flatMap(r=>r.citations||[]);
- return files.length||citations.length?<section><h3>实际执行结果</h3><AttachmentList items={files}/>{citations.map((c,i)=><p key={c.url+':'+i}><a href={c.url} target="_blank" rel="noreferrer">{i+1}. {c.title}</a></p>)}</section>:null;
+ return files.length||citations.length?<section><h3>实际执行结果</h3><AttachmentList items={files}/>{citations.map((c,i)=><p key={c.url+':'+i}><a href={c.url} target="_blank" rel="noreferrer">{i+1}. {displayTitle(c.title,'')}</a></p>)}</section>:null;
 }

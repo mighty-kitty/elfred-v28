@@ -1,4 +1,5 @@
 "use client";
+import {displayTitle} from "../../core/display-labels";
 import {useState} from 'react';
 import {ChevronRight,Plus,Users} from 'lucide-react';
 import {AppHeader} from '../../legacy/legacy-ui';
@@ -28,7 +29,7 @@ export function SwarmPage({go,onBack}:{go:(screen:Screen)=>void;onBack:()=>void}
   <nav className={styles.filters} aria-label="协作状态">{[['all','全部'],['running','进行中'],['results','成果'],['attention','需处理'],['draft','待启动']].map(([id,name])=><button key={id} aria-pressed={filter===id} onClick={()=>setFilter(id)}>{name}</button>)}</nav>
   <section aria-label="协作看板">{tasks.filter(task=>filter==='all'||bucket(text(task,'status'))===filter).map(task=>{
    const run=snapshot.objects.run.find(item=>item.id===task.data.run_id),receipts=(run?.data.receipts||[]) as {step_id:string;status:string}[],steps=(task.data.collaboration_steps||[]) as {id:string;system:string;goal:string;depends:string[]}[];
-   return <button key={task.id} className={styles.card} onClick={()=>go({name:'task',id:task.id})}><header><b>{text(task,'title')||text(task,'goal')}</b><small>{statuses[text(task,'status')]||text(task,'status')}</small></header><p>{nameOf(text(task,'system'))}汇总 · {steps.length+1} 位 Agent</p><ul>{steps.map(step=><li key={step.id}><span>{nameOf(step.system)}</span><span>{step.goal}</span><small>{receipts.some(receipt=>receipt.step_id==='collab-'+step.id&&receipt.status==='succeeded')?'已提交建议':step.depends.length?'等待前序结果':'待提交'}</small></li>)}</ul><footer><span>查看分工、过程与成果</span><ChevronRight size={17}/></footer></button>;
+   return <button key={task.id} className={styles.card} onClick={()=>go({name:'task',id:task.id})}><header><b>{displayTitle(text(task,'title'),'')||text(task,'goal')}</b><small>{statuses[text(task,'status')]||text(task,'status')}</small></header><p>{nameOf(text(task,'system'))}汇总 · {steps.length+1} 位 Agent</p><ul>{steps.map(step=><li key={step.id}><span>{nameOf(step.system)}</span><span>{step.goal}</span><small>{receipts.some(receipt=>receipt.step_id==='collab-'+step.id&&receipt.status==='succeeded')?'已提交建议':step.depends.length?'等待前序结果':'待提交'}</small></li>)}</ul><footer><span>查看分工、过程与成果</span><ChevronRight size={17}/></footer></button>;
   })}{!tasks.some(task=>filter==='all'||bucket(text(task,'status'))===filter)&&<div className={styles.empty}><Users size={28}/><h3>{filter==='all'?'还没有协作事项':'这里暂时没有事项'}</h3><p>{filter==='all'?'写下共同目标，选择分工后即可开始。':'切换其他状态，或发起新的协作。'}</p></div>}</section>
  </main>;
 }

@@ -1,4 +1,5 @@
 "use client";
+import {displayTitle} from "../../../core/display-labels";
 
 import {
   useEffect,
@@ -198,7 +199,7 @@ export function KnowledgePage({
 
   void storeVersion;
   // 固化出来的卡排在最前（刚建的能立刻看见），其余卡按成果裁定调整分数与成果数
-  const cards = [
+  const cards: (SheetCard & {owner: string;notRunYet?:boolean})[] = [
     // 知识固化出来的卡：补上"归属 Agent"和图标，和内置的三张卡长得一样
     ...store.fixedCards.map((card) => ({
       ...card,
@@ -228,7 +229,7 @@ export function KnowledgePage({
   useEffect(() => {
     const pending = takePendingCard();
     if (!pending) return;
-    const target = cards.find((card) => card.title === pending);
+    const target = cards.find((card) => card.id === pending) || cards.find((card) => card.title === pending);
     if (target) setSelectedCapability(target);
     // 只在挂载时跑一次，cards 每次渲染都是新数组，不能进依赖
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -396,7 +397,7 @@ export function KnowledgePage({
         <section className={`v277-ability-cards ${styles.cards}`}>
           {visibleCards.map(
             (
-              { type, dimension, title, copy, score, evidence, level, notRunYet, icon: Icon },
+              { id, type, dimension, title, copy, score, evidence, level, notRunYet, icon: Icon },
               index,
             ) => {
               const stage = readStage(level);
@@ -404,7 +405,7 @@ export function KnowledgePage({
               return (
               <button
                 type="button"
-                key={title}
+                key={id||title}
                 style={
                   {
                     "--dim": DIMENSION_COLOR[dimension] ?? "#6d7680",
@@ -414,6 +415,7 @@ export function KnowledgePage({
                 aria-label={`${title}：${dimension}维度，${notRunYet ? "尚未评分" : `Lv.${level} ${stage}`}，${gapLabel}`}
                 onClick={() =>
                   setSelectedCapability({
+                    id,
                     type,
                     dimension,
                     title,
@@ -478,7 +480,7 @@ export function KnowledgePage({
               <i className={styles.knowledgeVisual}>
                 <FileText size={24} />
               </i>
-              <b>{draft.title}</b>
+              <b>{displayTitle(draft.title,'')}</b>
               <p className={styles.knowledgePurpose}>{draft.purpose}</p>
               <span className={styles.knowledgeStrip}>跑出第一条成果就转正</span>
             </button>
@@ -531,7 +533,7 @@ export function KnowledgePage({
                   <span>
                     <Icon size={19} />
                   </span>
-                  <b>{item.title}</b>
+                  <b>{displayTitle(item.title,'')}</b>
                   <small>{item.note}</small>
                   <strong>{item.delta}</strong>
                 </button>
@@ -840,7 +842,7 @@ export function KnowledgePage({
                 {pendingList.map((item) => (
                   <div key={item.id} className={styles.pendingRow}>
                     <span>
-                      <b>{item.title}</b>
+                      <b>{displayTitle(item.title,'')}</b>
                       <small>{item.from} · 确认后才会上架</small>
                     </span>
                     <button
@@ -913,7 +915,7 @@ export function KnowledgePage({
           onCreateTask={async (card, goal) => {
             // ⚠️ 2026-09-26 对齐你们的新契约：`launchWithSkill` 现在返回 system + prompt，
             //    直接带着可编辑的 prefill 进那个 Agent 的会话（我们原来那版是 conversationId）。
-            const result = await launchWithSkill(runtime, card.title, goal);
+            const result = await launchWithSkill(runtime, card.id||card.title, goal);
             if (result.ok && result.system && result.prompt) {
               setPendingSkill(card.title);
               setSelectedCapability(null);

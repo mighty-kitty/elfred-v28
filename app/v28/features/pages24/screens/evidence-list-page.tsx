@@ -1,4 +1,5 @@
 "use client";
+import {displayTitle} from "../../../core/display-labels";
 
 import { ChevronRight, ShieldCheck } from "lucide-react";
 import type { Screen } from "../../../core/screen";
@@ -56,7 +57,7 @@ export function EvidenceListPage({
                     onClick={() => go({ name: "evidence-detail", id: record.id })}
                   >
                     <span className={styles.evidenceTime}>{record.time}</span>
-                    <b>{record.title}</b>
+                    <b>{displayTitle(record.title,'')}</b>
                     <small>
                       {record.kindLabel} ·{" "}
                       {record.impacts

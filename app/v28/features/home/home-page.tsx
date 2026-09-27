@@ -1,4 +1,5 @@
 "use client";
+import {displayTitle} from "../../core/display-labels";
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
@@ -204,8 +205,8 @@ export function HomePage({
                 }
               >
                 <small>{moduleLabel}</small>
-                <h2>{item.title}</h2>
-                <p>{importantEvent&&importantEvent.index===index?`${importantEvent.reason}：${importantEvent.title}`:item.summary}</p>
+                <h2>{displayTitle(item.title,'')}</h2>
+                <p>{importantEvent&&importantEvent.index===index?`${importantEvent.reason}：${displayTitle(importantEvent.title,'')}`:item.summary}</p>
                 <span>{item.stats}</span>
                 <strong>
                   {item.cta}

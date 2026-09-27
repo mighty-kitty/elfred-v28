@@ -1,4 +1,5 @@
 "use client";
+import {entityTitle,objectNames} from './display-labels';
 
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { PageMemoryProvider } from './page-memory';
@@ -493,7 +494,7 @@ export function V277App() {
     if(screen.name==='search-source')return <SearchSourcePage id={screen.id} anchor={screen.anchor} onBack={back}/>;
     if (screen.name === "knowledge-detail") {
       const entity=runtime?.snapshot&&Object.values(runtime.snapshot.objects).flat().find(entry=>entry.id===screen.id);
-      const item = runtime?(entity?{id:entity.id,title:entityText(entity,'title')||entity.type,purpose:entity.type==='knowledge'?'本人保存的知识资料':'本人当前可读取的资料',source:entity.type+' · '+new Date(entity.created).toLocaleString('zh-CN'),status:runtimeStatuses[entityText(entity,'status')]||entityText(entity,'status'),example:entityText(entity,'content')||entityText(entity,'text')||entityText(entity,'goal')}:undefined):v277Knowledge.find((entry) => entry.id === screen.id);
+      const item = runtime?(entity?{id:entity.id,title:entityTitle(entity),purpose:entity.type==='knowledge'?'本人保存的知识资料':'本人当前可读取的资料',source:(objectNames[entity.type]||'资料')+' · '+new Date(entity.created).toLocaleString('zh-CN'),status:runtimeStatuses[entityText(entity,'status')]||entityText(entity,'status'),example:entityText(entity,'content')||entityText(entity,'text')||entityText(entity,'goal')}:undefined):v277Knowledge.find((entry) => entry.id === screen.id);
       return item ? (
         <KnowledgeDetailPage
           item={item}
@@ -526,7 +527,7 @@ export function V277App() {
     if (screen.name === "evidence-detail") return <EvidenceDetailPage id={screen.id} go={go} onBack={back}/>;
     if (screen.name === "dimension") return <DimensionDetailPage id={screen.id} go={go} onBack={back}
       onCreateTask={async(card,goal)=>{
-        const result=await launchWithSkill(runtime,card.title,goal);
+        const result=await launchWithSkill(runtime,card.id||card.title,goal);
         if(result.ok&&result.system&&result.prompt){go({name:'chat',id:result.system,prefill:result.prompt});return {ok:true};}
         return {ok:false,note:result.note};
       }} onUpgrade={card=>setCardLevel(card.title,card.level+1)}/>;

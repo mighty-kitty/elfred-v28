@@ -1,4 +1,5 @@
 "use client";
+import {displayTitle} from "../../core/display-labels";
 import {ChevronRight,Plus,UsersRound} from 'lucide-react';
 import {useRuntime} from '../../core/runtime-context';
 import {text} from '../live/types';
@@ -16,7 +17,7 @@ export function CommunityEntry({go}:{go:(screen:Screen)=>void}){
   {projects.length>0&&<details className="community-entry-projects">
    <summary><UsersRound size={18}/><strong>我的共创</strong><span>{projects.length} 个项目</span><ChevronRight size={17}/></summary>
    <div className="community-entry-list">{projects.map(project=><button key={project.id} onClick={()=>go({name:'community-post',id:project.id})}>
-    <span><strong>{text(project,'title')}</strong><small>{project.owner===runtime.snapshot?.user.id?'我发起的':'我参与的'} · {project.data.recruiting?'招募中':'协作中'} · 修订 {Number(project.data.revision||0)}</small></span><ChevronRight size={17}/>
+    <span><strong>{displayTitle(text(project,'title'),'')}</strong><small>{project.owner===runtime.snapshot?.user.id?'我发起的':'我参与的'} · {project.data.recruiting?'招募中':'协作中'} · 修订 {Number(project.data.revision||0)}</small></span><ChevronRight size={17}/>
    </button>)}</div>
   </details>}
  </section>;

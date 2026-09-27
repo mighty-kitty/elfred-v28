@@ -15,15 +15,16 @@ export function ToolsPage({onBack,go,initialId}:{onBack:()=>void;go:Go;initialId
  const [tab,setTab]=useState(text(snapshot.objects.skill.find(item=>item.id===initialId),'kind')||'Skill'),[order,setOrder]=useState('recent'),[archived,setArchived]=useState(false),[open,setOpen]=useState<Entity|null>(snapshot.objects.skill.find(item=>item.id===initialId)||null),[goal,setGoal]=useState(''),[preview,setPreview]=useState('');
  const [query,setQuery]=useState('');
  const [selection,setSelection]=useState(0);
- const selectTool=(item:Entity)=>{setOpen(item);setGoal('');setSelection(value=>value+1)};
+ const restoredTool=useRef<string|null>(null);
+ const selectTool=(item:Entity)=>{restoredTool.current=initialId||null;setOpen(item);setGoal('');setSelection(value=>value+1)};
+ const selectTab=(kind:string)=>{restoredTool.current=initialId||null;setTab(kind);setOpen(null)};
  const detail=useRef<HTMLElement>(null);
  const openedToolId=open?.id;
  useEffect(()=>{if(openedToolId)detail.current?.scrollIntoView({block:'start',behavior:'smooth'})},[openedToolId,selection]);
  const initialTool=snapshot.objects.skill.find(item=>item.id===initialId);
- const restoredTool=useRef<string|null>(null);
  useEffect(()=>{
   if(initialId&&initialTool&&restoredTool.current!==initialId){
-   restoredTool.current=initialId;setOpen(initialTool);setTab(text(initialTool,'kind')||'Skill');
+   restoredTool.current=initialId;setOpen(initialTool);setTab(text(initialTool,'kind')||'Skill');setGoal('');
   }
  },[initialId,initialTool]);
  const pinned=(id:string)=>snapshot.objects.shortcut.some(item=>item.data.skill_id===id&&item.data.pinned);
@@ -32,7 +33,7 @@ export function ToolsPage({onBack,go,initialId}:{onBack:()=>void;go:Go;initialId
  return <main className="v277-page v281-tools-page elfred-tools-connected"><header><button aria-label="返回" onClick={onBack}><ArrowLeft size={26}/></button><h1>我的工具</h1><button aria-label="创建工具" style={{left:'auto',right:0}} onClick={()=>go({name:'create-tool'})}><Plus size={23}/></button></header>
  <button type="button" className="elfred-inbox-entry" onClick={()=>go({name:'inbox'})}><span>收件箱</span><small>{snapshot.objects.inbox.filter(item=>item.data.status==='pending').length} 项待整理</small><ChevronRight size={18}/></button>
  <Field name="搜索工具" value={query} onChange={setQuery}/>
- <nav className="v281-tools-tabs">{['Skill','Mini App','Agent'].map(kind=><button key={kind} className={tab===kind?'active':''} onClick={()=>{setTab(kind);setOpen(null)}}>{kind}</button>)}</nav>
+ <nav className="v281-tools-tabs">{['Skill','Mini App','Agent'].map(kind=><button key={kind} className={tab===kind?'active':''} onClick={()=>selectTab(kind)}>{kind}</button>)}</nav>
  {tab==='Skill'&&!archived&&<BuiltinCapabilities go={go}/>}
  <section className="v281-recent-tools"><header><h2>最近使用</h2><button onClick={()=>setOrder(order==='recent'?'frequent':'recent')}>{order==='recent'?'按常用排序':'按最近排序'}<ChevronRight size={18}/></button></header>{recent.length?recent.map(item=><button key={item.id} className="v281-recent-card" onClick={()=>selectTool(item)}><span><Layers3 size={28}/></span><div><h3>{text(item,'title')}</h3><p>{text(item,'instructions').slice(0,70)}</p><small>{new Date(text(item,'last_used_at')).toLocaleString('zh-CN')}</small></div></button>):<p className="v277-empty">使用后会自动出现在这里。</p>}</section>
  <section className="v281-all-tools"><h2>{archived?'已归档':'全部工具'}</h2><button className="v277-secondary" onClick={()=>setArchived(!archived)}>{archived?'查看有效工具':'查看归档'}</button><div>{tools.map(item=><button key={item.id} onClick={()=>selectTool(item)}><span>{pinned(item.id)?<Pin size={27}/>:<Layers3 size={27}/>}</span><h3>{text(item,'title')}</h3><p>{text(item,'status')==='active'?'已启用':text(item,'status')==='archived'?'已归档':'草稿'} · 使用 {Number(item.data.uses||0)} 次{item.data.activity==='idle'?' · 闲置':''}{item.data.mastery==='frequent'?' · 常用':item.data.mastery==='proficient'?' · 熟练':''}</p><ChevronRight size={20}/></button>)}</div>{!tools.length&&<button className="v277-secondary" onClick={()=>go({name:'create-tool'})}>创建第一个{tab}</button>}</section>

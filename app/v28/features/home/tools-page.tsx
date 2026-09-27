@@ -19,6 +19,13 @@ export function ToolsPage({onBack,go,initialId}:{onBack:()=>void;go:Go;initialId
  const detail=useRef<HTMLElement>(null);
  const openedToolId=open?.id;
  useEffect(()=>{if(openedToolId)detail.current?.scrollIntoView({block:'start',behavior:'smooth'})},[openedToolId,selection]);
+ const initialTool=snapshot.objects.skill.find(item=>item.id===initialId);
+ const restoredTool=useRef<string|null>(null);
+ useEffect(()=>{
+  if(initialId&&initialTool&&restoredTool.current!==initialId){
+   restoredTool.current=initialId;setOpen(initialTool);setTab(text(initialTool,'kind')||'Skill');
+  }
+ },[initialId,initialTool]);
  const pinned=(id:string)=>snapshot.objects.shortcut.some(item=>item.data.skill_id===id&&item.data.pinned);
  const tools=snapshot.objects.skill.filter(item=>(text(item,'title')+' '+text(item,'instructions')).toLowerCase().includes(query.toLowerCase())).filter(item=>(text(item,'kind')||'Skill')===tab&&(archived?item.data.status==='archived':item.data.status!=='archived')).slice().sort((a,b)=>Number(pinned(b.id))-Number(pinned(a.id))||(order==='frequent'?Number(b.data.uses||0)-Number(a.data.uses||0):text(b,'last_used_at').localeCompare(text(a,'last_used_at'))));
  const recent=tools.filter(item=>item.data.last_used_at).sort((a,b)=>text(b,'last_used_at').localeCompare(text(a,'last_used_at')));

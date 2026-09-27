@@ -5,16 +5,16 @@ import {createContext,useContext,useCallback,useEffect,useRef,useState,type Reac
 import {createInitialV277State,type V277State,type V277TaskStatus,type V277AgentId} from '../../v27-7-state';
 import {type Snapshot,type Entity,type Result,text,statuses} from '../features/live/types';
 
-type RuntimeContextValue={snapshot:Snapshot|null;syncStatus:'current'|'stale';lastSynced:string|null;loading:boolean;error:string;refresh:()=>Promise<void>;request:<T>(path:string,body?:unknown)=>Promise<T>;command:(action:string,input:Record<string,unknown>)=>Promise<Result>;login:(handle:string,password:string,register:boolean)=>Promise<void>;logout:()=>Promise<void>;clearError:()=>void;report:(message:string)=>void};
+type RuntimeContextValue={snapshot:Snapshot|null;syncStatus:'current'|'stale';lastSynced:string|null;loading:boolean;error:string;refresh:()=>Promise<void>;request:<T>(path:string,body?:unknown,options?:{signal?:AbortSignal})=>Promise<T>;command:(action:string,input:Record<string,unknown>)=>Promise<Result>;login:(handle:string,password:string,register:boolean)=>Promise<void>;logout:()=>Promise<void>;clearError:()=>void;report:(message:string)=>void};
 const Context=createContext<RuntimeContextValue|null>(null);
 export const useRuntime=()=>useContext(Context);
 export function RuntimeProvider({children}:{children:ReactNode}) {
   const [snapshot,setSnapshot]=useState<Snapshot|null>(null),[loading,setLoading]=useState(true),[error,setError]=useState('');
   const [syncStatus,setSyncStatus]=useState<'current'|'stale'>('current'),[lastSynced,setLastSynced]=useState<string|null>(null);
   const csrf=useRef(''),pending=useRef(new Map<string,string>()),identity=useRef(0),refreshSequence=useRef(0);
-  const request=useCallback(async<T,>(path:string,body?:unknown,key?:string):Promise<T>=>{
+  const request=useCallback(async<T,>(path:string,body?:unknown,key?:string|{signal?:AbortSignal}):Promise<T>=>{
     const generation=identity.current;
-    const response=await fetch('/api/elfred'+path,{method:body===undefined?'GET':'POST',credentials:'same-origin',headers:body===undefined?{}:{'Content-Type':'application/json','X-Elfred-Client':'1','X-CSRF-Token':csrf.current,...(key?{'Idempotency-Key':key}:{})},body:body===undefined?undefined:JSON.stringify(body)});
+    const response=await fetch('/api/elfred'+path,{method:body===undefined?'GET':'POST',credentials:'same-origin',headers:body===undefined?{}:{'Content-Type':'application/json','X-Elfred-Client':'1','X-CSRF-Token':csrf.current,...(typeof key==='string'?{'Idempotency-Key':key}:{})},body:body===undefined?undefined:JSON.stringify(body),signal:typeof key==='object'?key.signal:undefined});
     const result=await response.json() as {error?:{message:string}};
     if(!response.ok){if(response.status===401&&generation===identity.current){identity.current++;setSnapshot(null);csrf.current='';pending.current.clear();}throw new Error(result.error?.message||'操作失败，请重试');}
     return result as T;

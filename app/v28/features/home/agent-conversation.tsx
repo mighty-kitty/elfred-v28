@@ -17,18 +17,18 @@ const prompts:Record<V277AgentId,string>={
   execute:'帮我拆解这件事的下一步',
 };
 
-export function AgentConversationPage({id,go,onBack,prefill}:{id:V277AgentId;go:(screen:Screen)=>void;onBack:()=>void;prefill?:string}){
+export function AgentConversationPage({id,go,onBack,prefill,conversationId,messageId}:{id:V277AgentId;conversationId?:string;messageId?:string;go:(screen:Screen)=>void;onBack:()=>void;prefill?:string}){
   const runtime=useRuntime();
   const agent=agentList.find(item=>item.id===id)!;
   const Icon=agent.icon;
-  const [selectedId,setSelectedId]=useState<string|null>(null);
+  const [selectedId,setSelectedId]=useState<string|null>(conversationId||null);
   const [newThread,setNewThread]=useState(false);
   const [historyOpen,setHistoryOpen]=useState(false);
   const [query,setQuery]=useState('');
   const [input,setInput]=useState('');
   const [sending,setSending]=useState(false);
   const [drafting,setDrafting]=useState(false);
-  const thread=useRef<HTMLElement>(null);
+  const thread=useRef<HTMLElement>(null),anchorShown=useRef(false);
   const [taskOpen,setTaskOpen]=useState(false),[taskGoal,setTaskGoal]=useState(''),[taskMode,setTaskMode]=useState('compose'),[taskConsent,setTaskConsent]=useState(false),[startingTask,setStartingTask]=useState(false);
   const composer=useRef<HTMLTextAreaElement>(null);
   const threads=(runtime?.snapshot?.objects.conversation||[]).filter(item=>item.data.kind==='agent'&&item.data.system===systemOf(id)).sort((a,b)=>b.updated.localeCompare(a.updated));
@@ -44,7 +44,7 @@ export function AgentConversationPage({id,go,onBack,prefill}:{id:V277AgentId;go:
 
   useEffect(()=>{if(prefill)setInput(current=>current.trim()?current:prefill);},[prefill]);
 
-  useEffect(()=>{if(thread.current)thread.current.scrollTop=thread.current.scrollHeight;},[activeId,messages.length,pending?.id]);
+  useEffect(()=>{if(!thread.current)return;const target=!anchorShown.current&&messageId&&thread.current.querySelector<HTMLElement>('[data-message-id="'+CSS.escape(messageId)+'"]');if(target){thread.current.scrollTop=target.offsetTop-thread.current.offsetTop-24;anchorShown.current=true;}else thread.current.scrollTop=thread.current.scrollHeight;},[activeId,messages.length,pending?.id,messageId]);
   useEffect(()=>{const field=composer.current;if(!field)return;field.style.height='auto';field.style.height=Math.min(field.scrollHeight,130)+'px';field.closest('main')?.style.setProperty('--agent-composer-height',(field.parentElement?.offsetHeight||58)+'px');},[input]);
 
   const send=async(event?:FormEvent)=>{
@@ -81,7 +81,7 @@ export function AgentConversationPage({id,go,onBack,prefill}:{id:V277AgentId;go:
   const keyDown=(event:KeyboardEvent<HTMLTextAreaElement>)=>{
     if(event.key==='Enter'&&!event.shiftKey&&!event.nativeEvent.isComposing){event.preventDefault();void send();}
   };
-  const selectThread=(conversationId:string)=>{setSelectedId(conversationId);setNewThread(false);setHistoryOpen(false);setTaskOpen(false);setInput('');};
+  const selectThread=(conversationId:string)=>{anchorShown.current=true;setSelectedId(conversationId);setNewThread(false);setHistoryOpen(false);setTaskOpen(false);setInput('');};
   const startThread=()=>{setSelectedId(null);setNewThread(true);setHistoryOpen(false);setTaskOpen(false);setInput('');};
   const filtered=threads.filter(item=>{
     const first=(runtime?.snapshot?.objects.message||[]).find(message=>message.data.conversation_id===item.id&&message.data.actor_type==='human');
@@ -96,7 +96,7 @@ export function AgentConversationPage({id,go,onBack,prefill}:{id:V277AgentId;go:
       </span>
       <div className="v283-agent-title">
         <i className={'v283-agent-avatar small agent-'+id}><Icon size={18}/><em/></i>
-        <span><b>{agent.name} Agent</b><small>{active?'连续对话 · 仅自己可见':'新对话 · 仅自己可见'}</small></span>
+        <span><b>{agent.name} Agent</b><small>{activeId?'连续对话 · 仅自己可见':'新对话 · 仅自己可见'}</small></span>
       </div>
       <span>
         <button type="button" className="v277-icon-button" aria-label="新对话" onClick={startThread}><Plus size={21}/></button>
@@ -111,7 +111,7 @@ export function AgentConversationPage({id,go,onBack,prefill}:{id:V277AgentId;go:
         <button type="button" onClick={()=>setInput(prompts[id])}>{prompts[id]} <ChevronRight size={16}/></button>
         {!!threads.length&&newThread&&<button type="button" onClick={()=>selectThread(threads[0].id)}>继续最近的对话</button>}
       </div>}
-      {messages.map(message=><div key={message.id} className={'v283-agent-chat-row '+(message.data.actor_type==='human'?'mine':'theirs')}>
+      {messages.map(message=><div key={message.id} data-message-id={message.id} className={'v283-agent-chat-row '+(message.data.actor_type==='human'?'mine':'theirs')}>
         {message.data.actor_type!=='human'&&<i className={'v283-agent-avatar small agent-'+id}><Icon size={18}/></i>}
         <div className="v283-agent-chat-bubble">{String(message.data.text||'')}</div>
       </div>)}

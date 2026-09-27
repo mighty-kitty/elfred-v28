@@ -30,7 +30,7 @@ export type Screen =
   | { name: "feed-detail"; id: string }
   | { name: "community-post"; id: string }
   | { name: "task"; id: string }
-  | { name: "agent"; id: V277AgentId }
+  | { name: "agent"; id: V277AgentId; conversationId?:string; messageId?:string }
   | { name: "agent-level"; id: V277AgentId }
   | { name: "daily-brief"; kind: "morning" | "noon" | "evening" }
   | { name: "agent-moments"; id: V277AgentId }
@@ -38,6 +38,7 @@ export type Screen =
   | { name: "agent-settings"; id: V277AgentId }
   | { name: "chat"; id: string; messageId?:string; prefill?:string }
   | { name: "friend-profile"; id: string }
+  | {name:'search-source';id:string;anchor?:string}
   | { name: "knowledge-detail"; id: string; anchor?:string }
   | { name: "memory-detail"; id: string }
   // 第二页（负责人 B）的四个二级屏

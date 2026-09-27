@@ -855,3 +855,65 @@
   /* Safari zooms focused text controls below 16px. Preserve pinch zoom. */
   .v280-device .v277-root :is(input, textarea, select) { font-size: 16px !important; }
 }
+
+/* Search: keep the input fixed and put readable results before optional tools. */
+.v280-device .elfred-connected-search {
+ inset: 12px !important; width: auto !important; height: auto !important;
+ max-height: none !important; padding: 0 !important; transform: none !important;
+ animation: none !important; display: flex; flex-direction: column;
+ overflow: hidden !important; background: #f8f9fa !important; border-radius: 22px !important;
+}
+.elfred-search-header { flex: 0 0 auto; padding: 17px 16px 9px; background: #f8f9fa; }
+.elfred-search-header > div:first-child { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+.elfred-connected-search .elfred-search-header h2 { font-size: 18px !important; margin: 0 !important; }
+.elfred-search-header > div:first-child > button { display: grid; place-items: center; padding: 6px; border: 0; background: transparent; color: #69747e; }
+.elfred-search-header form { display: flex; align-items: center; gap: 9px; }
+.elfred-search-input { flex: 1; min-width: 0; height: 44px; display: flex; align-items: center; gap: 8px; padding: 0 11px; background: #fff; border: 1px solid #dfe4e8; border-radius: 14px; color: #7c8791; }
+.elfred-search-input > svg { flex: 0 0 auto; }
+.elfred-connected-search .elfred-search-input input { width: 100%; min-width: 0; padding: 0; border: 0; outline: none; background: transparent; color: #20282d; font-size: 16px; }
+.elfred-search-input input::-webkit-search-cancel-button { display: none; }
+.elfred-search-input > button { display: grid; place-items: center; padding: 4px; border: 0; background: transparent; color: #7c8791; }
+.elfred-search-header form > button { padding: 10px 0 10px 3px; border: 0; background: transparent; font-size: 14px; color: #20282d; white-space: nowrap; }
+.elfred-search-header form > button:disabled { opacity: .4; }
+.elfred-search-toolbar { display: flex; justify-content: space-between; align-items: center; margin-top: 9px; font-size: 12px; color: #7b858f; }
+.elfred-search-toolbar > button { display: flex; align-items: center; gap: 5px; padding: 7px 0 7px 12px; border: 0; background: transparent; font-size: 13px; color: #53616a; }
+.elfred-search-chips { display: flex; flex-wrap: wrap; gap: 6px; padding: 3px 0 7px; max-height: 92px; overflow-y: auto; }
+.elfred-search-chips > button { display: flex; align-items: center; gap: 5px; max-width: 100%; border: 1px solid #dfe5e8; border-radius: 10px; padding: 5px 8px; background: #fff; color: #53616a; font-size: 12px; overflow-wrap: anywhere; }
+.elfred-search-body { flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain; padding: 4px 16px 22px; }
+.elfred-connected-search .elfred-search-body p { font-size: 13px !important; line-height: 1.6; color: #75818a; }
+.elfred-search-welcome { padding: 50px 0 36px; text-align: center; color: #a3acb3; }
+.elfred-search-welcome h3 { color: #53616a; margin: 16px 0 10px; font-size: 16px; }
+.elfred-search-summary { display: flex; flex-direction: column; gap: 5px; padding: 9px 0 13px; font-size: 13px; color: #6e7b84; }
+.elfred-search-summary small { font-size: 11px; line-height: 1.6; }
+.elfred-query-results { background: white; border-radius: 16px; overflow: hidden; }
+.elfred-query-results > article + article { border-top: 1px solid #edf0f2; }
+.elfred-search-hit { width: 100%; display: grid; grid-template-columns: 38px minmax(0,1fr) 17px; align-items: start; gap: 10px; padding: 15px 12px 9px; border: 0; background: transparent; color: #20282d; text-align: left; }
+.elfred-search-type { display: flex; align-items: center; justify-content: center; min-height: 36px; border-radius: 10px; background: #f0f3f5; color: #72808b; font-size: 10px; line-height: 1.4; text-align: center; }
+.elfred-search-copy { min-width: 0; }
+.elfred-search-copy > b { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; font-size: 15px; line-height: 1.5; font-weight: 600; overflow-wrap: anywhere; }
+.elfred-search-copy > span { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; margin-top: 5px; white-space: pre-line; font-size: 12px; line-height: 1.6; color: #7b858f; overflow-wrap: anywhere; }
+.elfred-search-copy > small { display: block; margin-top: 6px; color: #7b858f; font-size: 11px; }
+.elfred-search-hit > svg { margin-top: 8px; color: #a3acb3; }
+.elfred-search-hit-more { margin: 0 12px 12px 60px; color: #86919a; font-size: 11px; }
+.elfred-search-hit-more summary { cursor: pointer; }
+.elfred-search-hit-more > div { display: flex; gap: 7px; flex-wrap: wrap; }
+.elfred-connected-search .elfred-search-hit-more button { font-size: 12px; padding: 8px 10px; }
+.elfred-search-input-options,.elfred-search-advanced { margin: 18px 0 0; padding: 12px 0; border-top: 1px solid #e6eaed; font-size: 13px; color: #687680; }
+.elfred-search-advanced > details { margin: 15px 0; }
+.elfred-search-notice,.elfred-search-empty { padding: 18px 12px; background: white; border-radius: 14px; margin: 8px 0 14px; }
+.elfred-search-notice h3 { font-size: 15px; margin: 0 0 8px; }
+.elfred-search-notice button,.elfred-search-empty button,.elfred-search-done { border: 1px solid #dfe5e8; border-radius: 12px; background: #f5f7f8; color: #374750; padding: 9px 12px; font-size: 13px; }
+.elfred-search-filters { padding: 13px; border-radius: 14px; background: white; margin-bottom: 13px; }
+.elfred-search-filters .v277-field { margin: 0 0 12px; font-size: 12px; }
+.elfred-search-filters > label:last-of-type { font-size: 13px; }
+.elfred-search-done { display: block; width: 100%; margin-top: 13px; }
+.elfred-search-source { overflow-y: auto !important; padding-bottom: 35px !important; }
+.elfred-search-source-content { margin: 15px 22px; padding: 18px; background: white; border-radius: 18px; overflow-wrap: anywhere; }
+.elfred-search-source-content h2 { font-size: 18px; line-height: 1.6; }
+.elfred-search-source-content p { white-space: pre-wrap; line-height: 1.8; font-size: 14px; }
+.elfred-search-source-content mark { background: #fff2b5; color: inherit; }
+@media (max-width: 600px) {
+ .v280-device .elfred-connected-search { inset: 0 !important; border-radius: 0 !important; }
+ .elfred-search-header { padding-top: max(12px,env(safe-area-inset-top)); }
+ .elfred-search-body { padding-bottom: max(22px,env(safe-area-inset-bottom)); }
+}

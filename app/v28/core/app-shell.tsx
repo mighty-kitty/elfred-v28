@@ -8,6 +8,7 @@ import {OnboardingConversation} from '../features/home/onboarding-conversation';
 import {SwarmPage} from '../features/home/swarm-page';
 import {ToolsPage,ToolEditor} from '../features/home/tools-page';
 import {AgentLevelPage} from '../features/home/agent-level-page';
+import {SearchSourcePage} from '../features/home/search-source-page';
 import {AgentConversationPage} from '../features/home/agent-conversation';
 import { text as entityText,statuses as runtimeStatuses } from '../features/live/types';
 import { Sparkles } from "lucide-react";
@@ -392,7 +393,7 @@ export function V277App() {
       return <HomePage state={state} go={go} searchOpen closeSearch={back} />;
     if (screen.name === "agents") return <AgentsPage state={state} go={go} />;
     if (screen.name === "agent")
-      return runtime?<AgentConversationPage id={screen.id} go={go} onBack={back}/>: (
+      return runtime?<AgentConversationPage key={screen.conversationId||screen.id} id={screen.id} conversationId={screen.conversationId} messageId={screen.messageId} go={go} onBack={back}/>: (
         <AgentExperiencePage
           id={screen.id}
           state={state}
@@ -489,6 +490,7 @@ export function V277App() {
     }
     if (screen.name === "knowledge")
       return <KnowledgePage state={state} go={go} setState={setState} runtime={runtime} />;
+    if(screen.name==='search-source')return <SearchSourcePage id={screen.id} anchor={screen.anchor} onBack={back}/>;
     if (screen.name === "knowledge-detail") {
       const entity=runtime?.snapshot&&Object.values(runtime.snapshot.objects).flat().find(entry=>entry.id===screen.id);
       const item = runtime?(entity?{id:entity.id,title:entityText(entity,'title')||entity.type,purpose:entity.type==='knowledge'?'本人保存的知识资料':'本人当前可读取的资料',source:entity.type+' · '+new Date(entity.created).toLocaleString('zh-CN'),status:runtimeStatuses[entityText(entity,'status')]||entityText(entity,'status'),example:entityText(entity,'content')||entityText(entity,'text')||entityText(entity,'goal')}:undefined):v277Knowledge.find((entry) => entry.id === screen.id);
@@ -636,6 +638,7 @@ export function V277App() {
       "agent-settings",
       "chat",
       "knowledge-detail",
+      "search-source",
       "memory-detail",
       "utility",
       "settings",

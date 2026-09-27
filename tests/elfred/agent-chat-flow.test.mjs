@@ -74,7 +74,7 @@ test('对话中的应用内检索实际读取资料，无模型发送或虚构�
  store.add('knowledge',user.id,{title:'首页设计',content:'首页保持五个 Agent 横向排列',status:'active'});
  const thread=command('agent.chat.create',{system:'explore'});
  assert.throws(()=>command('agent.chat.task',{id:thread.id,goal:'字'.repeat(301),mode:'search',confirm:true}),{code:'INVALID_INPUT'});
- assert.throws(()=>command('agent.chat.task',{id:thread.id,goal:'最近的首页设计',mode:'search',confirm:true}),{code:'SEARCH_CLARIFICATION_REQUIRED'});
+ assert.throws(()=>command('agent.chat.task',{id:thread.id,goal:'上周本周的首页设计',mode:'search',confirm:true}),{code:'SEARCH_CLARIFICATION_REQUIRED'});
  assert.equal(store.list('task').length,0);
  const started=command('agent.chat.task',{id:thread.id,goal:'首页设计',mode:'search',confirm:true});
  await new Runtime(store,provider).tick();assert.equal(requests.length,0);

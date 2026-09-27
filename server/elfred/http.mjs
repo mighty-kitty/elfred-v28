@@ -80,7 +80,7 @@ export function apiHandler(service,{origin='http://127.0.0.1:3000'}={}) {
         const input=await readBody(request),file=s.read(user.id,input.id,'attachment');
         const content=await parseFile(file);s.read(user.id,file.id,'attachment');
         if(!content?.trim())fail('PARSE_EMPTY','未提取到文字，请改用图片识别或手动输入');
-        send(200,{text:content.slice(0,12000),stored_as_knowledge:false});return true;
+        send(200,{text:content.slice(0,input.preview===true?500000:12000),stored_as_knowledge:false});return true;
       }
       if(method==='POST'&&route==='/search-scope'){send(200,semanticPreview(s,user.id,await readBody(request)));return true;}
       if(method==='POST'&&route==='/search-semantic'){send(200,semanticResults(s,user.id,await readBody(request)));return true;}

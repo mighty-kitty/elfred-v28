@@ -1,4 +1,51 @@
 /* Elfred V28 — shared product tokens and the complete first-use flow. */
+/* Actual touch devices use their own viewport; hardware is only a desktop preview. */
+@media (max-width: 600px), (pointer: coarse) {
+  .app-shell.v280-device {
+    position: fixed;
+    top: var(--app-viewport-top, 0px);
+    left: 0;
+    width: 100%;
+    height: var(--app-viewport-height, 100dvh) !important;
+    min-height: 0;
+    display: block !important;
+    padding: 0 !important;
+    background: #f6f7f8 !important;
+  }
+  .v280-device .device-frame {
+    width: 100%;
+    height: 100%;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
+  }
+  .v280-device .phone-stage {
+    position: relative !important;
+    top: 0;
+    left: 0;
+    width: 100% !important;
+    height: 100% !important;
+    padding: env(safe-area-inset-top, 0px) env(safe-area-inset-right, 0px) env(safe-area-inset-bottom, 0px) env(safe-area-inset-left, 0px) !important;
+    border: 0 !important;
+    border-radius: 0 !important;
+    transform: none !important;
+    box-shadow: none !important;
+  }
+  .v280-device :is(.iphone17-side-buttons, .iphone17-power-button, .iphone17-island, .v277-status),
+  .v280-device .phone-stage::after,
+  .v280-device .v277-bottom-wrap::after {
+    display: none !important;
+  }
+  .v280-device .v277-root { height: 100%; }
+  .v280-device .v277-bottom-wrap {
+    bottom: calc(14px + env(safe-area-inset-bottom, 0px)) !important;
+    left: calc(14px + env(safe-area-inset-left, 0px)) !important;
+    right: calc(14px + env(safe-area-inset-right, 0px)) !important;
+  }
+  .v280-device .v277-sticky-actions { position: absolute; left: 16px; right: 16px; }
+}
+
 .v280-device {
   --v280-canvas: #f6f7f8;
   --v280-card: #ffffff;

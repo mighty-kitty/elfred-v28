@@ -277,6 +277,11 @@
   justify-content: space-between;
 }
 
+@media (max-width: 600px), (pointer: coarse) {
+  /* RootPortal is inside the responsive app root, above the keyboard and safe area. */
+  .sheet { position: absolute; }
+}
+
 .sheetHead h2 {
   margin: 0;
   font-size: 17px;

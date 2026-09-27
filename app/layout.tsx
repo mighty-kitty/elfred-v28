@@ -14,7 +14,7 @@ import "./v27-8-daily-agent.css";
 import "./v27-9.css";
 import "./v28.css";
 
-export const viewport:Viewport={width:"device-width",initialScale:1,viewportFit:"cover",themeColor:"#f7f7f8"};
+export const viewport:Viewport={width:"device-width",initialScale:1,viewportFit:"cover",interactiveWidget:"resizes-content",themeColor:"#f7f7f8"};
 
 export const metadata: Metadata = {
   title: "Elfred V28 · 从目标到结果",

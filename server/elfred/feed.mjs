@@ -30,11 +30,18 @@ export function feedCommand(store,user,action,input){
  }
  if(action==='feed.question'){
   const feed=store.expect(store.owned(user,input.id,'feed'),input.version),goal=string(input.goal,'追问',3000);
-  const artifact=feed.data.artifact_id?store.read(user,feed.data.artifact_id):null,replies=store.visible(user,'feedback').filter(f=>f.data.feed_id===feed.id&&f.data.kind==='agent_response').slice(0,3),sources=[feed,...(artifact?[artifact]:[]),...replies];
-  const content=JSON.stringify({title:feed.data.title,summary:feed.data.summary,original_url:feed.data.external_url||null,original_result:artifact?.data.content?.slice(0,1600)||'',collaboration:(feed.data.comments||[]).slice(0,3).map(c=>({system:c.system,content:c.content.slice(0,400)})),recent_responses:replies.map(r=>({system:r.data.system,content:r.data.content.slice(0,400)})),scope_note:'本次为原成果、协作意见及最近三条补充的有限摘录；长内容可能截断，不代替完整原文'});
+  const comment=input.comment_id?store.read(user,input.comment_id,'feedback'):null;
+  if(comment&&(comment.data.feed_id!==feed.id||comment.data.kind!=='human_comment'))fail('INVALID_INPUT','只能回复此动态下本人的评论');
+  const artifact=feed.data.artifact_id?store.read(user,feed.data.artifact_id):null,replies=store.visible(user,'feedback').filter(f=>f.data.feed_id===feed.id&&f.data.kind==='agent_response').slice(-3),sources=[feed,...(artifact?[artifact]:[]),...replies,...(comment?[comment]:[])];
+  const content=JSON.stringify({title:feed.data.title,summary:feed.data.summary,original_url:feed.data.external_url||null,original_result:artifact?.data.content?.slice(0,1600)||'',human_comment:comment?.data.content||null,collaboration:(feed.data.comments||[]).slice(0,3).map(c=>({system:c.system,content:c.content.slice(0,400)})),recent_responses:replies.map(r=>({system:r.data.system,content:r.data.content.slice(0,400)})),scope_note:'本次为原成果、本人评论、协作意见及最近三条补充的有限摘录；长内容可能截断，不代替完整原文'});
   const context=store.add('resource',user,{title:'本次追问的事件与讨论摘录',content,source_refs:sources.map(s=>({id:s.id,version:s.version})),status:'active',internal_search:true});
   const result=taskCommand(store,user,'task.create',{goal,system:input.system||feed.data.system,source_refs:[{id:context.id,version:context.version}],review_mode:'single'});
-  const task=store.get(result.id);store.update(task,{...task.data,feed_event_id:feed.id},user);return result;
+  const task=store.get(result.id);store.update(task,{...task.data,feed_event_id:feed.id,...(comment?{feed_comment_id:comment.id}:{})},user);return result;
+ }
+ if(action==='feed.comment'){
+  const feed=store.expect(store.owned(user,input.id,'feed'),input.version),content=string(input.content,'评论',2000);
+  if(feed.data.status!=='active')fail('INVALID_INPUT','这条动态暂不能评论');
+  return {id:store.add('feedback',user,{feed_id:feed.id,kind:'human_comment',content,status:'posted',source_refs:[{id:feed.id,version:feed.version}],created_at:now()}).id};
  }
  if(action==='feed.feedback'){
   const feed=store.expect(store.owned(user,input.id,'feed'),input.version),note=string(input.note,'内容反馈',2000);

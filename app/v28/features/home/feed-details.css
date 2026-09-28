@@ -3,3 +3,12 @@
 .elfred-peer-comment select{min-width:0;max-width:140px;padding:9px;border:1px solid #dce3e7;border-radius:10px;background:#fff;color:inherit;font-size:13px}
 .elfred-peer-comment button{min-height:38px}
 .elfred-peer-comment>small{font-size:11px;line-height:1.5;color:#75828b}
+.elfred-feed-discussion{display:grid;gap:12px;min-width:0}
+.elfred-feed-thread{padding:12px;border-radius:14px;background:#f5f7f8;min-width:0}
+.elfred-feed-thread h3{font-size:15px;margin:0 0 10px}
+.elfred-feed-thread article{padding:8px 0;border-bottom:1px solid #e4e8eb;overflow-wrap:anywhere}
+.elfred-feed-thread article b{font-size:13px;color:#394c59}
+.elfred-feed-thread article p{white-space:pre-wrap;margin:4px 0 8px;line-height:1.5;font-size:14px}
+.elfred-feed-thread article button{font-size:12px;min-height:30px}
+.elfred-feed-thread .elfred-feed-reply{margin-left:18px;padding-left:10px;border-left:2px solid #dce3e7}
+.elfred-feed-thread small,.elfred-feed-empty{display:block;color:#71808a;font-size:12px;line-height:1.5;margin-top:8px}

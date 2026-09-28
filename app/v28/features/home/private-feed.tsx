@@ -105,6 +105,10 @@ export function PrivateFeed({ go, onDrag }: { go: (screen: Screen) => void; onDr
           ? ((item.data.attachments || []) as { id: string; mime: string }[])
             .filter(candidate => /^(image|video)\//.test(candidate.mime) && snapshot.objects.attachment.some(file => file.id === candidate.id)).slice(0,3)
           : [];
+        const commentPreview = [
+          ...((item.data.comments||[]) as {id:string;system:string;content:string}[]).map(c=>({id:c.id,name:`${snapshot.systems.find(agent=>agent.id===c.system)?.name||'Agent'} Agent`,content:c.content})),
+          ...snapshot.objects.feedback.filter(f=>f.data.feed_id===item.id&&['human_comment','agent_response'].includes(String(f.data.kind))).map(f=>({id:f.id,name:f.data.kind==='human_comment'?'我':`${snapshot.systems.find(agent=>agent.id===f.data.system)?.name||'Agent'} Agent`,content:text(f,'content')})),
+        ].slice(-2);
         return <article key={item.id} className={styles.post} draggable onDragStart={event => {
           event.dataTransfer.setData("application/x-elfred-content", item.id);
           onDrag(true);
@@ -126,7 +130,7 @@ export function PrivateFeed({ go, onDrag }: { go: (screen: Screen) => void; onDr
                   <MoreHorizontal size={24} />
                 </button>
               </footer>
-              {(((item.data.comments||[]) as {id:string;system:string;content:string}[]).length>0)&&<div className={styles.peerComments}>{((item.data.comments||[]) as {id:string;system:string;content:string}[]).slice(0,2).map(comment=><p key={comment.id}><b>{snapshot.systems.find(agent=>agent.id===comment.system)?.name||'Agent'}：</b>{comment.content.slice(0,160)}</p>)}</div>}
+              {commentPreview.length>0&&<div className={styles.peerComments}>{commentPreview.map(comment=><p key={comment.id}><b>{comment.name}：</b>{comment.content.slice(0,160)}</p>)}</div>}
             </div>
           </div>
           {menuId === item.id && <div className={styles.menu}>

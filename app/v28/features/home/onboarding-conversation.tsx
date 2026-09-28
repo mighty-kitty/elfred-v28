@@ -4,7 +4,7 @@ import {useEffect,useRef,useState,type FormEvent} from 'react';
 import {ArrowLeft,Sparkles,Compass,Lightbulb,PenLine,Link2,CheckCircle2,ChevronRight} from 'lucide-react';
 import {useRuntime} from '../../core/runtime-context';
 import {onboardingGuides} from '../../core/onboarding-guides.mjs';
-import {alignmentQuestions,alignmentSummary,firstValueChoices} from '../../core/onboarding-choice.mjs';
+import {alignmentQuestions,alignmentSummary,firstValueChoices,interestLabels,interestOptions} from '../../core/onboarding-choice.mjs';
 import {text,statuses} from '../live/types';
 import {finalReceipts} from '../../core/result-output';
 import {MarkdownContent} from '../../core/markdown-content';
@@ -13,13 +13,14 @@ import './onboarding-conversation.css';
 
 const icons=[Compass,Lightbulb,PenLine,Link2,CheckCircle2];
 const nameOf=(id:string)=>id==='owner'?'Person Agent':onboardingGuides.find(g=>g.id===id)?.name||id;
-type Answers=Record<string,{option:string;at:string;scope:string}>;
+type Answers=Record<string,{option:string;at:string;scope:string;detail?:string;tags?:string[]}>;
 export function OnboardingConversation({go,onExit}:{go:(screen:Screen)=>void;onExit:()=>void}){
  const runtime=useRuntime()!,snapshot=runtime.snapshot!,session=snapshot.objects.onboarding[0];
- const [busy,setBusy]=useState(false),[taskChoice,setTaskChoice]=useState('outline'),[interestInput,setInterestInput]=useState(''),[groupInput,setGroupInput]=useState(''),lock=useRef(false),stream=useRef<HTMLElement>(null),questionNode=useRef<HTMLElement>(null);
+ const [busy,setBusy]=useState(false),[taskChoice,setTaskChoice]=useState('outline'),[interestTags,setInterestTags]=useState<string[]>([]),[interestInput,setInterestInput]=useState(''),[groupInput,setGroupInput]=useState(''),lock=useRef(false),stream=useRef<HTMLElement>(null),questionNode=useRef<HTMLElement>(null);
  const data=session.data,mode=text(session,'choice_mode')||'sequential',phase=text(session,'choice_phase')||'intro';
  const step=Number(data.choice_step)||0,answers=(data.choice_answers||{}) as Answers,summary=alignmentSummary(answers);
- useEffect(()=>{setInterestInput(String((answers.interests as Answers[string]&{detail?:string}|undefined)?.detail||''));},[(answers.interests as Answers[string]&{detail?:string}|undefined)?.detail]);
+ const savedInterest=answers.interests?.tags?.join('、')||answers.interests?.detail||'';
+ useEffect(()=>{setInterestTags(interestLabels(savedInterest));setInterestInput('');},[savedInterest]);
  useEffect(()=>{if(phase==='questions'&&mode==='group'){questionNode.current?.scrollIntoView({block:'start'})}else if(stream.current)stream.current.scrollTop=0},[phase,step,mode]);
  const [discoveryChoice,setDiscoveryChoice]=useState<boolean|null>(null);
  const autoDiscovery=discoveryChoice??(typeof data.choice_auto_discovery==='boolean'?data.choice_auto_discovery:answers.initiative?.option!=='on_request');
@@ -38,7 +39,28 @@ export function OnboardingConversation({go,onExit}:{go:(screen:Screen)=>void;onE
  const groupPending=groupTurns.some(turn=>{const task=snapshot.objects.task.find(item=>item.id===turn.task_id);return task&&['queued','running','cancel_requested','pause_requested'].includes(String(task.data.status));});
  const sendGroup=async(event:FormEvent)=>{event.preventDefault();const content=groupInput.trim();if(!content||busy||groupPending)return;try{await command('onboarding.chat.reply',{text:content,model_consent:true});setGroupInput('');}catch{}};
  const groupDialogue=()=>mode==='group'&&<section className="elfred-choice-group-chat" aria-label="Agent 群聊对齐">{groupTurns.filter(turn=>turn.role==='user'||turn.role==='assistant').map((turn,index)=>{const task=snapshot.objects.task.find(item=>item.id===turn.task_id),run=snapshot.objects.run.find(item=>item.id===task?.data.run_id),answer=finalReceipts((run?.data.receipts||[]) as {phase?:string;output?:unknown;provider?:string}[]).find(item=>typeof item.output==='string')?.output;return <div key={index} className={'elfred-choice-chat-turn '+(turn.role==='user'?'mine':'agent')}><b>{turn.role==='user'?'我':nameOf(turn.participant||'owner')+' Agent'}</b>{typeof answer==='string'?<MarkdownContent text={answer}/>:<p>{turn.role==='user'?turn.text:task&&['blocked','failed'].includes(String(task.data.status))?'回复失败，可继续选择或稍后重试':'正在回复…'}</p>}</div>})}<form onSubmit={sendGroup}><input aria-label="向 Agent 群聊补充说明" value={groupInput} maxLength={2000} placeholder="补充你的想法，或直接选择上方答案" onChange={event=>setGroupInput(event.target.value)}/><button type="submit" disabled={busy||groupPending||!groupInput.trim()}>发送</button></form><small>本轮内容只在初始化会话共享；不会自动进入长期记忆。选项仍需你亲自确认。</small></section>;
- const optionsCard=(index:number)=>{const q=alignmentQuestions[index];return <section ref={questionNode} className="elfred-choice-question" key={q.id} aria-label={q.title}><div className="elfred-choice-speaker"><span>{nameOf(q.agent)}{mode==='group'?' · 在群聊中提问':''}</span><small>{index+1} / {alignmentQuestions.length}</small></div><h2>{displayTitle(q.title,'')}</h2>{q.id==='interests'&&<label className="elfred-interest-field">你想关注的具体领域（可写多个）<input aria-label="感兴趣的领域" maxLength={120} value={interestInput} placeholder="例如：AI 产品、城市生活、摄影" onChange={event=>setInterestInput(event.target.value)}/><small>只作为探索 Agent 的初始线索，不代表永久偏好。</small></label>}<div className="elfred-choice-options">{q.options.map(option=><button type="button" key={option.id} aria-pressed={answers[q.id]?.option===option.id} disabled={busy||q.id==='interests'&&option.id==='specified'&&interestInput.trim().length<2} className={['none','unsure','skip'].includes(option.id)?'is-optional':''} onClick={()=>act('onboarding.choice.answer',{question_id:q.id,option:option.id,...(q.id==='interests'&&option.id==='specified'?{detail:interestInput.trim()}: {})})}><span>{option.label}</span>{answers[q.id]?.option===option.id?<CheckCircle2 size={18}/>:<ChevronRight size={16}/>}</button>)}</div><small>{q.agent==='owner'?'Person Agent 保留当前需要和边界，按任务分配必要摘要。':`这项选择归${nameOf(q.agent)}，其他 Agent 不因此获得其私有记忆。`}</small></section>};
+ const optionsCard=(index:number)=>{
+  const q=alignmentQuestions[index];
+  const selectedInterests=interestLabels([...interestTags,...interestLabels(interestInput)]);
+  const interestDetail=selectedInterests.join('、');
+  const interestValid=selectedInterests.length>0&&selectedInterests.length<=8&&interestDetail.length<=120&&selectedInterests.every(tag=>tag.length>=2&&tag.length<=30&&!/[<>]/.test(tag));
+  return <section ref={questionNode} className="elfred-choice-question" key={q.id} aria-label={q.title}>
+   <div className="elfred-choice-speaker"><span>{nameOf(q.agent)}{mode==='group'?' · 在群聊中提问':''}</span><small>{index+1} / {alignmentQuestions.length}</small></div>
+   <h2>{displayTitle(q.title,'')}</h2>
+   {q.id==='interests'&&<div className="elfred-interest-selector">
+    <small>可以多选，最多 8 个。只作为探索 Agent 的初始线索，之后可以修改。</small>
+    <div className="elfred-interest-tags">{[...interestOptions,...interestTags.filter(tag=>!interestOptions.includes(tag))].map(tag=>{
+     const picked=interestTags.includes(tag);
+     return <button key={tag} type="button" aria-pressed={picked} disabled={busy||(!picked&&selectedInterests.length>=8)} onClick={()=>setInterestTags(current=>picked?current.filter(item=>item!==tag):[...current,tag])}>{tag}{picked&&<CheckCircle2 size={14}/>}</button>;
+    })}</div>
+    <label className="elfred-interest-field">没有合适的？可以补充<input aria-label="补充感兴趣的领域" maxLength={120} value={interestInput} placeholder="输入领域，多个用逗号分开" onChange={event=>setInterestInput(event.target.value)}/></label>
+    <small>已选 {selectedInterests.length} / 8</small>
+    <button className="elfred-interest-confirm" type="button" disabled={busy||!interestValid} onClick={()=>act('onboarding.choice.answer',{question_id:q.id,option:'specified',tags:selectedInterests})}>确认已选领域</button>
+   </div>}
+   <div className="elfred-choice-options">{q.options.filter(option=>q.id!=='interests'||option.id!=='specified').map(option=><button type="button" key={option.id} aria-pressed={answers[q.id]?.option===option.id} disabled={busy} className={['none','unsure','skip'].includes(option.id)?'is-optional':''} onClick={()=>act('onboarding.choice.answer',{question_id:q.id,option:option.id})}><span>{option.label}</span>{answers[q.id]?.option===option.id?<CheckCircle2 size={18}/>:<ChevronRight size={16}/>}</button>)}</div>
+   <small>{q.agent==='owner'?'Person Agent 保留当前需要和边界，按任务分配必要摘要。':`这项选择归${nameOf(q.agent)}，其他 Agent 不因此获得其私有记忆。`}</small>
+  </section>;
+ };
  return <main className="elfred-onboarding-chat elfred-choice-onboarding">
   <header><button type="button" aria-label="保存并返回首页" disabled={busy} onClick={defer}><ArrowLeft size={20}/></button><span>认识你的 Elfred<small>选择几项，从一件小事开始</small></span><button type="button" disabled={busy} onClick={defer}>稍后继续</button></header>
   <section ref={stream} className="elfred-onboarding-stream">

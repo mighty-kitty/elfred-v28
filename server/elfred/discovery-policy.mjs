@@ -1,3 +1,5 @@
+import {interestLabels} from '../../app/v28/core/onboarding-choice.mjs';
+
 const directions = {
  interest: ['科技','产品','设计','创意','兴趣'], ability: ['职业','技能','学习','能力','实践'],
  problem: ['产品','用户','需求','问题','解决'], opportunity: ['创业','市场','机会','创新','产品'],
@@ -9,7 +11,7 @@ const formats = {
 export function discoveryInterests(summary) {
  const option=id=>summary.find(item=>item.question_id===id&&item.certainty==='selected')?.option;
  const specific=summary.find(item=>item.question_id==='interests'&&item.certainty==='selected')?.label||'';
- return [...new Set([...specific.split(/[，,、；;\s]+/u).map(word=>word.trim()).filter(word=>word.length>=2&&word.length<=30).slice(0,8),...(directions[option('direction')]||[]),...(formats[option('format')]||[])])];
+ return [...new Set([...interestLabels(specific).filter(word=>word.length>=2&&word.length<=30).slice(0,8),...(directions[option('direction')]||[]),...(formats[option('format')]||[])])];
 }
 export function discoveryRelevance(item, interests=[]) {
  const content=(String(item.title||'')+' '+String(item.summary||'')).toLocaleLowerCase();

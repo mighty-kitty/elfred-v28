@@ -5,7 +5,8 @@ import {authenticate} from '../../server/elfred/auth.mjs';
 import {Service} from '../../server/elfred/service.mjs';
 import {ModelProvider} from '../../server/elfred/providers.mjs';
 import {Runtime} from '../../server/elfred/runtime.mjs';
-import {alignmentQuestions,alignmentSummary} from '../../app/v28/core/onboarding-choice.mjs';
+import {alignmentQuestions,alignmentSummary,interestOptions} from '../../app/v28/core/onboarding-choice.mjs';
+import {discoveryInterests} from '../../server/elfred/discovery-policy.mjs';
 function setup(t){const store=new Store(':memory:'),service=new Service(store,new ModelProvider({}));t.after(()=>store.close());const users=['alice','bob'].map(h=>authenticate(store,h,'local-test-password',true,h).user);users.forEach(u=>service.initialize(u));const cmd=(u,a,input)=>service.command(u.id,id(),a,input),session=u=>service.list(u.id,'onboarding')[0],ref=o=>({id:o.id,version:store.get(o.id).version});return {store,service,users,cmd,session,ref};}
 function chooseAll(env,user,mode='sequential'){const {cmd,session,ref}=env;cmd(user,'onboarding.choice.start',{...ref(session(user)),mode});for(const q of alignmentQuestions)cmd(user,'onboarding.choice.answer',{...ref(session(user)),question_id:q.id,option:q.options[0].id,...(q.id==='interests'?{detail:'AI 产品、摄影'}:{})});}
 
@@ -26,6 +27,21 @@ test('具体兴趣只按本人输入保存，缺少内容不能伪装成已选�
  assert.match(interest.data.content,/AI 产品、摄影/);
  assert.equal(interest.data.scope,'explore');
  assert.match(service.list(a.id,'observation')[0].data.keywords[0],/AI 产品/);
+});
+
+test('兴趣可从预设标签多选并补充自定义领域，保留完整标签供资讯订阅',t=>{
+ const {users:[a],cmd,session,ref}=setup(t);
+ assert.ok(interestOptions.includes('AI 产品'));
+ const tags=['AI 产品','摄影','城市生活'];
+ cmd(a,'onboarding.choice.answer',{...ref(session(a)),question_id:'interests',option:'specified',tags});
+ assert.deepEqual(session(a).data.choice_answers.interests.tags,tags);
+ assert.equal(session(a).data.choice_answers.interests.detail,'AI 产品、摄影、城市生活');
+ const summary=alignmentSummary(session(a).data.choice_answers);
+ assert.equal(summary.find(item=>item.question_id==='interests').label,'AI 产品、摄影、城市生活');
+ assert.ok(discoveryInterests(summary).includes('AI 产品'));
+ assert.ok(discoveryInterests(summary).includes('城市生活'));
+ assert.throws(()=>cmd(a,'onboarding.choice.answer',{...ref(session(a)),question_id:'interests',option:'specified',tags:interestOptions.slice(0,9)}),{code:'INVALID_INPUT'});
+ assert.throws(()=>cmd(a,'onboarding.choice.answer',{...ref(session(a)),question_id:'interests',option:'specified',tags:[{}]}),{code:'INVALID_INPUT'});
 });
 
 test('逐个与同场共用同一题目、选项、顺序和初始理解，选择不启动模型',t=>{

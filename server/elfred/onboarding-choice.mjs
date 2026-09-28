@@ -1,7 +1,7 @@
 import {fail,now} from './store.mjs';
 import {enumeration} from './policy.mjs';
 import {taskCommand} from './runtime.mjs';
-import {alignmentQuestions,alignmentSummary,choiceVersion,firstValueChoices} from '../../app/v28/core/onboarding-choice.mjs';
+import {alignmentQuestions,alignmentSummary,choiceVersion,firstValueChoices,interestLabels} from '../../app/v28/core/onboarding-choice.mjs';
 import {provisionInitialDiscovery} from './auto-discovery.mjs';
 import {queueMemorySync} from './memory-hub.mjs';
 import {allocateMemory} from './memory-allocation.mjs';
@@ -17,9 +17,11 @@ export function onboardingChoiceCommand(store,user,action,input){
   const index=alignmentQuestions.findIndex(q=>q.id===input.question_id),question=alignmentQuestions[index];
   if(!question)fail('INVALID_INPUT','题目不存在');
   const option=enumeration(input.option,question.options.map(o=>o.id),'选项');
-  const detail=question.id==='interests'&&option==='specified'?String(input.detail||'').trim():'';
-  if(question.id==='interests'&&option==='specified'&&(detail.length<2||detail.length>120||/[<>]/.test(detail)))fail('INVALID_INPUT','请填写 2—120 字感兴趣的领域');
-  return update({choice_version:choiceVersion,choice_answers:{...answers,[question.id]:{option,...(detail?{detail}:{}),at:now(),scope:question.agent}},choice_step:data.choice_editing?alignmentQuestions.length:Math.min(index+1,alignmentQuestions.length),choice_phase:data.choice_editing||index+1===alignmentQuestions.length?'summary':'questions',choice_editing:false,choice_confirmed_at:null,choice_summary:null,initial_context:null,initial_boundaries:null});
+  if(question.id==='interests'&&option==='specified'&&input.tags!==undefined&&(!Array.isArray(input.tags)||input.tags.some(tag=>typeof tag!=='string')))fail('INVALID_INPUT','兴趣领域格式无效');
+  const tags=question.id==='interests'&&option==='specified'?interestLabels(input.tags||input.detail):[];
+  const detail=tags.join('、');
+  if(question.id==='interests'&&option==='specified'&&(!tags.length||tags.length>8||detail.length>120||tags.some(tag=>tag.length<2||tag.length>30||/[<>]/.test(tag))))fail('INVALID_INPUT','请选择 1—8 个领域，每个 2—30 字');
+  return update({choice_version:choiceVersion,choice_answers:{...answers,[question.id]:{option,...(detail?{detail,tags}:{}),at:now(),scope:question.agent}},choice_step:data.choice_editing?alignmentQuestions.length:Math.min(index+1,alignmentQuestions.length),choice_phase:data.choice_editing||index+1===alignmentQuestions.length?'summary':'questions',choice_editing:false,choice_confirmed_at:null,choice_summary:null,initial_context:null,initial_boundaries:null});
  }
  if(action==='onboarding.choice.step'){
   if(!Number.isInteger(input.step)||input.step<0||input.step>alignmentQuestions.length)fail('INVALID_INPUT','步骤不存在');

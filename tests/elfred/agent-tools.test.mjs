@@ -75,6 +75,7 @@ test('已有联网任务入口也能使用公开工具，且不召回私人记�
 test('注册支持常规八位密码与账号首尾空格，重复注册、错密码和会话失效有明确结果',t=>{
  const store=new Store(':memory:');t.after(()=>store.close());const a=authenticate(store,' new-account ','pass1234',true,'新人');assert.equal(a.user.handle,'new-account');assert.equal(authenticate(store,'NEW-ACCOUNT','pass1234').user.id,a.user.id);
  assert.throws(()=>authenticate(store,'new-account','pass1234',true,'新人'),{code:'ACCOUNT_EXISTS'});assert.throws(()=>authenticate(store,'new-account','wrong123'),{code:'INVALID_LOGIN'});assert.throws(()=>authenticate(store,'another-account','1234567',true,'新人'),{code:'INVALID_PASSWORD'});
+ const email=authenticate(store,'name+project@example.com','pass1234',true,'邮箱用户');assert.equal(authenticate(store,'NAME+PROJECT@EXAMPLE.COM','pass1234').user.id,email.user.id);
 });
 
 test('长探索对话使用工具为冻结版本保留来源位置',async t=>{

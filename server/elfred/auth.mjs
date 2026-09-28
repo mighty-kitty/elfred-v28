@@ -11,7 +11,7 @@ function matches(password, stored) {
 }
 export function authenticate(store, handle, password, register = false, name = '', client = 'local') {
   if(typeof handle==='string')handle=handle.trim();
-  if (typeof handle !== 'string' || !/^[a-zA-Z0-9_.@-]{3,80}$/.test(handle)) fail('INVALID_HANDLE','账号需为 3—80 位字母、数字或 _.@-');
+  if (typeof handle !== 'string' || !/^[a-zA-Z0-9_.@+-]{3,80}$/.test(handle)) fail('INVALID_HANDLE','账号需为 3—80 位字母、数字或 _.@+-');
   if (typeof password !== 'string' || password.length < 8 || password.length > 128) fail('INVALID_PASSWORD','密码长度需为 8—128 位');
   const key = hash(client+':'+handle.toLowerCase()), time = Date.now();
   const limit = store.db.prepare('SELECT * FROM login_attempts WHERE key=?').get(key);

@@ -240,7 +240,7 @@ export function HomePage({
             >
               <Icon size={23} strokeWidth={1.8} />
               <b>{name}</b>
-              <small title={runtime?agentAlignment(runtime.snapshot?.objects.memory||[],id==='advisor'?'advise':id).label:undefined}>{runtime?agentAlignment(runtime.snapshot?.objects.memory||[],id==='advisor'?'advise':id).label:'L1'}</small>
+              <small title={runtime?agentAlignment(runtime.snapshot?.objects.memory||[],id==='advisor'?'advise':id).label:undefined}>{runtime?agentAlignment(runtime.snapshot?.objects.memory||[],id==='advisor'?'advise':id).levelLabel:'尚未对齐'}</small>
             </button>
           );
         })}

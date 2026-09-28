@@ -56,7 +56,8 @@ test('five agent stages use separate evidence and disclose mixed stages instead 
   assert.equal(agentAlignment(memories,'create').label,'场景已验证');
   assert.equal(agentAlignment(memories,'explore').label,'明确信息');
   assert.equal(agentAlignment(memories,'connect').label,'尚无足够理解');
-  assert.equal(agentAlignment([...memories,memory('c2','create','explicit')],'create').label,'理解不一致');
+  assert.equal(agentAlignment([...memories,memory('c2','create','explicit')],'create').label,'理解处于不同阶段');
+  assert.equal(agentAlignment([...memories,memory('c2','create','explicit')],'create').levelLabel,'第 1—3 阶段');
   assert.equal(agentAlignment([memory('old','create','stable_over_time','superseded')],'create').state,'insufficient');
   assert.equal(agentAlignment([memory('pending','create','insufficient','pending_confirmation')],'create').label,'理解待验证');
 });

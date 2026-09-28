@@ -1,0 +1,5 @@
+.elfred-peer-comment{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin:14px 0;padding:12px;border:1px solid #e4e8eb;border-radius:14px;background:#f9fafb;color:#28343a}
+.elfred-peer-comment>b,.elfred-peer-comment>small{width:100%}
+.elfred-peer-comment select{min-width:0;max-width:140px;padding:9px;border:1px solid #dce3e7;border-radius:10px;background:#fff;color:inherit;font-size:13px}
+.elfred-peer-comment button{min-height:38px}
+.elfred-peer-comment>small{font-size:11px;line-height:1.5;color:#75828b}

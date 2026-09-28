@@ -2,7 +2,7 @@ import {observationCommand} from './observation.mjs';
 import {discoveryInterests} from './discovery-policy.mjs';
 
 export function discoveryGoal(summary){
-  const selected=summary.filter(item=>item.certainty==='selected'&&['need','direction','criteria','format','cooperation','pace'].includes(item.question_id));
+  const selected=summary.filter(item=>item.certainty==='selected'&&['need','direction','interests','criteria','format','cooperation','pace'].includes(item.question_id));
   if(!selected.length)return null;
   return `根据本人初始化选择，持续寻找对当前方向有实际帮助的近期公开资料：${selected.map(item=>`${item.question} ${item.label}`).join('；')}。优先原始来源，说明与本人选择的关联；资料不足则标明未知，不编造机会或成果。`;
 }
@@ -11,7 +11,8 @@ export function discoveryQuery(summary){
   const option=id=>summary.find(item=>item.question_id===id&&item.certainty==='selected')?.option;
   const direction={interest:'科技 产品',ability:'职业 技能',problem:'产品 用户问题',opportunity:'创业 市场机会'}[option('direction')]||'产品 创新';
   const format={concept:'创意',prototype:'原型',content:'内容创作',product:'产品开发'}[option('format')]||'项目实践';
-  return `${direction} ${format}`;
+  const interests=summary.find(item=>item.question_id==='interests'&&item.certainty==='selected')?.label?.slice(0,48)||'';
+  return `${interests||direction} ${format}`;
 }
 
 function feedUrl(summary){

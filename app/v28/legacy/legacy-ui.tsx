@@ -1887,9 +1887,9 @@ export function LoginPage({
   const runtime=useRuntime();
   const [identifier, setIdentifier] = useState(state.account.identifier);
   const [legal, setLegal] = useState<"terms" | "privacy" | null>(null);
-  const normalized = identifier.trim();
+  const normalized = /^1[\d\s]{10,16}$/.test(identifier.trim())?identifier.replace(/\s/g, ""):identifier.trim();
   const valid =
-    (runtime && /^[a-zA-Z0-9_.@-]{3,80}$/.test(normalized)) || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalized) ||
+    (runtime && /^[a-zA-Z0-9_.@+-]{3,80}$/.test(normalized)) || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalized) ||
     /^1\d{10}$/.test(normalized.replace(/\s/g, ""));
   const quickLogin = (provider: "wechat" | "apple") => {
     if(runtime){runtime.report('该登录服务尚未配置，请使用本地账号登录');return;}
@@ -1949,15 +1949,16 @@ export function LoginPage({
       </form>
       <div className="v280-auth-divider"><span>或</span></div>
       <div className="v280-quick-login">
-        <button type="button" onClick={() => quickLogin("wechat")}>
+        <button type="button" disabled={Boolean(runtime)} onClick={() => quickLogin("wechat")}>
           <MessageCircle size={21} />
-          微信登录
+          微信登录{runtime?' · 待接入':''}
         </button>
-        <button type="button" onClick={() => quickLogin("apple")}>
+        <button type="button" disabled={Boolean(runtime)} onClick={() => quickLogin("apple")}>
           <Apple size={21} />
-          Apple 登录
+          Apple ID 登录{runtime?' · 待接入':''}
         </button>
       </div>
+      {runtime&&<p className="v280-auth-legal">当前可用：邮箱或手机号加密码。短信及邮箱验证码登录需要发送服务，微信与 Apple ID 登录需要应用平台凭据。</p>}
       <p className="v280-auth-legal">
         继续即表示你同意
         <button type="button" onClick={() => setLegal("terms")}>用户协议</button>

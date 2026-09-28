@@ -17,7 +17,9 @@ export function agentAlignment(memories, system) {
   });
   const states=new Set(entries.map(item=>item.state));
   const state=states.size===1?[...states][0]:states.size?'mixed':'insufficient';
-  return {system,state,label:state==='mixed'?'理解不一致':state==='insufficient'?(entries.length?'需要重评':'尚无足够理解'):alignmentStages.find(stage=>stage.id===state).label,entries,counts:Object.fromEntries(alignmentStages.map(stage=>[stage.id,entries.filter(item=>item.state===stage.id).length]))};
+  const levels=entries.map(item=>alignmentStages.findIndex(stage=>stage.id===item.state)+1).filter(level=>level>0);
+  const levelLabel=!entries.length?'尚未对齐':levels.length!==entries.length?'等级待核对':Math.min(...levels)===Math.max(...levels)?`第 ${levels[0]} 阶段`:`第 ${Math.min(...levels)}—${Math.max(...levels)} 阶段`;
+  return {system,state,label:state==='mixed'?'理解处于不同阶段':state==='insufficient'?(entries.length?'需要重评':'尚无足够理解'):alignmentStages.find(stage=>stage.id===state).label,levelLabel,entries,counts:Object.fromEntries(alignmentStages.map(stage=>[stage.id,entries.filter(item=>item.state===stage.id).length]))};
 }
 export function memoryOverview(memories){
   const domains=['explore','advise','create','connect','execute'].map(system=>agentAlignment(memories,system));

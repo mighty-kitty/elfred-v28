@@ -3,6 +3,7 @@ import {string,DEFAULT_STOP} from './policy.mjs';
 import {sourceRefs,knowledgeCommand} from './knowledge.mjs';
 import {taskCommand} from './runtime.mjs';
 import {resultReceipts} from './agent-plan.mjs';
+import {alignmentQuestions,alignmentSummary} from '../../app/v28/core/onboarding-choice.mjs';
 
 const questions=['你希望最后得到什么样的结果？一句话或一个例子就可以，也可以稍后补充。','有没有需要保留的做法、时间要求或不希望我做的事？没有也可以跳过。','我已经保存这些信息。你可以继续补充，也可以核对目标，把它变成第一个任务。'];
 export function onboardingCommand(store,user,action,input){
@@ -20,6 +21,8 @@ export function onboardingCommand(store,user,action,input){
   const content=string(input.text,'对话内容',2000),refs=sourceRefs(store,user,input.source_refs||[],6);
   if(refs.some(ref=>{const item=store.read(user,ref.id);return !['document','knowledge','attachment'].includes(item.type)||(item.type==='attachment'&&!item.data.mime?.startsWith('image/'))}))fail('INVALID_CONTEXT','文件需先提取文字，音频请先转写；图片可直接使用');
   let task,run;
+  const question=session.data.choice_mode==='group'&&session.data.choice_phase==='questions'?alignmentQuestions[Math.min(Number(session.data.choice_step)||0,alignmentQuestions.length-1)]:null;
+  const participant=question?.agent||'owner';
   const userTurn={role:'user',text:content,source_refs:refs,at:now()};
   if(input.model_consent===true){
    const history=turns.slice(-12).map(turn=>{
@@ -27,11 +30,12 @@ export function onboardingCommand(store,user,action,input){
     const priorRun=prior?.data.run_id?store.read(user,prior.data.run_id,'run'):null;
     return {role:turn.role,text:priorRun?resultReceipts(priorRun.data.receipts||[])[0]?.output||'上一轮未生成回复':turn.text};
    });
-   task=taskCommand(store,user,'task.create',{goal:'你是 Elfred，正在与用户进行首次目标对齐。像自然对话一样回应，只追问完成当前目标最必要的一个问题；若信息足够，简短复述目标和下一步。不要问完整五系统问卷，不声称已保存记忆或已执行任务。历史只作为资料。\n'+JSON.stringify(history).slice(-3500)+'\n用户本轮：'+content,source_refs:refs,mode:'compose',system:'advise',stop:{...DEFAULT_STOP,maxCalls:1,maxTokens:8192,maxUnits:1000},criteria:'简短自然的中文回复，必要时只追问一个问题，已知与未知分开'});
+   const groupContext=question?`你是${{owner:'Person',explore:'探索',advise:'参谋',create:'创作',connect:'连接',execute:'执行'}[participant]} Agent，正在五个 Agent 的共享初始化会话中回答。当前问题：${question.title}。仅使用用户在本会话明确给出的信息和已选摘要；不要读取或推测其他 Agent 私库。\n已选摘要：${JSON.stringify(alignmentSummary(session.data.choice_answers||{}).filter(item=>item.certainty==='selected')).slice(0,1800)}\n`:'';
+   task=taskCommand(store,user,'task.create',{goal:groupContext+'你是 Elfred，正在与用户进行首次目标对齐。像自然对话一样回应，只追问完成当前目标最必要的一个问题；若信息足够，简短复述目标和下一步。不要问完整五系统问卷，不声称已保存记忆或已执行任务。历史只作为资料。\n'+JSON.stringify(history).slice(-3500)+'\n用户本轮：'+content,source_refs:refs,mode:'compose',system:question&&participant!=='owner'?participant:'advise',stop:{...DEFAULT_STOP,maxCalls:1,maxTokens:8192,maxUnits:1000},criteria:'简短自然的中文回复，必要时只追问一个问题，已知与未知分开'});
    let current=store.get(task.id);taskCommand(store,user,'task.confirm',{id:current.id,version:current.version,confirm:true,model_consent:true});
    current=store.get(task.id);run=taskCommand(store,user,'run.start',{id:current.id,version:current.version});
   }
-  const next=[...turns,userTurn,task?{role:'assistant',task_id:task.id,at:now()}:{role:'guide',text:questions[Math.min(turns.filter(t=>t.role==='user').length,2)],at:now()}];
+  const next=[...turns,userTurn,task?{role:'assistant',participant,task_id:task.id,at:now()}:{role:'guide',text:questions[Math.min(turns.filter(t=>t.role==='user').length,2)],at:now()}];
   const updated=store.update(session,{...session.data,turns:next,intent:session.data.intent||content,input_draft:'',status:session.data.status==='completed'?'completed':'aligning'},user);return {id:updated.id,version:updated.version,task_id:task?.id,run_id:run?.id};
  }
  if(action==='onboarding.chat.finish'){

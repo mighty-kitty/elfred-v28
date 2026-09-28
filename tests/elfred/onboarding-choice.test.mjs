@@ -7,17 +7,28 @@ import {ModelProvider} from '../../server/elfred/providers.mjs';
 import {Runtime} from '../../server/elfred/runtime.mjs';
 import {alignmentQuestions,alignmentSummary} from '../../app/v28/core/onboarding-choice.mjs';
 function setup(t){const store=new Store(':memory:'),service=new Service(store,new ModelProvider({}));t.after(()=>store.close());const users=['alice','bob'].map(h=>authenticate(store,h,'local-test-password',true,h).user);users.forEach(u=>service.initialize(u));const cmd=(u,a,input)=>service.command(u.id,id(),a,input),session=u=>service.list(u.id,'onboarding')[0],ref=o=>({id:o.id,version:store.get(o.id).version});return {store,service,users,cmd,session,ref};}
-function chooseAll(env,user,mode='sequential'){const {cmd,session,ref}=env;cmd(user,'onboarding.choice.start',{...ref(session(user)),mode});for(const q of alignmentQuestions)cmd(user,'onboarding.choice.answer',{...ref(session(user)),question_id:q.id,option:q.options[0].id});}
+function chooseAll(env,user,mode='sequential'){const {cmd,session,ref}=env;cmd(user,'onboarding.choice.start',{...ref(session(user)),mode});for(const q of alignmentQuestions)cmd(user,'onboarding.choice.answer',{...ref(session(user)),question_id:q.id,option:q.options[0].id,...(q.id==='interests'?{detail:'AI 产品、摄影'}:{})});}
 
-test('逐个与同场使用原始记录相同的八题、选项、顺序和初始理解，选择不启动模型',t=>{
+test('具体兴趣只按本人输入保存，缺少内容不能伪装成已选择',t=>{
+ const {users:[a],cmd,session,ref,service}=setup(t);
+ assert.throws(()=>cmd(a,'onboarding.choice.answer',{...ref(session(a)),question_id:'interests',option:'specified',detail:''}),{code:'INVALID_INPUT'});
+ cmd(a,'onboarding.choice.answer',{...ref(session(a)),question_id:'interests',option:'specified',detail:'AI 产品、摄影'});
+ cmd(a,'onboarding.choice.confirm',{...ref(session(a)),confirm:true,auto_discovery:true});
+ const interest=service.list(a.id,'memory').find(item=>item.data.question_id==='interests');
+ assert.match(interest.data.content,/AI 产品、摄影/);
+ assert.equal(interest.data.scope,'explore');
+ assert.match(service.list(a.id,'observation')[0].data.keywords[0],/AI 产品/);
+});
+
+test('逐个与同场共用同一题目、选项、顺序和初始理解，选择不启动模型',t=>{
  const e=setup(t),{store,service,users:[a,b],cmd,session,ref}=e;chooseAll(e,a);chooseAll(e,b,'group');
  const normalized=user=>alignmentSummary(session(user).data.choice_answers).map(({at,...item})=>item);
- assert.deepEqual(normalized(a),normalized(b));assert.equal(session(a).data.choice_step,8);assert.equal(session(b).data.choice_phase,'summary');
- assert.deepEqual(alignmentQuestions.map(q=>q.agent),['owner','explore','advise','create','connect','execute','owner','owner']);
+ assert.deepEqual(normalized(a),normalized(b));assert.equal(session(a).data.choice_step,alignmentQuestions.length);assert.equal(session(b).data.choice_phase,'summary');
+ assert.deepEqual(alignmentQuestions.map(q=>q.agent),['owner','explore','explore','advise','create','connect','execute','owner','owner']);
  for(const q of alignmentQuestions)assert.deepEqual(q.options.slice(-3).map(o=>o.id),['none','unsure','skip']);
  cmd(a,'onboarding.choice.confirm',{...ref(session(a)),confirm:true});
  for(const type of ['approval','run','task','conversation','message','attachment','connector'])assert.equal(store.list(type).length,0,type);
- assert.equal(store.list('memory').length,8);assert.ok(store.list('memory').every(m=>['learned','validated'].includes(m.data.status)&&m.data.alignment==='explicit'));
+ assert.equal(store.list('memory').length,alignmentQuestions.length);assert.ok(store.list('memory').every(m=>['learned','validated'].includes(m.data.status)&&m.data.alignment==='explicit'));
  const context=session(a).data.initial_context;
  assert.equal(context.create.items.length,1);assert.equal(context.create.items[0].question_id,'format');assert.equal(context.connect.items[0].question_id,'cooperation');
  assert.equal(context.create.alignment,'insufficient');assert.equal(service.list(a.id,'onboarding').length,1);
@@ -32,7 +43,7 @@ test('选项和进度持久化、切换不重置、可返回修改与跳过；�
  cmd(a,'onboarding.choice.defer',{...ref(session(a))});cmd(a,'onboarding.choice.mode',{...ref(session(a)),mode:'group'});
  const recovered=service.bootstrap(a.id).objects.onboarding[0];assert.equal(recovered.data.choice_step,1);assert.equal(recovered.data.choice_answers.need.option,'make');assert.ok(recovered.data.deferred_at);assert.equal(recovered.data.status,'collecting');assert.equal(recovered.data.input_draft,'旧流程里未发送的文字');
  cmd(a,'onboarding.choice.step',{...ref(session(a)),step:0});cmd(a,'onboarding.choice.answer',{...ref(session(a)),question_id:'need',option:'none'});
- cmd(a,'onboarding.choice.step',{...ref(session(a)),step:8});cmd(a,'onboarding.choice.confirm',{...ref(session(a)),confirm:true});
+ cmd(a,'onboarding.choice.step',{...ref(session(a)),step:alignmentQuestions.length});cmd(a,'onboarding.choice.confirm',{...ref(session(a)),confirm:true});
  assert.ok(session(a).data.choice_summary.every(item=>item.certainty==='uncertain'));
  assert.throws(()=>cmd(b,'onboarding.choice.answer',{...ref(session(a)),question_id:'need',option:'act'}),{code:'NOT_FOUND'});
  assert.throws(()=>cmd(a,'onboarding.choice.answer',{...ref(session(a)),question_id:'invented',option:'act'}),{code:'INVALID_INPUT'});
@@ -82,8 +93,8 @@ test('主动程度不扩大授权；无 Key 不伪造首个成果，配置后模
 test('旧账号已确认的初始化恢复为本人选择的明确信息，重复读取及本人删除不会重新建立',t=>{
  const e=setup(t),{users:[a],cmd,session,ref,store,service}=e;chooseAll(e,a);
  const summary=alignmentSummary(session(a).data.choice_answers);store.update(session(a),{...session(a).data,choice_summary:summary,choice_confirmed_at:new Date().toISOString()},a.id);
- assert.equal(store.list('memory').length,0);const snapshot=service.bootstrap(a.id);assert.equal(snapshot.objects.memory.length,8);assert.ok(snapshot.objects.memory.every(m=>['learned','validated'].includes(m.data.status)));
+ assert.equal(store.list('memory').length,0);const snapshot=service.bootstrap(a.id);assert.equal(snapshot.objects.memory.length,alignmentQuestions.length);assert.ok(snapshot.objects.memory.every(m=>['learned','validated'].includes(m.data.status)));
  const m=snapshot.objects.memory[0];cmd(a,'memory.decide',{...ref(m),decision:'delete'});service.bootstrap(a.id);service.bootstrap(a.id);
- assert.equal(store.list('memory').length,8);assert.equal(service.list(a.id,'memory').length,7);
- cmd(a,'onboarding.choice.confirm',{...ref(session(a)),confirm:true});assert.equal(store.list('memory').length,8);
+ assert.equal(store.list('memory').length,alignmentQuestions.length);assert.equal(service.list(a.id,'memory').length,alignmentQuestions.length-1);
+ cmd(a,'onboarding.choice.confirm',{...ref(session(a)),confirm:true});assert.equal(store.list('memory').length,alignmentQuestions.length);
 });

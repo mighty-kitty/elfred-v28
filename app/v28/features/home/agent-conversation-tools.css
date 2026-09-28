@@ -7,3 +7,8 @@
 .elfred-chat-sources {margin-top:8px;font-size:12px;color:#697582;}
 .elfred-chat-sources a {display:block;margin-top:6px;color:#2462cb;overflow-wrap:anywhere;}
 .v283-agent-chat-bubble>small {display:block;margin-top:8px;color:#697582;font-size:12px;}
+.v283-agent-chat-page{padding-bottom:0!important;min-height:0;overflow:hidden;}
+.v283-agent-chat-page .v283-agent-thread{min-height:0;padding-bottom:12px;overscroll-behavior:contain;}
+.v283-agent-chat-page .v283-agent-chat-composer{position:relative;left:auto;right:auto;bottom:auto;flex:none;margin:0 -6px max(12px,env(safe-area-inset-bottom));width:auto;box-sizing:border-box;}
+.v283-agent-chat-page .v283-agent-chat-welcome{min-height:min(62%,440px);}
+.v283-agent-chat-composer textarea:focus{outline:none!important;box-shadow:none!important;transform:none!important;}

@@ -55,7 +55,7 @@ test('library projection cleans labels but preserves source identities and task 
   assert.equal(data.documents?.[0].excerpt,'计划 重点');
   assert.equal(data.skills?.[0].name,id);
   const contract=await fetchContract(id,'整理资料');
-  assert.equal(contract?.skill.name,id);
+  assert.equal(contract?.skill?.name,id);
   assert.match(contract?.constraints||'',/# 步骤/);
   await createPage2Task({title:'任务名称',brief:'整理资料',agent:'create',knowledgeIds:['document-id']});
   assert.deepEqual(calls[0].input.source_refs,[{id:'document-id',version:1790485382411}]);

@@ -16,7 +16,7 @@ export function AgentLevelPage({id,onBack,go}:{id:V277AgentId;onBack:()=>void;go
   const [content,setContent]=useState('');
   return <main className="v277-page v278-utility-page">
     <header className="v277-page-head"><button className="v277-icon-button" aria-label="返回" onClick={onBack}><ArrowLeft size={21}/></button><h1>{agent.name} · 等级与理解</h1></header>
-    <section className="v279-stage-card"><div><small>当前对齐阶段</small><h3>{summary.label}</h3><p>只依据{agent.name}领域的理解记录。不同条目阶段不一致时，分别展示，不平均成分数。</p></div></section>
+    <section className="v279-stage-card"><div><small>当前对齐等级</small><h3>{summary.levelLabel} · {summary.label}</h3><p>只依据{agent.name}领域的理解记录。不同条目阶段不一致时，分别展示，不平均成分数。</p></div></section>
     <section className="v279-level-stats">{alignmentStages.map(stage=><div key={stage.id}><b>{summary.counts[stage.id]}</b><span>{stage.label}</span></div>)}</section>
     <section className="v277-edit-card"><h3>为什么是这个阶段</h3>{!summary.entries.length&&<p>还没有这个领域的理解依据。你可以自愿记录一个目标或偏好。</p>}
       {summary.entries.map(entry=>{const memory=snapshot.objects.memory.find(item=>item.id===entry.id)!;return <article key={entry.id}><h4>{entry.label}</h4><p>{text(memory,'content')}</p><p>适用用途：{text(memory,'usage_purpose')}</p><button className="v277-secondary" onClick={()=>go({name:'memory-detail',id:memory.id})}>查看、修正或撤销这条理解</button>{['candidate','pending_confirmation'].includes(text(memory,'status'))&&<Action run={()=>runtime.command('memory.decide',{...entityRef(memory),decision:'confirm'})}>确认这条理解及范围</Action>}<MemoryEvidence item={memory}/></article>})}

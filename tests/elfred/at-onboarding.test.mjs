@@ -32,6 +32,18 @@ test('初始化模型对话需同意、串行、真实结果与历史上下文�
  const blocked=cmd(a,'onboarding.chat.reply',{...ref(session),text:'帮我整理',model_consent:true});await new Runtime(store,new ModelProvider({})).tick();
  assert.equal(store.get(blocked.task_id).data.status,'blocked');assert.equal(store.get(blocked.run_id).data.receipts.length,0);
 });
+test('群聊对齐由当前 Agent 回答，只共享本次已选摘要',async t=>{
+ const {store,service,users:[a],cmd,ref}=setup(t),session=service.list(a.id,'onboarding')[0];
+ cmd(a,'onboarding.choice.start',{...ref(session),mode:'group'});
+ cmd(a,'onboarding.choice.answer',{...ref(session),question_id:'need',option:'direction'});
+ cmd(a,'onboarding.choice.answer',{...ref(session),question_id:'direction',option:'interest'});
+ const reply=cmd(a,'onboarding.chat.reply',{...ref(session),text:'我对 AI 产品感兴趣',model_consent:true});
+ const task=store.get(reply.task_id);assert.equal(task.data.system,'explore');assert.match(task.data.goal,/探索 Agent/);assert.match(task.data.goal,/找到方向/);
+ assert.equal(store.get(session.id).data.turns.at(-1).participant,'explore');
+ const provider={status:()=>({configured:true}),generate:async()=>({output:'你更想探索哪些具体产品？',usage:{total_tokens:10}})};
+ await new Runtime(store,provider).tick();assert.equal(store.get(task.id).data.status,'awaiting_review');
+ assert.equal(store.list('memory').length,0);
+});
 test('@ 本人辅助仅本人可见，不增加真人消息、通知与未读，填草稿后需人工发送',async t=>{
  const {store,service,users:[a,b],cmd,ref}=setup(t),friend=cmd(a,'friend.request',{handle:'bob'});const room=cmd(b,'friend.respond',{...ref(friend),decision:'accept'}).conversation_id;
  const msg=cmd(b,'message.send',{id:room,text:'明天方便讨论吗'}),draft=cmd(a,'draft.save',{conversation_id:room,version:0,text:'我的原稿'});

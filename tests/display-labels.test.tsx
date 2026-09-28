@@ -19,6 +19,7 @@ test('system identifiers and old generated fixture suffixes have readable labels
  assert.equal(entityTitle(entity('document',{})),'文档');
  assert.equal(displayAnchor('line:12'),'第 12 行');
  assert.doesNotMatch(displayError('无法读取 '+id),new RegExp(id));
+ assert.equal(displayError('Failed to fetch'),'网络连接失败，请检查网络后重试');
  assert.doesNotMatch(displayTitle('语音-1790485382411.m4a'),/1790485382411/);
 });
 

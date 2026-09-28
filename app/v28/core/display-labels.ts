@@ -26,6 +26,8 @@ export function displayAnchor(anchor:string){
 }
 
 export function displayError(message:string){
+  if(/^(?:failed to fetch|networkerror when attempting to fetch resource\.?|network request failed|load failed)$/i.test(message.trim()))
+    return '网络连接失败，请检查网络后重试';
   return message.replace(uuid,'相关记录').replace(/\b[\da-f]{32,}\b/gi,'校验信息');
 }
 

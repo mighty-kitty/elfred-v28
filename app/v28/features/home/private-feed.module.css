@@ -303,6 +303,19 @@
   text-decoration: none;
 }
 
+.peerComments {
+  margin-top: 8px;
+  padding: 7px 9px;
+  border-radius: 7px;
+  background: #f3f5f6;
+  color: #394650;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.peerComments p { margin: 2px 0; overflow-wrap: anywhere; }
+.peerComments b { color: #425d73; font-weight: 650; }
+
 .menu {
   display: flex;
   flex-wrap: wrap;

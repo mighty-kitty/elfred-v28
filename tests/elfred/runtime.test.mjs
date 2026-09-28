@@ -75,6 +75,17 @@ test('离线候选隔离训练与留出、真实调用评估后人工发布、�
   assert.equal(snapshot.method.id,method.id);command(a,'method.rollback',{confirm:true});assert.deepEqual(store.get(future.run.id).data.version_snapshot,snapshot);
   assert.equal(store.visible(a.id,'method').some(item=>item.data.active),false);
 });
+test('本人指正自动生成同领域待验证方法，未评估不生效也不跨 Agent 使用',async t=>{
+  const provider={status:()=>({configured:true}),generate:async()=>({output:'可核对的初稿',usage:{total_tokens:5}})};
+  const {a,command,current,task,runtime,store}=fixture(t,':memory:',provider),item=task({goal:'写一页产品说明',system:'create',mode:'compose'});
+  await runtime.tick();command(a,'task.accept',{...current(item.task),accept:false,feedback:'不要把尚未验证的内容写成已完成'});
+  const candidate=store.list('candidate').find(entry=>entry.data.origin==='task_correction');assert.ok(candidate);assert.equal(candidate.data.scope_system,'create');assert.match(candidate.data.prompt,/尚未验证/);assert.equal(store.list('method').length,0);
+  const baselines=[];for(let index=0;index<2;index++){const baseline=task({goal:'另一个创作任务 '+index,system:'create',mode:'compose'});await runtime.tick();command(a,'task.accept',{...current(baseline.task),accept:true});baselines.push(baseline.task)}
+  const evaluation=command(a,'candidate.evaluate',{...current(candidate),task_ids:baselines.map(item=>item.id),confirm:true,model_consent:true});await runtime.tick();await runtime.tick();
+  const reviews=store.get(evaluation.id).data.tests.map(test=>({run_id:test.run_id,passed:true,note:'逐项核对来源、标准和原结果'}));command(a,'evaluation.review',{...current(evaluation),reviews,confirm:true});const method=command(a,'method.release',{evaluation_id:evaluation.id,confirm:true});
+  assert.equal(store.get(method.id).data.scope_system,'create');const explore=task({goal:'核对另一条资讯',system:'explore',mode:'compose'});assert.equal(store.get(explore.run.id).data.version_snapshot.method,null);
+  const future=task({goal:'写另一页文案',system:'create',mode:'compose'});assert.equal(store.get(future.run.id).data.version_snapshot.method.id,method.id);
+});
 test('账号会话隔离、失败登录、持久重启与退出令牌',t=>{
   const dir=mkdtempSync(path.join(tmpdir(),'elfred-test-')),filename=path.join(dir,'test.sqlite');
   const store=new Store(filename),auth=authenticate(store,'persist','secure-password',true,'存储');
@@ -145,7 +156,7 @@ test('屏蔽不能被对方移除关系绕过',t=>{
 });
 test('共创两人副本、本人提交、冲突和发布指针',t=>{
   const {a,b,store,command,current}=fixture(t);
-  const project=command(a,'project.create',{title:'共创',goal:'共同写文章',criteria:'真人审核',task:'撰写'});
+  const project=command(a,'project.create',{basis:'已有可公开基础',public_scope:'brief',reviewer_id:a.id,fee_terms:'各自承担费用',deadline_mode:'none',title:'共创',goal:'共同写文章',criteria:'真人审核',task:'撰写'});
   const post=command(a,'project.publish_post',{...current(project),confirm:true});command(b,'project.claim',{post_id:post.id,confirm:true});
   const copy=command(b,'copy.create',{project_id:project.id});command(b,'copy.save',{...current(copy),content:'<script>alert(1)</script>纯文本成果'});
   assert.throws(()=>command(b,'copy.submit',{...current(copy),reviewed:false}),{code:'REVIEW_REQUIRED'});
@@ -248,7 +259,7 @@ test('事件流超过300条他人事件仍能获得自己的下一条事件',t=>
 test('留出评估继承项目权限，移除成员后不再向模型传输项目目标',async t=>{
   const seen=[];const provider={status:()=>({configured:true}),generate:async input=>{if(input.goal.phase!=='review')seen.push(input.goal.goal);return {output:'已核对测试结果',usage:{total_tokens:2}}}};
   const {a,b,command,current,store,runtime}=fixture(t,':memory:',provider);
-  const project=command(a,'project.create',{title:'机密项目',goal:'项目目标',criteria:'核对',task:'整理'}),post=command(a,'project.publish_post',{...current(project),confirm:true});command(b,'project.claim',{post_id:post.id,confirm:true});
+  const project=command(a,'project.create',{basis:'已有可公开基础',public_scope:'brief',reviewer_id:a.id,fee_terms:'各自承担费用',deadline_mode:'none',title:'机密项目',goal:'项目目标',criteria:'核对',task:'整理'}),post=command(a,'project.publish_post',{...current(project),confirm:true});command(b,'project.claim',{post_id:post.id,confirm:true});
   const tasks=[];
   for(const [index,goal] of ['训练目标','机密留出目标','独立留出目标'].entries()){
     const task=command(b,'task.create',{goal,mode:'compose',...(index===1?{project_id:project.id}:{})});command(b,'task.confirm',{...current(task),confirm:true,model_consent:true});command(b,'run.start',current(task));await runtime.tick();command(b,'task.accept',{...current(task),accept:true});tasks.push(task);

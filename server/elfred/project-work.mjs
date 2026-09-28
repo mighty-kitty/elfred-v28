@@ -15,7 +15,7 @@ export function validateFiles(input){
 }
 export function mergeFiles(base,upstream,local){const merged={...upstream},conflicts=[];for(const path of new Set([...Object.keys(base),...Object.keys(local)])){if(local[path]===base[path])continue;if(upstream[path]!==base[path]&&upstream[path]!==local[path]){conflicts.push(path);continue;}if(local[path]===undefined)delete merged[path];else merged[path]=local[path];}return {files:merged,conflicts};}
 export function projectWorkCommand(store,user,action,input){
- if(!['project.budget','project.dispatch','project.end','project.leave','copy.ai_prepare','copy.ai_apply','copy.stage','stage.depend','claim.reconfirm','copy.files','copy.resolve'].includes(action))return null;
+ if(!['project.budget','project.dispatch','project.dispatch.publish','project.end','project.leave','copy.ai_prepare','copy.ai_apply','copy.stage','stage.depend','claim.reconfirm','copy.files','copy.resolve'].includes(action))return null;
  if(input.actor_type==='agent')fail('HUMAN_REQUIRED','需要本人操作');
  if(action==='project.budget'){
   const p=store.expect(store.owned(user,input.id,'project'),input.version);if(input.confirm!==true)fail('CONFIRMATION_REQUIRED','请确认本项目公共调度使用本人的额度');
@@ -38,7 +38,16 @@ export function projectWorkCommand(store,user,action,input){
   if(input.confirm!==true||input.model_consent!==true)fail('CONSENT_REQUIRED','请确认共享范围、调度目标和额度');
   const shared=[...store.visible(user,'project_stage').filter(x=>x.space===p.id&&x.data.status==='shared'),...store.visible(user,'feedback').filter(x=>x.space===p.id)].slice(0,20);
   const result=taskCommand(store,user,'task.create',{goal:'为项目制定临时调度建议：'+p.data.goal+'。当前请求：'+string(input.goal,'调度目标',3000)+'。只依据共享阶段成果安排建议，不能指挥其他成员私人 Agent，不能代人接受任务或发布。',system:'connect',project_id:p.id,source_refs:shared.map(s=>({id:s.id,version:s.version}))});
-  const task=store.get(result.id);store.update(task,{...task.data,budget_source:'project'},user);return {id:result.id,task_id:result.id};
+  const task=store.get(result.id);store.update(task,{...task.data,title:'项目协作安排',dispatch_for:p.id,budget_source:'project'},user);return {id:result.id,task_id:result.id};
+ }
+ if(action==='project.dispatch.publish'){
+  const p=projectActive(store,user,input.id);if(p.owner!==user||input.confirm!==true)fail('CONFIRMATION_REQUIRED','需由发起者核对后共享调度建议');
+  const task=store.owned(user,input.task_id,'task');if(task.data.dispatch_for!==p.id||task.data.status!=='completed')fail('REVIEW_REQUIRED','请先验收本项目的调度建议');
+  const run=store.owned(user,task.data.run_id,'run'),output=resultReceipts(run.data.receipts||[]).find(receipt=>typeof receipt.output==='string')?.output;
+  if(!output)fail('RESULT_REQUIRED','没有可共享的调度结果');
+  const text=string(input.content||output,'调度说明',5000);
+  const feedback=store.unique('feedback',`coordination:${p.id}:${task.id}`,()=>store.add('feedback',user,{content:text,kind:'coordination',task_id:task.id,confirmed_by:user,confirmed_at:now(),note:'建议不自动改变成员承诺；任务、范围与费用变化仍需本人确认'},{space:p.id,visibility:'members'}));
+  return {id:feedback.id};
  }
  if(action==='claim.reconfirm'){
   const claim=store.expect(store.owned(user,input.id,'claim'),input.version),p=projectActive(store,user,claim.data.project_id),slot=store.read(user,claim.data.slot_id,'project_slot');

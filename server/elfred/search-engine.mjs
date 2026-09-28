@@ -39,7 +39,7 @@ function scopeFor(store,user,intent){
  return o=>!(constrained&&['attachment','document'].includes(o.type)&&(o.data.access_space||sharedFiles.has(o.id)||sharedFiles.has(o.data.attachment_id)))&&(!intent.space||o.space===intent.space||o.data.access_space===intent.space||o.id===intent.space)&&(!intent.author||o.owner===intent.author)&&(!intent.after||Date.parse(o.created)>=Date.parse(intent.after))&&(!intent.before||Date.parse(o.created)<Date.parse(intent.before));
 }
 export function semanticSources(store,user,input,intent){
- const types=input.types||SEARCH_TYPES,usable=o=>!o.data.internal_search&&!o.data.search_query_id&&!retired.includes(o.data.status)&&!o.data.hidden&&(!o.data.expires_at||Date.parse(o.data.expires_at)>Date.now())&&!input.excluded_ids?.includes(o.id)&&(!intent.latest||sourceIsCurrent(store,o)),scoped=scopeFor(store,user,intent);
+ const types=input.types||SEARCH_TYPES,usable=o=>!o.data.internal_search&&!o.data.internal_onboarding&&!o.data.search_query_id&&!retired.includes(o.data.status)&&!o.data.hidden&&(!o.data.expires_at||Date.parse(o.data.expires_at)>Date.now())&&!input.excluded_ids?.includes(o.id)&&(!intent.latest||sourceIsCurrent(store,o)),scoped=scopeFor(store,user,intent);
  const originTypes=types.some(t=>['attachment','document'].includes(t))&&!types.includes('message')?[...types,'message']:types;
  const sources=new Map(originTypes.flatMap(t=>store.visible(user,t)).filter(o=>usable(o)&&scoped(o)).map(o=>[o.id,o]));
  // A dated message may point to an older file. Keep the origin constraint on the message.
@@ -54,7 +54,7 @@ export function localSearch(store,user,input){
  if(intent.after&&intent.before&&Date.parse(intent.after)>=Date.parse(intent.before))intent.uncertainties.push('开始时间必须早于结束时间');
  const queryId=hash(JSON.stringify({user,intent,types:[...types].sort(),excluded_ids:[...(input.excluded_ids||[])].sort()})).slice(0,24);
  if(intent.uncertainties.length)return {status:'needs_clarification',query_id:queryId,intent,hits:[],engine:'local-hybrid-v2',semantic_status:'not_checked'};
- const usable=o=>!o.data.internal_search&&!o.data.search_query_id&&!retired.includes(o.data.status)&&!o.data.hidden&&(!o.data.expires_at||Date.parse(o.data.expires_at)>Date.now());
+ const usable=o=>!o.data.internal_search&&!o.data.internal_onboarding&&!o.data.search_query_id&&!retired.includes(o.data.status)&&!o.data.hidden&&(!o.data.expires_at||Date.parse(o.data.expires_at)>Date.now());
  const originTypes=types.some(t=>['attachment','document'].includes(t))&&!types.includes('message')?[...types,'message']:types;
  const all=originTypes.flatMap(t=>store.visible(user,t)).filter(o=>usable(o)&&!input.excluded_ids?.includes(o.id));
  const terms=intent.terms.length?intent.terms:context.notes.length||intent.recency?[]:[query.toLowerCase()];

@@ -35,14 +35,41 @@ export function communityCommand(store,user,action,input) {
     return {id:store.update(project,{...project.data,recruiting},user).id};
   }
   if(action==='project.create') {
-    const project=store.add('project',user,{title:string(input.title,'项目名',200),goal:string(input.goal,'项目目标',3000),criteria:string(input.criteria,'验收标准',2000),task:string(input.task,'开放任务',2000),participation:enumeration(input.participation||'open',['open','application'],'参与方式'),status:'active',recruiting:true,revision:0,content:'',release_id:null},{visibility:'members'});
+    const project=store.add('project',user,{title:string(input.title,'项目名',200),goal:string(input.goal,'项目目标',3000),criteria:string(input.criteria,'验收标准',2000),task:string(input.task,'开放任务',2000),basis:input.basis?string(input.basis,'已有基础',3000):'',public_scope:input.public_scope?enumeration(input.public_scope,['brief'],'公开范围'):'',reviewer_id:input.reviewer_id===user?user:null,fee_terms:input.fee_terms?string(input.fee_terms,'费用说明',1000):'',deadline_mode:input.deadline_mode?enumeration(input.deadline_mode,['none','date'],'截止设置'):'',deadline:input.deadline_mode==='date'?string(input.deadline,'截止日期',40):null,participation:enumeration(input.participation||'open',['open','application'],'参与方式'),status:'active',recruiting:false,revision:0,content:'',release_id:null},{visibility:'members'});
     store.join(project.id,user,'owner');return {id:project.id};
+  }
+  if(action==='project.brief.update') {
+    const project=store.expect(store.owned(user,input.id,'project'),input.version);
+    if(project.data.status==='ended')fail('PROJECT_CLOSED','项目已结束');
+    const deadline_mode=enumeration(input.deadline_mode,['none','date'],'截止设置');
+    const deadline=deadline_mode==='date'?string(input.deadline,'截止日期',40):null;
+    if(deadline&&(!Number.isFinite(Date.parse(deadline))||Date.parse(deadline)<=Date.now()))fail('INVALID_DEADLINE','截止日期必须晚于现在');
+    const data={...project.data,title:string(input.title,'项目名',200),goal:string(input.goal,'项目目标',3000),criteria:string(input.criteria,'验收标准',2000),task:string(input.task,'开放任务',2000),basis:string(input.basis,'已有基础',3000),public_scope:enumeration(input.public_scope,['brief'],'公开范围'),reviewer_id:input.reviewer_id===user?user:null,fee_terms:string(input.fee_terms,'费用说明',1000),deadline_mode,deadline,participation:enumeration(input.participation,['open','application'],'参与方式')};
+    if(!data.reviewer_id)fail('INVALID_REVIEWER','当前需由项目发起者本人负责最终审核');
+    const updated=store.update(project,data,user);
+    const autoSlot=store.list('project_slot').find(slot=>slot.space===project.id&&slot.data.auto_brief);
+    if(autoSlot&&(autoSlot.data.title!==data.task||autoSlot.data.criteria!==data.criteria||autoSlot.data.participation!==data.participation)){
+      slotCommand(store,user,'project.slot.save',{id:autoSlot.id,version:autoSlot.version,project_id:project.id,title:data.task,criteria:data.criteria,participation:data.participation,capacity:null,risk:autoSlot.data.risk,deadline:autoSlot.data.deadline,depends_on:autoSlot.data.depends_on||[]});
+    }
+    return {id:updated.id,version:updated.version};
   }
   if(action==='project.publish_post') {
     const project=store.expect(store.owned(user,input.id,'project'),input.version);
     if(input.confirm!==true) fail('CONFIRMATION_REQUIRED','请确认公开文字和参与范围');
+    const missing=['title','goal','basis','task','criteria','participation','public_scope','reviewer_id','fee_terms','deadline_mode'].filter(key=>!project.data[key]);
+    if(missing.length)fail('BRIEF_INCOMPLETE','公开前请补齐：'+missing.join('、'));
+    if(project.data.deadline_mode==='date'&&(!project.data.deadline||Date.parse(project.data.deadline)<=Date.now()))fail('INVALID_DEADLINE','截止日期必须晚于现在');
+    if(project.data.reviewer_id!==project.owner)fail('INVALID_REVIEWER','当前需由发起者本人负责最终审核');
+    // The first brief task is a real claimable task, even when the owner has not
+    // split the work into more detailed slots yet.
+    if(!store.list('project_slot').some(slot=>slot.space===project.id)){
+      const created=slotCommand(store,user,'project.slot.save',{project_id:project.id,title:project.data.task,criteria:project.data.criteria,capacity:null,participation:project.data.participation});
+      const slot=store.get(created.id);store.update(slot,{...slot.data,auto_brief:true},user);
+    }
     const existing=store.list('post').find(item=>item.data.project_id===project.id);
-    const data={kind:'cocreation',author_type:'human',published_by:user,slots:publicSlots(store,project.id),title:project.data.title,author_name:store.user(user).name,content:project.data.goal,criteria:project.data.criteria,task:project.data.task,project_id:project.id,status:project.data.recruiting?'recruiting':'closed',participation:project.data.participation};
+    const recruiting=existing?project.data.recruiting:true;
+    const data={kind:'cocreation',author_type:'human',published_by:user,slots:publicSlots(store,project.id),title:project.data.title,author_name:store.user(user).name,content:project.data.goal,basis:project.data.basis,public_scope:project.data.public_scope,reviewer_name:store.user(project.owner).name,fee_terms:project.data.fee_terms,deadline_mode:project.data.deadline_mode,deadline:project.data.deadline,criteria:project.data.criteria,task:project.data.task,project_id:project.id,status:recruiting?'recruiting':'closed',participation:project.data.participation};
+    if(!existing)store.update(project,{...project.data,recruiting:true},user);
     return {id:existing?store.update(existing,data,user).id:store.add('post',user,data,{visibility:'public'}).id};
   }
   if(action==='project.claim') {
@@ -50,13 +77,15 @@ export function communityCommand(store,user,action,input) {
     if(!project?.data.recruiting || post.data.status!=='recruiting') fail('CLOSED','项目已停止招募');
     if(input.confirm!==true) fail('CONFIRMATION_REQUIRED','请确认本人参与承诺');
     if(store.list('claim').some(item=>item.owner===user&&item.data.project_id===project.id&&item.data.status==='removed'))fail('MEMBERSHIP_REVOKED','参与资格已撤销，需要发起者重新批准',403);
-    const slot=input.slot_id?store.get(input.slot_id):null;
-    if(!input.slot_id&&store.list('project_slot').some(s=>s.space===project.id))fail('SLOT_REQUIRED','请选择具体任务位，并按其名额与审批规则参与');
+    const publishedSlots=post.data.slots||[];
+    const implicit=publishedSlots.length===1&&publishedSlots[0].auto_brief?publishedSlots[0]:null;
+    const slot=input.slot_id?store.get(input.slot_id):implicit?store.get(implicit.id):null;
+    if(!slot&&store.list('project_slot').some(s=>s.space===project.id))fail('SLOT_REQUIRED','请选择具体任务位，并按其名额与审批规则参与');
     if(slot&&!(post.data.slots||[]).some(item=>item.id===slot.id))fail('INVALID_SLOT','任务位尚未公开');
     const previous=store.list('claim').find(item=>item.owner===user&&item.data.project_id===project.id&&(item.data.slot_id||null)===(slot?.id||null));
     if(previous&&['accepted','pending','needs_reconfirmation'].includes(previous.data.status))return {id:previous.id,project_id:project.id};
-    checkSlot(store,project,slot,input.slot_id);
-    if(slot)store.expect(slot,input.slot_version);
+    checkSlot(store,project,slot,slot?.id);
+    if(slot)store.expect(slot,input.slot_version??implicit?.rules_version);
     if(slot&&(post.data.slots||[]).find(published=>published.id===slot.id)?.rules_version!==slot.version)fail('SLOT_RULES_CHANGED','任务约定正在更新，请等待发起者重新公开后再确认');
     if(previous){const status=requiresApproval(project,slot)?'pending':'accepted';store.update(previous,{...previous.data,status,withdrawn_at:null,rules_version:slot?.version||null,rules_snapshot:slot?.data||{criteria:project.data.criteria}},user);if(status==='accepted')store.join(project.id,user);return {id:previous.id,project_id:project.id};}
     const claim=store.unique('claim',`${project.id}:${user}:${slot?.id||'general'}`,()=>store.add('claim',user,{project_id:project.id,slot_id:slot?.id||null,status:requiresApproval(project,slot)?'pending':'accepted',goal:slot?.data.title||project.data.task,rules_version:slot?.version||null,rules_snapshot:slot?.data||{criteria:project.data.criteria}}));
@@ -80,8 +109,9 @@ export function communityCommand(store,user,action,input) {
   }
   if(action==='copy.create') {
     const project=member(input.project_id);
-    if(user!==project.owner&&!input.slot_id&&store.list('project_slot').some(s=>s.space===project.id))fail('SLOT_REQUIRED','请选择已认领的具体任务位创建副本');
-    const slot=input.slot_id?store.read(user,input.slot_id,'project_slot'):null;
+    const implicit=user!==project.owner&&!input.slot_id?store.list('claim').find(c=>c.owner===user&&c.data.project_id===project.id&&c.data.status==='accepted'&&store.get(c.data.slot_id)?.data.auto_brief):null;
+    if(user!==project.owner&&!input.slot_id&&!implicit&&store.list('project_slot').some(s=>s.space===project.id))fail('SLOT_REQUIRED','请选择已认领的具体任务位创建副本');
+    const slot=input.slot_id||implicit?.data.slot_id?store.read(user,input.slot_id||implicit.data.slot_id,'project_slot'):null;
     if(slot&&(slot.space!==project.id||user!==project.owner&&!store.list('claim').some(c=>c.owner===user&&c.data.slot_id===slot.id&&c.data.status==='accepted')))fail('FORBIDDEN','请先认领此任务位',403);
     return {id:store.add('copy',user,{project_id:project.id,slot_id:slot?.id||null,format:project.data.format||'text',access_space:project.id,base_revision:project.data.revision,content:project.data.content,files:project.data.files||{},base_files:project.data.files||{},rules_snapshot:slot?.data||{criteria:project.data.criteria},status:'draft'}).id};
   }
@@ -125,7 +155,9 @@ export function communityCommand(store,user,action,input) {
   }
   if(action==='project.feedback') {
     const project=member(input.id);
-    return {id:store.add('feedback',user,{content:string(input.content,'阶段反馈',5000),kind:enumeration(input.kind||'progress',['progress','blocked','dependency'],'反馈类型')},{space:project.id,visibility:'members'}).id};
+    const stage=input.stage_id?store.read(user,input.stage_id,'project_stage'):null;
+    if(stage&&(stage.space!==project.id||!['shared','superseded'].includes(stage.data.status)||!Number.isInteger(input.stage_version)||stage.version!==input.stage_version))fail('STAGE_CHANGED','所选阶段版本已变化，请重新核对',409);
+    return {id:store.add('feedback',user,{content:string(input.content,'阶段反馈',5000),kind:enumeration(input.kind||'progress',['progress','blocked','dependency','review'],'反馈类型'),stage_ref:stage?{id:stage.id,version:stage.version}:null},{space:project.id,visibility:'members'}).id};
   }
   if(action==='project.release') {
     const project=store.expect(store.owned(user,input.id,'project'),input.version);

@@ -2,6 +2,7 @@ import {routeSuggestion} from './task-routing.mjs';
 import {tickObservations,tickRssObservations,observationUsage} from './observation.mjs';
 import {cosine} from './embedding-provider.mjs';
 import {feedEvidence} from './feed.mjs';
+import {tickFeedPeerComments} from './feed-peer.mjs';
 import { fail, hash, id, now } from './store.mjs';
 import { DEFAULT_STOP, POLICY_VERSION, TOOLS, string, enumeration, stopPolicy, planGate, verify } from './policy.mjs';
 import {composePlan,roleFor,rolePrompt,reviewVerdict,resultReceipts,reviewPolicy,reviewerFor,capabilityPrompt,checkCapabilityOutput} from './agent-plan.mjs';
@@ -15,6 +16,7 @@ import {chatModelRequest} from './agent-chat-context.mjs';
 import {recallMemories,feedbackMemory,verifyTaskMemoryEvidence,unpackLearningReply,captureTaskExperience} from './memory-learning.mjs';
 import {syncMemoryHub} from './memory-hub.mjs';
 import {taskMemoryFeedback} from './memory-feedback.mjs';
+import {recordCorrectionCandidate} from './improvement-correction.mjs';
 import {memoryApplies} from './memory-allocation.mjs';
 import {memoryUsable,projectMemory} from './memory-validity.mjs';
 
@@ -51,7 +53,7 @@ export function taskCommand(store,user,action,input) {
     if (task.data.mode==='compose' && input.model_consent!==true) fail('CONSENT_REQUIRED','使用模型需确认把目标和所选资料发送给配置的服务');
     sourceRefs(store,user,task.data.source_refs,task.data.search_semantic?128:20);
     if(task.data.mode==='compose'&&composePlan(task).length>12)fail('INVALID_PLAN','本次协作、主责和复核合计超过计划上限，请减少协作步骤');
-    const memoryRefs=task.data.mode==='compose'&&!task.data.project_id&&!task.data.access_space&&!task.data.group_agent&&!task.data.search_semantic&&!task.data.media_operation&&!task.data.public_research?recallMemories(store,user,task.data.system,task.data.goal,{skillId:task.data.skill_id||null}).map(m=>({id:m.id,version:m.version})):[];
+    const memoryRefs=task.data.mode==='compose'&&!task.data.project_id&&!task.data.access_space&&!task.data.group_agent&&!task.data.search_semantic&&!task.data.media_operation&&!task.data.public_research&&!task.data.internal_peer_comment?recallMemories(store,user,task.data.system,task.data.goal,{skillId:task.data.skill_id||null}).map(m=>({id:m.id,version:m.version})):[];
     const memoryChanged=JSON.stringify(task.data.memory_refs||[])!==JSON.stringify(memoryRefs);
     const updatedTask=store.update(task,{...task.data,memory_refs:memoryRefs,memory_dispatch:{holder:'person',target_system:task.data.system,purpose:task.data.goal,global_refs:memoryRefs.filter(ref=>store.get(ref.id).data.scope==='owner'),domain_refs:memoryRefs.filter(ref=>store.get(ref.id).data.scope!=='owner'),at:now()},execution_revision:(task.data.execution_revision||0)+(memoryChanged?1:0)},user);
     const approval=store.add('approval',user,{task_id:task.id,goal_hash:hash(JSON.stringify(updatedTask.data)),resource_version:updatedTask.version,scopes:[...(task.data.mode==='compose'?['read','model']:['read']),...(task.data.web_lookup?['read_public']:[])],status:'approved',expires:Date.now()+86400000,policy:POLICY_VERSION});
@@ -85,7 +87,7 @@ export function taskCommand(store,user,action,input) {
     const plan={steps,role:{id:role.id,name:role.name,version:role.version},review,selection:task.data.capability_selection||{provider:'legacy'},execution_style:'shared-runner',version:(prior?.data.plan.version||0)+1,goal_hash:hash(task.data.goal),parent_run:prior?.id||null,repair_scope:action==='run.replan'?'revise_with_owner_feedback':'retry_unfinished_steps',feedback:action==='run.replan'?task.data.feedback:sameRevision?prior?.data.plan.feedback||null:null};
     const gate=planGate(plan,{stop},approval.data.scopes);
     if(role.tool_allowlist&&steps.some(step=>!role.tool_allowlist.includes(step.tool)))fail('CAPABILITY_TOOL_FORBIDDEN','所选能力不允许该工具',403);
-    const method=task.data.agent_chat?null:input.evaluation_candidate_id?store.owned(user,input.evaluation_candidate_id,'candidate'):store.visible(user,'method').find(item=>item.data.active);
+    const method=task.data.agent_chat?null:input.evaluation_candidate_id?store.owned(user,input.evaluation_candidate_id,'candidate'):store.visible(user,'method').find(item=>item.data.active&&item.data.scope_system===task.data.system)||store.visible(user,'method').find(item=>item.data.active&&!item.data.scope_system);
     const receipts=resume?prior.data.receipts.filter(receipt=>receipt.status==='succeeded'):[];
     const run=store.add('run',user,{task_id:task.id,memory_refs:task.data.memory_refs||[],task_execution_revision:task.data.execution_revision||0,access_space:task.data.access_space,status:'queued',goal:{goal:task.data.goal,criteria:task.data.criteria,constraints:task.data.constraints,parameters:task.data.parameter_values||{},stop},plan,gate,source_refs:resume?prior.data.source_refs:[...task.data.source_refs,...(method?[{id:method.id}]:[])],approval_id:approval.id,approval_version:approval.version,version_snapshot:resume?prior.data.version_snapshot:{model:task.data.model_name||null,policy:POLICY_VERSION,tools:TOOLS,system:task.data.system,role,reviewer,preferences:preferences||null,method:method?{id:method.id,version:method.version,prompt:method.data.prompt,prompt_hash:method.data.prompt_hash}:null},receipts,verification:null,checkpoint:receipts.map(receipt=>receipt.step_id),created_at:now()});
     store.db.prepare('INSERT INTO jobs(id,run_id,status) VALUES(?,?,?)').run(id(),run.id,'queued');
@@ -114,6 +116,7 @@ export function taskCommand(store,user,action,input) {
     if (!run.data.receipts?.length || run.data.receipts.some(receipt=>receipt.status!=='succeeded')) fail('EVIDENCE_REQUIRED','缺少成功回执');
     if (input.accept!==true) {
       store.update(task,{...task.data,status:'partial',satisfaction:'unsatisfied',feedback_pending:true,feedback:string(input.feedback||'需继续修改','反馈',3000)},user);
+      if(input.feedback)recordCorrectionCandidate(store,user,task,run,input.feedback);
       feedbackMemory(store,user,task,input.feedback||'','task_correction');
       return {id:task.id};
     }
@@ -183,7 +186,7 @@ export class Runtime {
       publishGroupAgentReply(s,task,{...run,data:{...run.data,...extra}},status);
       publishAgentChatReply(s,task,{...run,data:{...run.data,...extra}},status);
       s.db.prepare("UPDATE jobs SET status='done',lease_until=0 WHERE id=? AND lease=?").run(job.id,job.lease);
-      if(!task.data.agent_chat&&(!task.data.observation_id||!['completed','awaiting_review'].includes(status)))s.unique('notification',run.id+':finished',()=>s.add('notification',run.owner,{kind:'task_state',target_id:task.id,status:'unread',summary:`任务状态：${status}`}));
+      if(!task.data.agent_chat&&!task.data.internal_peer_comment&&(!task.data.observation_id||!['completed','awaiting_review'].includes(status)))s.unique('notification',run.id+':finished',()=>s.add('notification',run.owner,{kind:'task_state',target_id:task.id,status:'unread',summary:`任务状态：${status}`}));
     });
   }
   async tick() {
@@ -192,6 +195,7 @@ export class Runtime {
     let job;
     try {
       tickObservations(this.store,this.provider);
+      tickFeedPeerComments(this.store,this.provider);
       job=this.claim();
       if (!job) {
         await syncMemoryHub(this.store,this.provider.config||process.env);

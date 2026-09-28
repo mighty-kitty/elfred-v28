@@ -9,7 +9,7 @@ import {Runtime} from '../../server/elfred/runtime.mjs';
 function setup(t){const store=new Store(':memory:'),service=new Service(store,new ModelProvider({}));t.after(()=>store.close());const users=['alice','bob','carol'].map(h=>authenticate(store,h,'local-test-password',true,h).user);users.forEach(u=>service.initialize(u));return {store,service,users,cmd:(u,a,input)=>service.command(u.id,id(),a,input),ref:o=>({id:o.id,version:store.get(o.id).version})};}
 test('共创任务人数、前置依赖、截止日期与撤权不可绕过，撤回可重认领',t=>{
  const {store,users:[a,b,c],cmd,ref}=setup(t);
- const project=cmd(a,'project.create',{title:'共创',goal:'制作页面',criteria:'可用',task:'制作',participation:'open'});
+ const project=cmd(a,'project.create',{basis:'已有可公开基础',public_scope:'brief',reviewer_id:a.id,fee_terms:'各自承担费用',deadline_mode:'none',title:'共创',goal:'制作页面',criteria:'可用',task:'制作',participation:'open'});
  const slot=cmd(a,'project.slot.save',{project_id:project.id,title:'设计',criteria:'审核设计',capacity:1});
  const second=cmd(a,'project.slot.save',{project_id:project.id,title:'实现',criteria:'测试通过',capacity:1,depends_on:[slot.id]});
  const expired=cmd(a,'project.slot.save',{project_id:project.id,title:'旧任务',criteria:'已截止',deadline:'2020-01-01',capacity:1});
@@ -33,7 +33,7 @@ test('共创任务人数、前置依赖、截止日期与撤权不可绕过，�
 test('公开共创内容来自本人确认；网页经过本人提交、审核和发布并可追溯',t=>{
  const {store,users:[a,b],cmd,ref}=setup(t);
  assert.throws(()=>cmd(a,'post.create',{title:'自动发帖',content:'自动',confirm:true,actor_type:'agent'}),{code:'HUMAN_REQUIRED'});
- const project=cmd(a,'project.create',{title:'网页',goal:'计数器',criteria:'点击增加',task:'实现按钮',participation:'open'});
+ const project=cmd(a,'project.create',{basis:'已有可公开基础',public_scope:'brief',reviewer_id:a.id,fee_terms:'各自承担费用',deadline_mode:'none',title:'网页',goal:'计数器',criteria:'点击增加',task:'实现按钮',participation:'open'});
  assert.throws(()=>cmd(a,'project.publish_post',ref(project)),{code:'CONFIRMATION_REQUIRED'});
  const post=cmd(a,'project.publish_post',{...ref(project),confirm:true});
  assert.equal(store.get(post.id).data.author_type,'human');

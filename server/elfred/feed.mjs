@@ -1,7 +1,13 @@
 import {fail,now} from './store.mjs';
-import {string} from './policy.mjs';
+import {string,bounded} from './policy.mjs';
 import {taskCommand} from './runtime.mjs';
 export function feedCommand(store,user,action,input){
+ if(action==='feed.peer_comments.policy'){
+  const settings=store.expect(store.owned(user,input.id,'settings'),input.version);
+  if(input.confirm!==true||input.enabled===true&&input.model_consent!==true)fail('CONSENT_REQUIRED','请确认私人朋友圈自动评论的模型使用和每日上限');
+  const daily_limit=bounded(input.daily_limit,'每日评论上限',1,5);
+  return {id:store.update(settings,{...settings.data,feed_peer_comments:{enabled:input.enabled===true,daily_limit,consented_at:input.enabled===true?now():settings.data.feed_peer_comments?.consented_at||null}},user).id};
+ }
  if(action==='feed.topic.set'||action==='feed.topic.merge'||action==='feed.topic.remove'){
   const settings=store.visible(user,'settings')[0];
   if(!settings)fail('NOT_FOUND','设置不存在',404);

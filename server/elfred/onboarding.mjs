@@ -32,7 +32,8 @@ export function onboardingCommand(store,user,action,input){
    });
    const groupContext=question?`你是${{owner:'Person',explore:'探索',advise:'参谋',create:'创作',connect:'连接',execute:'执行'}[participant]} Agent，正在五个 Agent 的共享初始化会话中回答。当前问题：${question.title}。仅使用用户在本会话明确给出的信息和已选摘要；不要读取或推测其他 Agent 私库。\n已选摘要：${JSON.stringify(alignmentSummary(session.data.choice_answers||{}).filter(item=>item.certainty==='selected')).slice(0,1800)}\n`:'';
    task=taskCommand(store,user,'task.create',{goal:groupContext+'你是 Elfred，正在与用户进行首次目标对齐。像自然对话一样回应，只追问完成当前目标最必要的一个问题；若信息足够，简短复述目标和下一步。不要问完整五系统问卷，不声称已保存记忆或已执行任务。历史只作为资料。\n'+JSON.stringify(history).slice(-3500)+'\n用户本轮：'+content,source_refs:refs,mode:'compose',system:question&&participant!=='owner'?participant:'advise',stop:{...DEFAULT_STOP,maxCalls:1,maxTokens:8192,maxUnits:1000},criteria:'简短自然的中文回复，必要时只追问一个问题，已知与未知分开'});
-   let current=store.get(task.id);taskCommand(store,user,'task.confirm',{id:current.id,version:current.version,confirm:true,model_consent:true});
+   let current=store.get(task.id);store.update(current,{...current.data,title:'初始化对话 · '+({owner:'Elfred',explore:'探索 Agent',advise:'参谋 Agent',create:'创作 Agent',connect:'连接 Agent',execute:'执行 Agent'}[participant]||'Elfred'),internal_onboarding:true},user);
+   current=store.get(task.id);taskCommand(store,user,'task.confirm',{id:current.id,version:current.version,confirm:true,model_consent:true});
    current=store.get(task.id);run=taskCommand(store,user,'run.start',{id:current.id,version:current.version});
   }
   const next=[...turns,userTurn,task?{role:'assistant',participant,task_id:task.id,at:now()}:{role:'guide',text:questions[Math.min(turns.filter(t=>t.role==='user').length,2)],at:now()}];

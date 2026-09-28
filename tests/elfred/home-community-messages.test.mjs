@@ -78,7 +78,7 @@ test('community post publishes, edits with version check, and withdrawal closes 
 });
 test('stopping recruitment prevents joining and approving pending claims',t=>{
   const {users:[a,b],cmd,ref}=setup(t);
-  const project=cmd(a,'project.create',{title:'共创',goal:'改善首页',criteria:'逐项核对',task:'准备说明',participation:'application'});
+  const project=cmd(a,'project.create',{basis:'已有可公开基础',public_scope:'brief',reviewer_id:a.id,fee_terms:'各自承担费用',deadline_mode:'none',title:'共创',goal:'改善首页',criteria:'逐项核对',task:'准备说明',participation:'application'});
   const post=cmd(a,'project.publish_post',{...ref(project),confirm:true});
   const claim=cmd(b,'project.claim',{post_id:post.id,confirm:true});
   cmd(a,'project.recruiting',{...ref(project),enabled:false});

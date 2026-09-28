@@ -14,9 +14,25 @@ function setup(t){
  const cmd=(u,a,i)=>service.command(u.id,id(),a,i),ref=o=>({id:o.id,version:store.get(o.id).version});
  const start=o=>{const u=users.find(u=>u.id===store.get(o.id).owner);cmd(u,'task.confirm',{...ref(o),confirm:true,model_consent:true});return cmd(u,'run.start',ref(o));};
  const group=()=>{for(const u of users.slice(1)){const request=cmd(users[0],'friend.request',{handle:u.handle});cmd(u,'friend.respond',{...ref(request),decision:'accept'});}return cmd(users[0],'conversation.create',{title:'项目群',handles:['bob','carol']});};
- const project=()=>{const p=cmd(users[0],'project.create',{title:'多人共创',goal:'共同交付',task:'完成成果',criteria:'本人逐项核对'});const post=cmd(users[0],'project.publish_post',{...ref(p),confirm:true});users.slice(1).forEach(u=>cmd(u,'project.claim',{post_id:post.id,confirm:true}));return p;};
+ const project=()=>{const p=cmd(users[0],'project.create',{basis:'已有可公开基础',public_scope:'brief',reviewer_id:users[0].id,fee_terms:'各自承担费用',deadline_mode:'none',title:'多人共创',goal:'共同交付',task:'完成成果',criteria:'本人逐项核对'});const post=cmd(users[0],'project.publish_post',{...ref(p),confirm:true});users.slice(1).forEach(u=>cmd(u,'project.claim',{post_id:post.id,confirm:true}));return p;};
  return {store,service,runtime,users,cmd,ref,start,calls,group,project};
 }
+test('共创公开的第一项任务有可认领身份，申请与副本沿同一任务',t=>{
+ const {store,users:[a,b],cmd,ref}=setup(t);
+ const project=cmd(a,'project.create',{title:'公开任务',goal:'共同完成页面',basis:'已有草稿',task:'完善移动布局',criteria:'手机窄屏可读',public_scope:'brief',reviewer_id:a.id,fee_terms:'各自承担费用',deadline_mode:'none',participation:'open'});
+ const post=cmd(a,'project.publish_post',{...ref(project),confirm:true}),published=store.get(post.id);
+ assert.equal(published.data.slots.length,1);
+ assert.equal(published.data.slots[0].title,'完善移动布局');
+ const claim=cmd(b,'project.claim',{post_id:post.id,confirm:true});
+ assert.equal(store.get(claim.id).data.slot_id,published.data.slots[0].id);
+ const copy=cmd(b,'copy.create',{project_id:project.id});
+ assert.equal(store.get(copy.id).data.slot_id,published.data.slots[0].id);
+ cmd(a,'project.brief.update',{...ref(project),title:'公开任务',goal:'共同完成页面',basis:'已有草稿',task:'完善移动布局与键盘',criteria:'手机窄屏与输入可读',public_scope:'brief',reviewer_id:a.id,fee_terms:'各自承担费用',deadline_mode:'none',participation:'open'});
+ assert.equal(store.get(claim.id).data.status,'needs_reconfirmation');
+ assert.equal(store.get(post.id).data.slots[0].title,'完善移动布局');
+ cmd(a,'project.publish_post',{...ref(project),confirm:true});
+ assert.equal(store.get(post.id).data.slots[0].title,'完善移动布局与键盘');
+});
 test('原稿 H02/H04：未排期想法不进入今日；接受才改安排，拒绝不改',t=>{
  const {store,users:[a],cmd,ref}=setup(t),task=cmd(a,'task.create',{goal:'未来的想法'});
  assert.equal(dailyTasks([store.get(task.id)]).length,0);
@@ -24,6 +40,19 @@ test('原稿 H02/H04：未排期想法不进入今日；接受才改安排，拒
  const noon=cmd(a,'brief.create',{kind:'noon'}),suggestion=store.get(noon.id).data.suggestions[0],version=ref(task).version;
  cmd(a,'brief.suggestion',{...ref(noon),suggestion_id:suggestion.id,decision:'reject'});assert.equal(ref(task).version,version);
  cmd(a,'brief.refresh',ref(noon));assert.equal(store.list('run').length,0);
+});
+test('共创临时调度需发起者验收后才能共享，成员只看到确认的安排',async t=>{
+ const {store,service,runtime,users:[a,b],cmd,ref,start,project}=setup(t),p=project();
+ cmd(a,'project.budget',{...ref(p),limit:3000,confirm:true});
+ const task=cmd(a,'project.dispatch',{id:p.id,goal:'协调页面分工',confirm:true,model_consent:true});
+ assert.throws(()=>cmd(a,'project.dispatch.publish',{id:p.id,task_id:task.id,confirm:true}),{code:'REVIEW_REQUIRED'});
+ start(task);await runtime.tick();
+ assert.ok(['awaiting_review','awaiting_acceptance'].includes(store.get(task.id).data.status));
+ cmd(a,'task.accept',{...ref(task),accept:true});
+ const feedback=cmd(a,'project.dispatch.publish',{id:p.id,task_id:task.id,confirm:true});
+ assert.equal(service.read(b.id,feedback.id).data.kind,'coordination');
+ assert.equal(cmd(a,'project.dispatch.publish',{id:p.id,task_id:task.id,confirm:true}).id,feedback.id);
+ assert.throws(()=>cmd(b,'project.dispatch.publish',{id:p.id,task_id:task.id,confirm:true}));
 });
 test('原稿 K03：知识编辑保留对象与来源、阻止旧版本和越权覆盖',t=>{
  const {store,service,users:[a,b],cmd,ref}=setup(t),doc=cmd(a,'document.create',{title:'来源.md',content:'原始事实'}),note=cmd(a,'knowledge.create',{title:'笔记',content:'旧内容',source_refs:[ref(doc)]}),old=ref(note);

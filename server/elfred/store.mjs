@@ -55,7 +55,7 @@ export class Store {
   canRead(userId, object, seen = new Set()) {
     if (!object || object.deleted) return false;
     if(object.type==='message'&&Number(object.data.seq)<(this.db.prepare('SELECT min_seq FROM member_history WHERE space=? AND user_id=?').get(object.space,userId)?.min_seq||0))return false;
-    if(object.type==='project_stage'&&(!this.role(object.space,object.owner)||object.data.status!=='shared'))return false;
+    if(object.type==='project_stage'&&(!this.role(object.space,object.owner)||!['shared','superseded'].includes(object.data.status)))return false;
     if(object.type==='post'&&object.data.status==='withdrawn')return false;
     if(object.type==='comment'&&(!this.get(object.data.post_id)||this.get(object.data.post_id).data.status==='withdrawn'))return false;
     if (seen.has(object.id) || seen.size > 32) return false;

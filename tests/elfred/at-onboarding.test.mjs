@@ -5,6 +5,7 @@ import {authenticate} from '../../server/elfred/auth.mjs';
 import {Service} from '../../server/elfred/service.mjs';
 import {ModelProvider} from '../../server/elfred/providers.mjs';
 import {Runtime} from '../../server/elfred/runtime.mjs';
+import {search} from '../../server/elfred/knowledge.mjs';
 function setup(t){const store=new Store(':memory:'),service=new Service(store,new ModelProvider({}));t.after(()=>store.close());const users=['alice','bob'].map(h=>authenticate(store,h,'local-test-password',true,h).user);users.forEach(u=>service.initialize(u));return {store,service,users,cmd:(u,a,input)=>service.command(u.id,id(),a,input),ref:o=>({id:o.id,version:store.get(o.id).version})};}
 test('初始化对话持久化、跳过再继续、并发保护与首次任务幂等',t=>{
  const {store,service,users:[a,b],cmd,ref}=setup(t),session=service.list(a.id,'onboarding')[0];
@@ -25,6 +26,8 @@ test('初始化对话持久化、跳过再继续、并发保护与首次任务�
 test('初始化模型对话需同意、串行、真实结果与历史上下文，缺 Key 不伪造回复',async t=>{
  const {store,service,users:[a],cmd,ref}=setup(t),session=service.list(a.id,'onboarding')[0];
  const first=cmd(a,'onboarding.chat.reply',{...ref(session),text:'帮我准备面试',model_consent:true});
+ assert.equal(store.get(first.task_id).data.internal_onboarding,true);assert.equal(store.get(first.task_id).data.title,'初始化对话 · Elfred');
+ assert.equal(search(store,a.id,{query:'你是 Elfred',types:['task']}).hits.length,0);
  assert.throws(()=>cmd(a,'onboarding.chat.reply',{...ref(session),text:'下一条',model_consent:true}),{code:'RUN_ACTIVE'});
  let goals=[];const provider={status:()=>({configured:true}),generate:async({goal})=>{goals.push(goal.goal);return {output:'面试的岗位是什么？',usage:{total_tokens:10}}}};
  await new Runtime(store,provider).tick();assert.equal(store.get(first.task_id).data.status,'awaiting_review');assert.equal(store.list('message').length,0);

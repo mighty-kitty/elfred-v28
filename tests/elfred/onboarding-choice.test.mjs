@@ -9,6 +9,14 @@ import {alignmentQuestions,alignmentSummary} from '../../app/v28/core/onboarding
 function setup(t){const store=new Store(':memory:'),service=new Service(store,new ModelProvider({}));t.after(()=>store.close());const users=['alice','bob'].map(h=>authenticate(store,h,'local-test-password',true,h).user);users.forEach(u=>service.initialize(u));const cmd=(u,a,input)=>service.command(u.id,id(),a,input),session=u=>service.list(u.id,'onboarding')[0],ref=o=>({id:o.id,version:store.get(o.id).version});return {store,service,users,cmd,session,ref};}
 function chooseAll(env,user,mode='sequential'){const {cmd,session,ref}=env;cmd(user,'onboarding.choice.start',{...ref(session(user)),mode});for(const q of alignmentQuestions)cmd(user,'onboarding.choice.answer',{...ref(session(user)),question_id:q.id,option:q.options[0].id,...(q.id==='interests'?{detail:'AI 产品、摄影'}:{})});}
 
+test('初始化自主评论须明确同意，每日上限只用于私人朋友圈',t=>{
+ const env=setup(t),{users:[a],cmd,session,ref,service}=env;chooseAll(env,a);
+ assert.throws(()=>cmd(a,'onboarding.choice.confirm',{...ref(session(a)),confirm:true,auto_peer_comments:true}),{code:'CONSENT_REQUIRED'});
+ cmd(a,'onboarding.choice.confirm',{...ref(session(a)),confirm:true,auto_peer_comments:true,model_consent:true});
+ assert.equal(service.list(a.id,'settings')[0].data.feed_peer_comments.enabled,true);
+ assert.equal(service.list(a.id,'settings')[0].data.feed_peer_comments.daily_limit,3);
+});
+
 test('具体兴趣只按本人输入保存，缺少内容不能伪装成已选择',t=>{
  const {users:[a],cmd,session,ref,service}=setup(t);
  assert.throws(()=>cmd(a,'onboarding.choice.answer',{...ref(session(a)),question_id:'interests',option:'specified',detail:''}),{code:'INVALID_INPUT'});

@@ -36,6 +36,8 @@ test('P13 Brief remains private until separate publish and keeps private source 
  const {store,service,users:[a,b],cmd,ref,input,conversation}=await setup(t);
  const result=cmd(a,'assist.project_brief',{...input,criteria:'验收标准',open_task:'开放任务'}),project=store.get(result.id);assert.equal(project.visibility,'members');assert.equal(store.list('post').length,0);assert.throws(()=>service.read(b.id,result.id),{code:'NOT_FOUND'});
  assert.equal(service.read(a.id,result.handoff_id).data.conversation_id,conversation.id);
+ assert.throws(()=>cmd(a,'project.publish_post',{...ref(project),confirm:true}),{code:'BRIEF_INCOMPLETE'});
+ cmd(a,'project.brief.update',{...ref(project),title:project.data.title,goal:project.data.goal,basis:'可公开的已有基础',task:project.data.task,criteria:project.data.criteria,participation:'application',public_scope:'brief',reviewer_id:a.id,fee_terms:'各自承担本人费用',deadline_mode:'none'});
  const post=cmd(a,'project.publish_post',{...ref(project),confirm:true});const publicPost=service.read(b.id,post.id);assert.ok(!JSON.stringify(publicPost).includes(conversation.id));assert.ok(!JSON.stringify(publicPost).includes('PRIVATE_SOURCE_DO_NOT_SHARE'));
 });
 test('handoff rejects stale output version, other user and revoked original conversation',async t=>{

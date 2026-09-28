@@ -1,9 +1,7 @@
 import {fail,hash,now} from './store.mjs';
 import {string} from './policy.mjs';
 import {taskCommand} from './runtime.mjs';
-
-const normalized=value=>String(value||'').trim().toLowerCase().replace(/\s+/g,' ');
-const caseFingerprint=(store,task)=>hash(JSON.stringify({goal:normalized(task.data.goal),criteria:normalized(task.data.criteria),constraints:normalized(task.data.constraints),sources:(task.data.source_refs||[]).map(ref=>{const source=store.get(ref.id);return hash(normalized(source?.data.content||source?.data.text||source?.data.goal||source?.data.summary))}).sort()}));
+import {caseFingerprint} from './improvement-correction.mjs';
 
 // Offline improvement stays separate from online execution and never changes an active run.
 export function improvementCommand(store,user,action,input) {
@@ -24,6 +22,7 @@ export function improvementCommand(store,user,action,input) {
     const fingerprints=new Set([candidate.data.training_fingerprint]);
     const tests=input.task_ids.map(taskId=>{
       const baseline=store.owned(user,taskId,'task');
+      if(candidate.data.scope_system&&baseline.data.system!==candidate.data.scope_system)fail('SCOPE_MISMATCH','留出任务需与候选方法属于同一 Agent 领域');
       const fingerprint=caseFingerprint(store,baseline);if(fingerprints.has(fingerprint))fail('TRAIN_TEST_LEAK','训练样本与留出样本的目标和来源不可重复');fingerprints.add(fingerprint);
       if(baseline.data.status!=='completed'||baseline.data.mode!=='compose')fail('BASELINE_REQUIRED','留出任务需有本人已验收的模型生成基线');
       const task=taskCommand(store,user,'task.create',{goal:baseline.data.goal,criteria:baseline.data.criteria,constraints:baseline.data.constraints,source_refs:baseline.data.source_refs,project_id:baseline.data.project_id,mode:'compose',system:baseline.data.system,capability_id:baseline.data.capability?.id,review_mode:baseline.data.review_mode,stop:baseline.data.stop});
@@ -49,8 +48,8 @@ export function improvementCommand(store,user,action,input) {
   if(action==='method.release') {
     const evaluation=store.owned(user,input.evaluation_id,'evaluation'),candidate=store.owned(user,evaluation.data.candidate_id,'candidate');
     if(evaluation.data.status!=='passed'||evaluation.data.prompt_hash!==candidate.data.prompt_hash||input.confirm!==true)fail('EVALUATION_REQUIRED','需通过留出评估并明确批准发布');
-    for(const method of store.visible(user,'method').filter(item=>item.data.active))store.update(method,{...method.data,active:false},user);
-    const method=store.add('method',user,{title:candidate.data.title,prompt:candidate.data.prompt,prompt_hash:candidate.data.prompt_hash,candidate_id:candidate.id,evaluation_id:evaluation.id,source_refs:[{id:candidate.id},{id:evaluation.id}],status:'released',active:true});
+    for(const method of store.visible(user,'method').filter(item=>item.data.active&&(item.data.scope_system||null)===(candidate.data.scope_system||null)))store.update(method,{...method.data,active:false},user);
+    const method=store.add('method',user,{title:candidate.data.title,prompt:candidate.data.prompt,prompt_hash:candidate.data.prompt_hash,candidate_id:candidate.id,evaluation_id:evaluation.id,source_refs:[{id:candidate.id},{id:evaluation.id}],status:'released',active:true,scope_system:candidate.data.scope_system||null});
     store.add('rollout',user,{method_id:method.id,action:'release',status:'active',approved_by:user,scope:'future-owned-runs-only'});
     return {id:method.id};
   }

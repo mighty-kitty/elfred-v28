@@ -40,6 +40,7 @@ export function PrivateFeed({ go, onDrag }: { go: (screen: Screen) => void; onDr
   const snapshot = runtime.snapshot!;
   const publishPreferences = snapshot.objects.settings[0]?.data.agent_publish as Record<string, { format?: string; format_version?: number }> | undefined;
   const topicSettings = (snapshot.objects.settings[0]?.data.feed_topics || {}) as Record<string, {mode?: string; alias?: string; removed?: boolean}>;
+  const peerComments = snapshot.objects.settings[0]?.data.feed_peer_comments as {enabled?:boolean;daily_limit?:number}|undefined;
   const [order, setOrder] = usePageState<"recommended" | "latest">("feed:order", "recommended");
   const [system, setSystem] = usePageState("feed:system", "");
   const [topic, setTopic] = usePageState("feed:topic", "");
@@ -72,6 +73,7 @@ export function PrivateFeed({ go, onDrag }: { go: (screen: Screen) => void; onDr
       </button>
     </header>
     {filtersOpen && <div className={styles.filters}>
+      <Action run={()=>runtime.command('feed.peer_comments.policy',{...entityRef(snapshot.objects.settings[0]),enabled:!peerComments?.enabled,daily_limit:3,confirm:true,model_consent:true})}>{peerComments?.enabled?'暂停 Agent 自主评论':'开启 Agent 自主评论'}</Action><small>启用后，其他 Agent 可基于已验收成果或真实来源，自动补充私人评论；每天最多 3 次模型调用，每次最多 1000 本地额度。</small>
       <div className={styles.sort} role="group" aria-label="朋友圈排序">
         <button type="button" aria-pressed={order === "recommended"} onClick={() => setOrder("recommended")}>推荐</button>
         <button type="button" aria-pressed={order === "latest"} onClick={() => setOrder("latest")}>最新</button>
@@ -124,6 +126,7 @@ export function PrivateFeed({ go, onDrag }: { go: (screen: Screen) => void; onDr
                   <MoreHorizontal size={24} />
                 </button>
               </footer>
+              {(((item.data.comments||[]) as {id:string;system:string;content:string}[]).length>0)&&<div className={styles.peerComments}>{((item.data.comments||[]) as {id:string;system:string;content:string}[]).slice(0,2).map(comment=><p key={comment.id}><b>{snapshot.systems.find(agent=>agent.id===comment.system)?.name||'Agent'}：</b>{comment.content.slice(0,160)}</p>)}</div>}
             </div>
           </div>
           {menuId === item.id && <div className={styles.menu}>

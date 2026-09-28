@@ -7,6 +7,7 @@
 | 初始化对话只在会话内展示，不把内部提示词当普通任务标题 | `onboarding.mjs` 标记后台任务；任务列表和搜索过滤；初始化会话继续读取实际回执 | `at-onboarding.test.mjs`、手机端初始化流程 |
 | 真人发起共创时填写目标、已有基础、开放任务、验收、参与、公开范围、审核人与费用；明确无期限；预览后本人发布 | `community.mjs` 的私有草稿、`project.brief.update` 和发布校验；`CommunityComposer`、`ProjectBriefEditor` 提供填写、预览、确认 | `handoffs.test.mjs` 缺项阻断与私有来源隔离；手机端创建→预览→发布 |
 | 首个公开任务可直接认领，公开约定变更需成员重新确认 | 首次发布把 Brief 的开放任务创建为真实任务位；一般认领和副本沿同一任务位，更新 Brief 后旧公开约定保持到本人再发布 | `original-requirements.test.mjs` 的任务身份、认领、副本和变更验证 |
+| 指定截止日后停止新参与，发起者延长日期后才可重新招募 | 认领、申请批准和重新开放招募均按发起者时区的日历日检查截止 | `original-requirements.test.mjs` 的截止日期用例 |
 | 社区内容只能真人公开；私人资料不自动带入共创帖 | 社区命令拒绝 Agent 发布；公开帖仅复制经确认的 Brief 字段 | `completion.test.mjs`、`handoffs.test.mjs` |
 | 项目成员持续共享工作状态；过程稿与正式贡献、公开作品有区分 | 项目副本、任务进度、阶段稿、提交、采纳、发布独立；看板只显示已共享阶段预览 | `project-progress.test.mjs`、`original-requirements.test.mjs` |
 | 对阶段版本反馈，变化后下游重验；非成员不得查看 | `project.feedback` 固定阶段版本；旧版本只保留历史，不再可用于执行；成员权限过滤 | `project-progress.test.mjs`；`project-live.test.mjs` 双账号 SSE 与非成员拒读 |

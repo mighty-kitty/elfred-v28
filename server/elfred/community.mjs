@@ -6,6 +6,15 @@ import {attachmentRefs} from './attachments.mjs';
 import {validateWebArtifact} from './preview.mjs';
 import {slotCommand,publicSlots,checkSlot,requiresApproval} from './project-slots.mjs';
 
+function deadlinePassed(store,project){
+ if(project.data.deadline_mode!=='date')return false;
+ const date=project.data.deadline;
+ if(typeof date!=='string'||!/^\d{4}-\d{2}-\d{2}$/.test(date)||!Number.isFinite(Date.parse(date))||new Date(date).toISOString().slice(0,10)!==date)fail('INVALID_DEADLINE','截止日期无效');
+ const timezone=store.visible(project.owner,'settings')[0]?.data.timezone||'Asia/Shanghai';
+ let today;try{today=new Intl.DateTimeFormat('en-CA',{timeZone:timezone,year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date());}catch{today=new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Shanghai',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date());}
+ return date<today;
+}
+
 export function communityCommand(store,user,action,input) {
   if(/^(post|project|claim|copy|contribution)\./.test(action)&&(!store.user(user)||input.actor_type==='agent'||input.auto_publish===true))fail('HUMAN_REQUIRED','社区内容只能由登录用户主动发布',403);
   const slotResult=slotCommand(store,user,action,input);if(slotResult)return slotResult;
@@ -31,6 +40,7 @@ export function communityCommand(store,user,action,input) {
     const project=store.expect(store.owned(user,input.id,'project'),input.version);
     if(project.data.status==='ended')fail('PROJECT_CLOSED','项目已结束');
     const recruiting=input.enabled===true;
+    if(recruiting&&deadlinePassed(store,project))fail('CLOSED','截止日期已过，请先更新项目日期');
     for(const post of store.list('post').filter(item=>item.data.project_id===project.id))store.update(post,{...post.data,status:recruiting?'recruiting':'closed'},user);
     return {id:store.update(project,{...project.data,recruiting},user).id};
   }
@@ -43,7 +53,7 @@ export function communityCommand(store,user,action,input) {
     if(project.data.status==='ended')fail('PROJECT_CLOSED','项目已结束');
     const deadline_mode=enumeration(input.deadline_mode,['none','date'],'截止设置');
     const deadline=deadline_mode==='date'?string(input.deadline,'截止日期',40):null;
-    if(deadline&&(!Number.isFinite(Date.parse(deadline))||Date.parse(deadline)<=Date.now()))fail('INVALID_DEADLINE','截止日期必须晚于现在');
+    if(deadlinePassed(store,{...project,data:{...project.data,deadline_mode,deadline}}))fail('INVALID_DEADLINE','截止日期已过');
     const data={...project.data,title:string(input.title,'项目名',200),goal:string(input.goal,'项目目标',3000),criteria:string(input.criteria,'验收标准',2000),task:string(input.task,'开放任务',2000),basis:string(input.basis,'已有基础',3000),public_scope:enumeration(input.public_scope,['brief'],'公开范围'),reviewer_id:input.reviewer_id===user?user:null,fee_terms:string(input.fee_terms,'费用说明',1000),deadline_mode,deadline,participation:enumeration(input.participation,['open','application'],'参与方式')};
     if(!data.reviewer_id)fail('INVALID_REVIEWER','当前需由项目发起者本人负责最终审核');
     const updated=store.update(project,data,user);
@@ -58,7 +68,7 @@ export function communityCommand(store,user,action,input) {
     if(input.confirm!==true) fail('CONFIRMATION_REQUIRED','请确认公开文字和参与范围');
     const missing=['title','goal','basis','task','criteria','participation','public_scope','reviewer_id','fee_terms','deadline_mode'].filter(key=>!project.data[key]);
     if(missing.length)fail('BRIEF_INCOMPLETE','公开前请补齐：'+missing.join('、'));
-    if(project.data.deadline_mode==='date'&&(!project.data.deadline||Date.parse(project.data.deadline)<=Date.now()))fail('INVALID_DEADLINE','截止日期必须晚于现在');
+    if(deadlinePassed(store,project))fail('INVALID_DEADLINE','截止日期已过');
     if(project.data.reviewer_id!==project.owner)fail('INVALID_REVIEWER','当前需由发起者本人负责最终审核');
     // The first brief task is a real claimable task, even when the owner has not
     // split the work into more detailed slots yet.
@@ -74,7 +84,7 @@ export function communityCommand(store,user,action,input) {
   }
   if(action==='project.claim') {
     const post=store.read(user,input.post_id,'post'),project=store.get(post.data.project_id);
-    if(!project?.data.recruiting || post.data.status!=='recruiting') fail('CLOSED','项目已停止招募');
+    if(!project?.data.recruiting || post.data.status!=='recruiting'||deadlinePassed(store,project)) fail('CLOSED','项目已停止招募或超过截止日期');
     if(input.confirm!==true) fail('CONFIRMATION_REQUIRED','请确认本人参与承诺');
     if(store.list('claim').some(item=>item.owner===user&&item.data.project_id===project.id&&item.data.status==='removed'))fail('MEMBERSHIP_REVOKED','参与资格已撤销，需要发起者重新批准',403);
     const publishedSlots=post.data.slots||[];
@@ -95,7 +105,7 @@ export function communityCommand(store,user,action,input) {
   if(action==='claim.review') {
     const claim=store.get(input.id);if(!claim || claim.type!=='claim') fail('NOT_FOUND','申请不存在',404);
     const project=store.owned(user,claim.data.project_id,'project');store.expect(claim,input.version);
-    if(input.accept===true&&!project.data.recruiting)fail('CLOSED','项目已停止招募');
+    if(input.accept===true&&(!project.data.recruiting||deadlinePassed(store,project)))fail('CLOSED','项目已停止招募或超过截止日期');
     if(claim.data.status!=='pending') fail('INVALID_STATE','申请已处理',409);
     if(input.accept===true){const slot=claim.data.slot_id?store.get(claim.data.slot_id):null;if(slot&&claim.data.rules_version!==slot.version)fail('SLOT_RULES_CHANGED','任务约定已变化，请由申请人重新确认');checkSlot(store,project,slot,claim.data.slot_id);store.join(claim.data.project_id,claim.owner);}
     return {id:store.update(claim,{...claim.data,status:input.accept===true?'accepted':'declined',review_note:string(input.note||(input.accept===true?'发起者已批准':'本次申请未获接纳，可调整后重新申请'),'审核说明',1000)},user).id};

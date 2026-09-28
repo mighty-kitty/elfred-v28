@@ -33,6 +33,14 @@ test('共创公开的第一项任务有可认领身份，申请与副本沿同�
  cmd(a,'project.publish_post',{...ref(project),confirm:true});
  assert.equal(store.get(post.id).data.slots[0].title,'完善移动布局与键盘');
 });
+test('共创截止日期按发起者日历日执行，过期不能新认领或重新招募',t=>{
+ const {store,users:[a,b],cmd,ref}=setup(t);
+ const project=cmd(a,'project.create',{title:'有期限的项目',goal:'共同完成页面',basis:'已有草稿',task:'检查移动布局',criteria:'窄屏可读',public_scope:'brief',reviewer_id:a.id,fee_terms:'各自承担费用',deadline_mode:'date',deadline:'2999-12-31',participation:'open'});
+ const post=cmd(a,'project.publish_post',{...ref(project),confirm:true});
+ store.update(store.get(project.id),{...store.get(project.id).data,deadline:'2020-01-01'},a.id);
+ assert.throws(()=>cmd(b,'project.claim',{post_id:post.id,confirm:true}),{code:'CLOSED'});
+ assert.throws(()=>cmd(a,'project.recruiting',{...ref(project),enabled:true}),{code:'CLOSED'});
+});
 test('原稿 H02/H04：未排期想法不进入今日；接受才改安排，拒绝不改',t=>{
  const {store,users:[a],cmd,ref}=setup(t),task=cmd(a,'task.create',{goal:'未来的想法'});
  assert.equal(dailyTasks([store.get(task.id)]).length,0);

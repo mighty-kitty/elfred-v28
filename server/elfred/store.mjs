@@ -27,6 +27,8 @@ export class Store {
       CREATE TABLE IF NOT EXISTS commands(actor TEXT NOT NULL,key TEXT NOT NULL,digest TEXT NOT NULL,result TEXT NOT NULL,PRIMARY KEY(actor,key));
       CREATE TABLE IF NOT EXISTS jobs(id TEXT PRIMARY KEY,run_id TEXT UNIQUE NOT NULL,status TEXT NOT NULL,lease TEXT,lease_until INTEGER NOT NULL DEFAULT 0,attempt INTEGER NOT NULL DEFAULT 0);
       CREATE TABLE IF NOT EXISTS login_attempts(key TEXT PRIMARY KEY,count INTEGER NOT NULL,until INTEGER NOT NULL);
+      CREATE TABLE IF NOT EXISTS email_challenges(email TEXT PRIMARY KEY,code_digest TEXT NOT NULL,expires INTEGER NOT NULL,requested_at INTEGER NOT NULL,attempts INTEGER NOT NULL DEFAULT 0,request_id TEXT NOT NULL);
+      CREATE TABLE IF NOT EXISTS verified_emails(email TEXT PRIMARY KEY,user_id TEXT NOT NULL UNIQUE REFERENCES users(id),verified_at TEXT NOT NULL);
       CREATE TABLE IF NOT EXISTS migrations(version INTEGER PRIMARY KEY, applied_at TEXT NOT NULL);
       CREATE TABLE IF NOT EXISTS object_versions(object_id TEXT NOT NULL,version INTEGER NOT NULL,data TEXT NOT NULL,at TEXT NOT NULL,PRIMARY KEY(object_id,version));
       CREATE TABLE IF NOT EXISTS unique_keys(namespace TEXT NOT NULL,key TEXT NOT NULL,object_id TEXT NOT NULL REFERENCES objects(id),PRIMARY KEY(namespace,key));

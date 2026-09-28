@@ -1,6 +1,7 @@
 import {semanticPreview,semanticResults} from './semantic-search.mjs';
 import {searchJudgment} from './search-commands.mjs';
 import { authenticate, session } from './auth.mjs';
+import {consumeEmailCode,emailConfigured,markVerifiedEmail,requestEmailCode} from './email-verification.mjs';
 import {parseFile} from './file-parser.mjs';
 import {PREVIEW_CSP,validateWebArtifact,renderWebArtifact} from './preview.mjs';
 import { DomainError, fail, hash } from './store.mjs';
@@ -16,8 +17,9 @@ async function readBody(request) {
   for await(const chunk of request) {size+=chunk.length;if(size>12000000) fail('BODY_TOO_LARGE','请求内容过大',413);chunks.push(chunk);}
   try {const value=JSON.parse(Buffer.concat(chunks).toString('utf8'));if(!value||typeof value!=='object'||Array.isArray(value)) throw new Error();return value;}catch {fail('INVALID_JSON','请求格式不正确');}
 }
-export function apiHandler(service,{origin='http://127.0.0.1:3000'}={}) {
+export function apiHandler(service,{origin='http://127.0.0.1:3000',emailConfig=process.env,emailFetch=fetch}={}) {
   const s=service.store;
+  const emailActive=emailConfigured(emailConfig)&&(origin.startsWith('https://')||/^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin));
   return async(request,response)=>{
     const url=new URL(request.url,origin);
     if(!url.pathname.startsWith('/api/elfred')) return false;
@@ -30,17 +32,30 @@ export function apiHandler(service,{origin='http://127.0.0.1:3000'}={}) {
       const user=session(s,token);
       if(method!=='GET') {
         if(request.headers.origin!==origin || request.headers['x-elfred-client']!=='1') fail('CSRF_REJECTED','请从当前应用发起操作',403);
-        if(!['/auth/login','/auth/register'].includes(route) && (!user||request.headers['x-csrf-token']!==hash(token+':csrf'))) fail('CSRF_REJECTED','会话已变化，请刷新后重试',403);
+        if(!['/auth/login','/auth/register','/auth/email/request'].includes(route) && (!user||request.headers['x-csrf-token']!==hash(token+':csrf'))) fail('CSRF_REJECTED','会话已变化，请刷新后重试',403);
       }
       if(method==='GET' && route==='/health') {send(200,{status:'ok',storage:'sqlite',mode:'local'});return true;}
+      if(method==='GET' && route==='/auth/email/status') {send(200,{configured:emailActive});return true;}
       if(method==='GET' && route==='/session') {send(200,{user:user||null,csrf:user?hash(token+':csrf'):null});return true;}
+      if(method==='POST' && route==='/auth/email/request') {
+        if(!emailActive)fail('EMAIL_NOT_CONFIGURED','邮箱验证需要已配置的发件服务和 HTTPS 地址',503);
+        const input=await readBody(request);
+        send(200,await requestEmailCode(s,input.email,request.socket.remoteAddress,emailConfig,emailFetch));return true;
+      }
       if(method==='POST' && ['/auth/login','/auth/register'].includes(route)) {
         const input=await readBody(request);
         const key=hash('ip:'+request.socket.remoteAddress),time=Date.now();
         const limit=s.db.prepare('SELECT * FROM login_attempts WHERE key=?').get(key);
         if(limit && limit.until>time && limit.count>=50) fail('RATE_LIMIT','登录请求过多，请稍后再试',429);
         s.db.prepare('INSERT INTO login_attempts VALUES(?,1,?) ON CONFLICT(key) DO UPDATE SET count=CASE WHEN until<? THEN 1 ELSE count+1 END,until=CASE WHEN until<? THEN excluded.until ELSE until END').run(key,time+900000,time,time);
-        const result=authenticate(s,input.handle,input.password,route==='/auth/register',input.name,request.socket.remoteAddress);
+        const registering=route==='/auth/register',verifyEmail=registering&&typeof input.handle==='string'&&input.handle.includes('@')&&emailActive;
+        const verifiedEmail=verifyEmail?consumeEmailCode(s,input.handle,input.email_code,emailConfig):null;
+        const createAccount=()=>{
+          const account=authenticate(s,input.handle,input.password,registering,input.name,request.socket.remoteAddress);
+          if(verifiedEmail)markVerifiedEmail(s,verifiedEmail,account.user.id);
+          return account;
+        };
+        const result=verifiedEmail?s.transaction(createAccount):createAccount();
         service.initialize(result.user);
         send(200,{user:result.user,csrf:hash(result.token+':csrf')},{'Set-Cookie':`elfred_session=${result.token}; Path=/; HttpOnly; SameSite=Strict; Max-Age=604800${origin.startsWith('https:')?'; Secure':''}`});return true;
       }

@@ -214,6 +214,10 @@
 .v280-login-form {
   margin-top: 40px;
 }
+.v280-email-code-row{display:flex;align-items:center;gap:8px;min-width:0}
+.v280-login-form .v280-email-code-row input{flex:1;min-width:0;width:auto}
+.v280-email-code-row button{flex:none;min-height:52px;padding:0 12px;white-space:nowrap}
+.v280-login-form label small{margin-top:7px;color:var(--v280-secondary);font-size:12px;line-height:1.5}
 
 .v280-login-form > label,
 .v280-init-fields > label,

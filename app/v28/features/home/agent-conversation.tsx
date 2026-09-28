@@ -11,7 +11,8 @@ import type {Screen} from '../../core/screen';
 import {useRuntime,entityRef} from '../../core/runtime-context';
 import {Action} from '../../core/runtime-panels';
 import {statuses,text as entityText} from '../live/types';
-import {MarkdownContent} from '../../core/markdown-content';
+import {InlineHtmlPreview} from '../../core/inline-html-preview';
+import {extractHtmlPreview} from '../../core/inline-html-preview.mjs';
 import {Globe,Wrench} from 'lucide-react';
 import './agent-conversation-tools.css';
 
@@ -125,7 +126,7 @@ export function AgentConversationPage({id,go,onBack,prefill,conversationId,messa
       </div>}
       {messages.map(message=><div key={message.id} data-message-id={message.id} className={'v283-agent-chat-row '+(message.data.actor_type==='human'?'mine':'theirs')}>
         {message.data.actor_type!=='human'&&<i className={'v283-agent-avatar small agent-'+id}><Icon size={18}/></i>}
-        <div className="v283-agent-chat-bubble">{message.data.actor_type==='human'?String(message.data.text||''):<><MarkdownContent text={String(message.data.text||'')}/>{!!(message.data.citations as {title:string;url:string}[]|undefined)?.length&&<details className="elfred-chat-sources"><summary>查看来源</summary>{(message.data.citations as {title:string;url:string}[]).map(source=><a key={source.url} href={source.url} target="_blank" rel="noopener noreferrer">{source.title}</a>)}</details>}{Boolean(message.data.tool_id)&&<small>已使用保存的工具</small>}</>}</div>
+        <div className={'v283-agent-chat-bubble'+(message.data.actor_type!=='human'&&extractHtmlPreview(String(message.data.text||''))?' has-html-preview':'')}>{message.data.actor_type==='human'?String(message.data.text||''):<><InlineHtmlPreview source={String(message.data.text||'')} title="Agent 网页预览"/>{!!(message.data.citations as {title:string;url:string}[]|undefined)?.length&&<details className="elfred-chat-sources"><summary>查看来源</summary>{(message.data.citations as {title:string;url:string}[]).map(source=><a key={source.url} href={source.url} target="_blank" rel="noopener noreferrer">{source.title}</a>)}</details>}{Boolean(message.data.tool_id)&&<small>已使用保存的工具</small>}</>}</div>
       </div>)}
       {pending&&<div className="v283-agent-chat-row theirs"><i className={'v283-agent-avatar small agent-'+id}><Icon size={18}/></i><div className="v283-agent-chat-bubble subtle">{pending.data.web_lookup?'正在联网查阅…':pending.data.skill_id?'正在调用工具…':'正在回复…'}</div></div>}
       {failed&&!pending&&<p className="v283-agent-chat-status">这次回复未完成：{String(((runtime?.snapshot?.objects.run||[]).find(item=>item.id===failed.data.run_id)?.data.error as {message?:string}|undefined)?.message||'请重试发送；已发送的消息仍保留在对话中。')}</p>}

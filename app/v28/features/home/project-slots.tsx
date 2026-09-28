@@ -4,9 +4,9 @@ import {useState} from 'react';
 import {useRuntime,entityRef} from '../../core/runtime-context';
 import {Action,Field} from '../../core/runtime-panels';
 import {text,type Entity} from '../live/types';
-export function ArtifactPreview({item}:{item:Entity}){
- const [open,setOpen]=useState(false);
- return item.data.format==='web'?<><button className="v277-secondary" onClick={()=>setOpen(!open)}>{open?'关闭作品预览':'运行作品预览'}</button>{open&&<iframe title="共创作品预览" sandbox="allow-scripts" src={`/api/elfred/preview/${item.id}`} style={{width:'100%',height:360,border:'1px solid #e5e7eb',borderRadius:12}}/>}</>:null;
+export function ArtifactPreview({item,autoOpen=false}:{item:Entity;autoOpen?:boolean}){
+ const [open,setOpen]=useState(autoOpen),[interactive,setInteractive]=useState(false);
+ return item.data.format==='web'?<><button type="button" className="v277-secondary" onClick={()=>setOpen(!open)}>{open?'收起作品预览':'查看作品预览'}</button>{open&&<><button type="button" className="v277-secondary" onClick={()=>setInteractive(value=>!value)}>{interactive?'停止交互':'运行交互'}</button><iframe key={interactive?'interactive':'static'} title="共创作品预览" sandbox={interactive?'allow-scripts':''} src={`/api/elfred/preview/${item.id}`} style={{display:'block',width:'100%',height:360,border:'1px solid #e5e7eb',borderRadius:12}}/></>}</>:null;
 }
 type Slot={id:string;title:string;criteria:string;capacity:number|null;filled?:number;terms_changed?:boolean;rules_version?:number;risk?:string;participation?:string;deadline?:string;status:string;depends_on:string[]};
 export function ProjectSlots({project,post}:{project?:Entity;post?:Entity}){

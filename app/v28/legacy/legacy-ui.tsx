@@ -2,6 +2,7 @@
 import {AccountForm} from '../core/account-form';
 import {displayTitle,displayError} from "../core/display-labels";
 import {MarkdownContent} from '../core/markdown-content';
+import {extractHtmlPreview} from '../core/inline-html-preview.mjs';
 import {PlayerRunLog} from '../features/home/player-run-log';
 import {PlayerModelSettings} from '../features/home/player-model-settings';
 import {FollowAuthor,RecruitmentSummary} from '../features/home/community-author';
@@ -6261,7 +6262,7 @@ export function CommunityPage({
   const followed=(author:string)=>Boolean(runtime?.snapshot?.objects.interaction.some(i=>i.data.kind==='follow_author'&&i.data.object_id===author&&i.data.active));
   const visibleWorks=runtime?.snapshot?.objects.release.filter(r=>r.visibility==='public'&&r.data.author_type==='human'&&r.data.status==='published'&&r.data.is_current&&(communityKind!=='following'||followed(r.owner))&&!runtime.snapshot?.objects.interaction.some(i=>i.data.object_id===r.id&&i.data.kind==='hide'&&i.data.active))||[];
   const shownWorks=runtime&&['all','work','following'].includes(communityKind)?visibleWorks:[];
-  const visiblePosts:SocialPost[]=runtime?(runtime.snapshot?.objects.post||[]).filter(item=>item.visibility==='public'&&item.data.author_type==='human'&&['published','recruiting','closed'].includes(String(item.data.status))&&!state.hiddenPostIds.includes(item.id)&&(communityKind!=='following'||followed(item.owner))&&(['all','following'].includes(communityKind)||(communityKind==='project'?Boolean(item.data.project_id):communityKind==='post'?!item.data.project_id:false))).map(item=>({id:item.id,name:entityText(item,'author_name')||displayTitle(entityText(item,'title'),'社区动态'),date:new Date(item.created).toLocaleDateString('zh-CN'),text:entityText(item,'content'),likes:Number(item.data.likes||0),comments:Number(item.data.comments||0),avatar:'lin'})):communityPosts;
+  const visiblePosts:SocialPost[]=runtime?(runtime.snapshot?.objects.post||[]).filter(item=>item.visibility==='public'&&item.data.author_type==='human'&&['published','recruiting','closed'].includes(String(item.data.status))&&!state.hiddenPostIds.includes(item.id)&&(communityKind!=='following'||followed(item.owner))&&(['all','following'].includes(communityKind)||(communityKind==='project'?Boolean(item.data.project_id):communityKind==='post'?!item.data.project_id:false))).map(item=>({id:item.id,name:entityText(item,'author_name')||displayTitle(entityText(item,'title'),'社区动态'),date:new Date(item.created).toLocaleDateString('zh-CN'),text:(()=>{const source=entityText(item,'content'),preview=extractHtmlPreview(source);return preview?(preview.description?preview.description.slice(0,120)+' · 网页预览':'网页预览 · 点击查看效果'):source})(),likes:Number(item.data.likes||0),comments:Number(item.data.comments||0),avatar:'lin'})):communityPosts;
   const communityDates = new Map([...(runtime?.snapshot?.objects.post || []), ...shownWorks].map(item => [item.id, item.created]));
   const toggleSaved = (id: string) => {
     if(runtime){void runtime.command('post.interact',{id,kind:'save'}).catch(()=>{});return;}

@@ -4,11 +4,12 @@ import {displayTitle} from '../../core/display-labels';
 import {useRuntime,entityRef} from '../../core/runtime-context';
 import {Action,Field} from '../../core/runtime-panels';
 import {AttachmentList,type FileRef} from '../live/attachments';
+import {MarkdownContent} from '../../core/markdown-content';
 import {type Entity,text} from '../live/types';
 import type {Screen} from '../../core/screen';
 import './feed-details.css';
 
-type PeerComment={id:string;system:string;content:string};
+type PeerComment={id:string;system:string;content:string;reply_to?:string|null};
 
 export function FeedDetails({item,go}:{item:Entity;go:(screen:Screen)=>void}){
  const r=useRuntime()!,s=r.snapshot!;
@@ -33,7 +34,7 @@ export function FeedDetails({item,go}:{item:Entity;go:(screen:Screen)=>void}){
   <section className="elfred-feed-thread" aria-label="私人动态评论">
    <h3>评论</h3>
    {human.length===0&&responses.length===0&&((item.data.comments||[]) as PeerComment[]).length===0&&<p className="elfred-feed-empty">还没有评论</p>}
-   {((item.data.comments||[]) as PeerComment[]).map(c=><article key={c.id}><b>{s.systems.find(a=>a.id===c.system)?.name||'Agent'} Agent</b><p>{c.content}</p></article>)}
+   {((item.data.comments||[]) as PeerComment[]).map(c=><article key={c.id} className={c.reply_to?'elfred-feed-reply':''}><b>{s.systems.find(a=>a.id===c.system)?.name||'Agent'} Agent{c.reply_to?' 回复':''}</b><MarkdownContent text={c.content}/></article>)}
    {feedback.filter(f=>['human_comment','agent_response'].includes(String(f.data.kind))).map(f=><article key={f.id} className={f.data.reply_to?'elfred-feed-reply':''}>
     <b>{f.data.kind==='human_comment'?'我':`${s.systems.find(a=>a.id===f.data.system)?.name||'Agent'} Agent`}{f.data.reply_to?' 回复我':''}</b>
     <p>{text(f,'content')}</p>

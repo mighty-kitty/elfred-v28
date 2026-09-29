@@ -28,3 +28,12 @@
 .v280-device .v279-human-chat-stream .v277-message p{white-space:pre-wrap}
 .v280-device .elfred-mention-composer>textarea{font-size:16px;caret-color:#3478f6}
 .elfred-group-agent-avatar{display:inline-flex;align-items:center;justify-content:center;flex:0 0 34px;width:34px;height:34px;border-radius:50%;background:#121619;color:#fff}
+.elfred-mention-picker{bottom:calc(var(--elfred-composer-height,64px) + 28px);padding:10px 12px;max-height:min(45vh,280px);overscroll-behavior:contain}
+.elfred-mention-personal{min-height:56px;padding:7px 4px}
+.elfred-mention-logo{width:38px;height:38px}
+.elfred-mention-results{max-height:164px}
+.elfred-mention-simple-hint{margin:4px 4px 2px!important;padding-top:8px;border-top:1px solid #f0f1f3;color:#8a939b;font-size:11px!important;line-height:1.5!important}
+.elfred-mention-results strong{display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;overflow:hidden;overflow-wrap:anywhere}
+.v280-device .v279-human-chat-page{display:flex;flex-direction:column;min-height:0}
+.v280-device .v279-human-chat-head{flex:0 0 74px}
+.v280-device .v279-human-chat-stream{flex:1;min-height:0;height:auto!important;overflow-y:auto!important;overscroll-behavior-y:contain;padding-bottom:calc(var(--elfred-composer-height,64px) + 32px)!important}

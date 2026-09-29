@@ -35,6 +35,12 @@ function readableExcerpt(summary: string, title: string) {
   return candidate.match(/^.{1,160}?[。！？]/)?.[0] || candidate.slice(0, 160);
 }
 
+function readableComment(content:string){
+  const lines=content.split(/\r?\n/).map(line=>line.replace(/^\s*(?:#{1,6}\s*|[-*•]\s*)/,'').replace(/\*\*/g,'').trim()).filter(line=>line&&!/^(?:目标|任务|审查范围|待核对主张|证据核对|风险与证据|背景|输出要求|应对与停止条件)(?:[:：]|$)/.test(line));
+  const sentence=lines.find(line=>line.length>=18)||lines[0]||'';
+  return sentence.slice(0,120)+(sentence.length>120?'…':'');
+}
+
 export function PrivateFeed({ go, onDrag }: { go: (screen: Screen) => void; onDrag: (value: boolean) => void }) {
   const runtime = useRuntime()!;
   const snapshot = runtime.snapshot!;
@@ -72,6 +78,7 @@ export function PrivateFeed({ go, onDrag }: { go: (screen: Screen) => void; onDr
         <SlidersHorizontal size={20} />
       </button>
     </header>
+    {items.length>0&&!peerComments?.enabled&&<div className={styles.peerPrompt}><span>让其他 Agent 补充真实发现</span><Action run={()=>runtime.command('feed.peer_comments.policy',{...entityRef(snapshot.objects.settings[0]),enabled:true,daily_limit:3,confirm:true,model_consent:true})}>开启互评</Action></div>}
     {filtersOpen && <div className={styles.filters}>
       <Action run={()=>runtime.command('feed.peer_comments.policy',{...entityRef(snapshot.objects.settings[0]),enabled:!peerComments?.enabled,daily_limit:3,confirm:true,model_consent:true})}>{peerComments?.enabled?'暂停 Agent 自主评论':'开启 Agent 自主评论'}</Action><small>启用后，其他 Agent 可基于已验收成果或真实来源，自动补充私人评论；每天最多 3 次模型调用，每次最多 1000 本地额度。</small>
       <div className={styles.sort} role="group" aria-label="朋友圈排序">
@@ -106,7 +113,7 @@ export function PrivateFeed({ go, onDrag }: { go: (screen: Screen) => void; onDr
             .filter(candidate => /^(image|video)\//.test(candidate.mime) && snapshot.objects.attachment.some(file => file.id === candidate.id)).slice(0,3)
           : [];
         const commentPreview = [
-          ...((item.data.comments||[]) as {id:string;system:string;content:string}[]).map(c=>({id:c.id,name:`${snapshot.systems.find(agent=>agent.id===c.system)?.name||'Agent'} Agent`,content:c.content})),
+          ...((item.data.comments||[]) as {id:string;system:string;content:string;reply_to?:string|null}[]).map(c=>({id:c.id,name:`${snapshot.systems.find(agent=>agent.id===c.system)?.name||'Agent'} Agent${c.reply_to?' 回复':''}`,content:c.content})),
           ...snapshot.objects.feedback.filter(f=>f.data.feed_id===item.id&&['human_comment','agent_response'].includes(String(f.data.kind))).map(f=>({id:f.id,name:f.data.kind==='human_comment'?'我':`${snapshot.systems.find(agent=>agent.id===f.data.system)?.name||'Agent'} Agent`,content:text(f,'content')})),
         ].slice(-2);
         return <article key={item.id} className={styles.post} draggable onDragStart={event => {
@@ -130,7 +137,7 @@ export function PrivateFeed({ go, onDrag }: { go: (screen: Screen) => void; onDr
                   <MoreHorizontal size={24} />
                 </button>
               </footer>
-              {commentPreview.length>0&&<div className={styles.peerComments}>{commentPreview.map(comment=><p key={comment.id}><b>{comment.name}：</b>{comment.content.slice(0,160)}</p>)}</div>}
+              {commentPreview.length>0&&<div className={styles.peerComments}>{commentPreview.map(comment=><p key={comment.id}><b>{comment.name}：</b>{readableComment(comment.content)}</p>)}</div>}
             </div>
           </div>
           {menuId === item.id && <div className={styles.menu}>

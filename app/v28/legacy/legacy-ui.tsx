@@ -12,6 +12,7 @@ import {TaskContext} from '../features/home/task-context';
 import {ConnectedSearch} from '../features/home/connected-search';
 import {KnowledgeEditor} from '../features/home/knowledge-editor';
 import {MentionPicker} from '../features/messages/mention-picker';
+import {ChatAvatar} from '../features/messages/chat-avatar';
 import {PersonalAgentPanel,type PersonalAgentHandle} from '../features/messages/personal-agent';
 import {VoiceInput} from '../features/messages/voice-input';
 import {BuiltinCapabilities,TaskCapability} from '../features/home/builtin-capabilities';
@@ -5757,7 +5758,7 @@ export function MessageSearchSheet({
                 go({ name: "chat", id: item.id, messageId:item.messageId });
               }}
             >
-              <i className={`${item.avatar} v277-sprite-community`} />
+              <ChatAvatar name={item.name} id={item.id} group={item.kind==='群聊'} live={Boolean(runtime)}/>
               <span>
                 <b>{item.name}</b>
                 <p>{item.text}</p>
@@ -5808,8 +5809,7 @@ export function ChatPage({
   const [composerHeight,setComposerHeight]=useState(64);
   const mentionGeneration=useRef(0);
   useEffect(()=>{mentionGeneration.current++;return()=>{mentionGeneration.current++}},[id]);
-  useEffect(()=>{if(agentMode)agentAnchor.current?.scrollIntoView({block:'start'})},[agentMode]);
-  useEffect(()=>{if(!mentionBusy&&!mention)composerInput.current?.focus()},[agentMode,mentionBusy,Boolean(mention)]);
+  // Keep the page still while the native keyboard opens; focus only after a direct user action.
   const [searchHits,setSearchHits]=useState<{id:string;type:string;title:string;excerpt:string}[]|null>(null);
   const lastHumanMessage=runtime?.snapshot?.objects.message.filter(item=>item.space===id).sort((a,b)=>Number(b.data.seq)-Number(a.data.seq))[0];
   const cold=conversation?.data.kind==='direct'&&(!lastHumanMessage||Date.parse(runtime?.snapshot?.server_time||lastHumanMessage.created)-Date.parse(lastHumanMessage.created)>=7*86400000);
@@ -5846,6 +5846,7 @@ export function ChatPage({
   const [moreOpen, setMoreOpen] = useState(false);
   const agent = agentList.find((item) => item.id === id);
   const contact = conversation?{name:displayTitle(entityText(conversation,'title'),'会话'),subtitle:conversation.data.kind==='group'?'群聊 · '+conversation.members?.length+' 人':'真人会话',greeting:''}:runtime?undefined:chatDirectory[id];
+  const chatName=contact?.name||'';
   const isHuman = Boolean(conversation || (contact && id.startsWith("person-")));
   const humanPreview: V277Message[] =
     id === "person-linjia"
@@ -5985,9 +5986,7 @@ export function ChatPage({
             className="v279-chat-person"
             onClick={() => go({ name: "friend-profile", id })}
           >
-            <i className="avatar-lin v277-sprite-community">
-              <em />
-            </i>
+            <ChatAvatar name={chatName} id={id} group={isGroup} live={Boolean(conversation)}/>
             <span>
               <b>{contact?.name}</b>
               <small>{contact?.subtitle}</small>
@@ -6009,7 +6008,7 @@ export function ChatPage({
           {messages.filter(message=>!chatQuery||message.text.includes(chatQuery)).slice(chatQuery||messageId?0:-messageLimit).map((message, index) => (
             <Fragment key={message.id}>
               <div id={"message-"+message.id} className={`v277-message ${message.role}`} style={message.id===messageId?{outline:"2px solid #7894a4",borderRadius:12}:undefined}>
-                {message.role === "assistant" && (runtime?.snapshot?.objects.message.find(item=>item.id===message.id)?.data.actor_type==='agent'?<span className="elfred-group-agent-avatar" aria-label="AI Agent"><Bot size={19}/></span>:<i className="avatar-lin v277-sprite-community" />)}
+                {message.role === "assistant" && (runtime?.snapshot?.objects.message.find(item=>item.id===message.id)?.data.actor_type==='agent'?<span className="elfred-group-agent-avatar" aria-label="AI Agent"><Bot size={19}/></span>:<ChatAvatar name={runtime?entityText(runtime.snapshot?.objects.message.find(item=>item.id===message.id),'sender_name')||chatName:chatName} id={id} live={Boolean(conversation)} small/>)}
                 <div>
                   {runtime&&<small>{entityText(runtime.snapshot?.objects.message.find(item=>item.id===message.id),'sender_name')} · {message.time}</small>}
                   <p>{message.text}</p>{runtime&&runtime.snapshot?.objects.message.find(item=>item.id===message.id)?.data.actor_type==='agent'&&<><small>AI 协作建议 · 日程、介绍和承诺待相关成员确认</small><details><summary>查看引用的群消息</summary>{((runtime.snapshot?.objects.message.find(item=>item.id===message.id)?.data.source_refs||[]) as {id:string}[]).map(ref=>{const source=runtime.snapshot?.objects.message.find(item=>item.id===ref.id);return <button type="button" key={ref.id} className="v277-secondary" onClick={()=>document.getElementById('message-'+ref.id)?.scrollIntoView({block:'center'})}>{source?`${entityText(source,'sender_name')}：${entityText(source,'text').slice(0,60)}`:'来源已不可访问'}</button>})}</details></>}{runtime&&<SharedRecordCard message={runtime.snapshot?.objects.message.find(item=>item.id===message.id)} go={go}/>}{runtime&&<AttachmentList items={(runtime.snapshot?.objects.message.find(item=>item.id===message.id)?.data.attachments||[]) as FileRef[]}/>}
@@ -6045,9 +6044,8 @@ export function ChatPage({
           {runtime&&conversation&&agentMode&&<div ref={agentAnchor}><PersonalAgentPanel ref={agentPanel} conversation={conversation} unreadAfter={unreadEntry?.after} entry={agentMode} onClose={()=>{if(!sending){setAgentMode(false);setSearchHits(null)}}} onFill={async(value,version)=>{setSending(true);try{await runtime.command('draft.save',{conversation_id:id,text:value,version});await reloadDraft(value)}finally{setSending(false)}}} go={go}/></div>}
           {agentMode&&searchHits&&<section className="elfred-search-results" aria-label="个人智能体搜索结果"><b>搜索结果 · {searchHits.length} 条</b>{!searchHits.length&&<p>未找到匹配资料，试试更具体的关键词。</p>}{searchHits.map(hit=><button type="button" key={hit.id} onClick={()=>{void runtime!.request<import('../features/live/types').Entity>('/objects/'+hit.id).then(item=>go(objectScreen(item))).catch(error=>runtime!.report(error.message))}}><b>{displayTitle(hit.title,'')}</b><p>{hit.excerpt}</p><small>{hit.type} · 查看来源</small></button>)}</section>}
         </section>
-        {runtime&&conversation&&mention&&!agentMode&&isGroup&&<section id="elfred-mention-picker" className="elfred-mention-picker" aria-label="选择群成员"><p className="elfred-mention-title">提及群成员或群协作 Agent</p><div className="elfred-mention-results">{groupAgentReady&&'Elfred'.toLowerCase().includes(mention.query.toLowerCase())&&<button className="elfred-mention-personal" type="button" onClick={chooseGroupAgent}><span><strong>Elfred · 群协作 Agent</strong><small>AI 身份公开回复 · 使用群内授权上下文</small></span></button>}{groupMembers.map(member=><button className="elfred-mention-personal" type="button" key={member.id} onClick={()=>chooseMember(member)}><span><strong>{member.name}</strong><small>@{member.handle}</small></span></button>)}{!groupMembers.length&&!groupAgentReady&&<p>没有匹配的当前群成员</p>}</div><button type="button" onClick={closeMention}>取消</button></section>}
+        {runtime&&conversation&&mention&&!agentMode&&isGroup&&<section id="elfred-mention-picker" className="elfred-mention-picker" aria-label="选择群成员"><p className="elfred-mention-title">选择群成员</p><div className="elfred-mention-results">{groupAgentReady&&'Elfred'.toLowerCase().includes(mention.query.toLowerCase())&&<button className="elfred-mention-personal" type="button" onMouseDown={event=>event.preventDefault()} onClick={chooseGroupAgent}><span><strong>Elfred</strong><small>群内 AI 回复</small></span></button>}{groupMembers.map(member=><button className="elfred-mention-personal" type="button" key={member.id} onMouseDown={event=>event.preventDefault()} onClick={()=>chooseMember(member)}><span><strong>{member.name}</strong><small>@{member.handle}</small></span></button>)}{!groupMembers.length&&!groupAgentReady&&<p>没有匹配的群成员</p>}</div></section>}
         {runtime&&conversation&&mention&&!agentMode&&!isGroup&&<MentionPicker query={mention.query} busy={mentionBusy} onPersonal={openMentionPersonal} onDismiss={closeMention} onResource={item=>{if(mentionBusy)return;setMentionBusy(true);const generation=mentionGeneration.current;void flushDraft().then(()=>{if(generation!==mentionGeneration.current)return;setMention(null);go(objectScreen(item))}).catch(()=>{}).finally(()=>{if(generation===mentionGeneration.current)setMentionBusy(false)})}}/>}
-        {mention&&!mention.prefix&&!mention.query&&<span className="elfred-mention-input-hint" aria-hidden="true">继续输入…</span>}
         <form className={`v279-human-composer ${runtime?'elfred-connected-composer':''} ${agentMode?'elfred-agent-mode':''} ${mention?'elfred-mention-composer':''}`} onSubmit={send}>
           <button type="button" aria-label="添加内容" disabled={sending} onClick={()=>void flushDraft().then(()=>setAssistOpen(true)).catch(()=>{})}>
             <Plus size={22} />

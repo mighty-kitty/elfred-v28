@@ -1,0 +1,4 @@
+.elfred-chat-avatar{display:inline-grid!important;place-items:center;flex:none;width:42px;height:42px;border-radius:50%;overflow:hidden;font-style:normal}
+.elfred-chat-avatar.is-small{width:32px!important;height:32px!important}
+.elfred-chat-avatar-fallback{background:#e8edf1;color:#435363;font-size:17px;font-weight:650;line-height:1}
+.elfred-chat-avatar-fallback.is-small{font-size:13px}

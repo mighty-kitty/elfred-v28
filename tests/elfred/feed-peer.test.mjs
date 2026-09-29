@@ -33,3 +33,15 @@ test('自主评论失败后保留动态并在退避期结束重试，不被旧�
  tickFeedPeerComments(store,provider);
  assert.equal(store.list('task').filter(task=>task.data.feed_peer_for===feed.id).length,2);
 });
+test('两名 Agent 在同一真实动态下先评论再回复，受到每日调用上限约束',async t=>{
+ const store=new Store(':memory:'),calls=[];t.after(()=>store.close());
+ const provider={status:()=>({configured:true}),generate:async request=>{calls.push(request);return {output:calls.length===1?'### 审查范围\n请先确认报名时间。':'目标：完成评论任务\n同意，时间确认后再安排下一步。',usage:{total_tokens:12}}}};
+ const service=new Service(store,provider),runtime=new Runtime(store,provider),user=authenticate(store,'feed-peer-dialogue','feed-peer-password',true,'本人').user;service.initialize(user);
+ const settings=store.visible(user.id,'settings')[0],feed=store.add('feed',user.id,{title:'报名信息有变化',summary:'真实来源显示活动报名时间更新',purpose:'discovery',system:'explore',status:'active',comments:[]});
+ service.command(user.id,id(),'feed.peer_comments.policy',{id:settings.id,version:settings.version,enabled:true,daily_limit:2,confirm:true,model_consent:true});
+ for(let i=0;i<5;i++)await runtime.tick();
+ const comments=store.get(feed.id).data.comments;
+ assert.equal(comments.length,2);assert.equal(calls.length,2);
+ assert.equal(comments[0].system,'advise');assert.equal(comments[0].content,'请先确认报名时间。');assert.equal(comments[1].system,'explore');assert.equal(comments[1].content,'同意，时间确认后再安排下一步。');assert.equal(comments[1].reply_to,comments[0].id);
+ assert.equal(store.list('feed').length,1);
+});

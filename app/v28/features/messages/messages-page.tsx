@@ -8,6 +8,7 @@ import type { V277State } from "../../../v27-7-state";
 import type { Screen } from "../../core/screen";
 import {useRuntime} from "../../core/runtime-context";
 import { MessageSearchSheet } from "../../legacy/legacy-ui";
+import {ChatAvatar} from './chat-avatar';
 
 export function MessagesPage({
   go,
@@ -157,7 +158,7 @@ export function MessagesPage({
             key={item.id}
             onClick={() => go({ name: "chat", id: item.id })}
           >
-            <i className={`${item.avatar} v277-sprite-community`} />
+            <ChatAvatar name={item.name} id={item.id} group={item.kind==='群聊'} live={Boolean(runtime)}/>
             <div>
               <b>{item.name}</b>
               <p>{item.text}</p>

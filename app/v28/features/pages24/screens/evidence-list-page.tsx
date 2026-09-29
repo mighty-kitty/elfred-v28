@@ -6,6 +6,7 @@ import type { Screen } from "../../../core/screen";
 import { AppHeader } from "../../../legacy/legacy-ui";
 import { evidenceRecords } from "../data/knowledge-data";
 import styles from "../styles/knowledge.module.css";
+import sheetStyles from "../styles/knowledge-sheet.module.css";
 
 // 成果列表：以前"查看全部"跳到能力洞察，是跳错页；这一屏才是"今天/最近产生了哪些成果"。
 export function EvidenceListPage({

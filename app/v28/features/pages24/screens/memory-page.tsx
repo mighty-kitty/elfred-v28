@@ -18,12 +18,6 @@ import {
   memoriesOf,
   type MemoryGroup,
 } from "../data/memory-data";
-import {
-  SHOW_RESERVED_ACTIONS,
-  archiveMemory,
-  fetchHygiene,
-  type LiveHygiene,
-} from "../api/page2-api";
 import knowledgeStyles from "../styles/knowledge.module.css";
 import styles from "../styles/memory.module.css";
 
@@ -38,29 +32,6 @@ export function MemoryPage({
 }) {
   const [filter, setFilter] = useState<"全部" | MemoryGroup>("全部");
   const [alignmentOpen, setAlignmentOpen] = useState(false);
-  // 记忆体检：后端有接口（`/page2/memory/hygiene`）但界面原来没有入口，这里补一个真入口。
-  // 只读一遍候选，点"归档"才真的动数据（走 `/page2/memory/{id}/archive`，可 restore 回滚）。
-  const [hygiene, setHygiene] = useState<LiveHygiene | null>(null);
-  const [hygieneBusy, setHygieneBusy] = useState(false);
-  const [hygieneNote, setHygieneNote] = useState("");
-
-  const runHygiene = async () => {
-    setHygieneBusy(true);
-    const result = await fetchHygiene();
-    setHygiene(result);
-    setHygieneNote(
-      result?.available
-        ? `体检过一遍：长期未用 ${result.stale.length} · 低置信 ${result.lowConfidence.length} · 没标签 ${result.untagged.length}`
-        : "记忆体检暂时不可用（后端没连上或 EMOS 没起）",
-    );
-    setHygieneBusy(false);
-  };
-
-  const archive = async (memoryId: string) => {
-    const result = await archiveMemory(memoryId, "记忆体检：用户手动归档");
-    setHygieneNote(result?.ok ? "已归档（可在记忆历史里恢复）" : "归档没成功，稍后再试");
-    if (result?.ok) await runHygiene();
-  };
   const view = buildMemoryView(state.memories);
   const visibleGroups =
     filter === "全部" ? MEMORY_GROUPS : MEMORY_GROUPS.filter((group) => group === filter);
@@ -130,58 +101,9 @@ export function MemoryPage({
           </section>
         )}
 
-        {/* 记忆体检：**预留功能，默认不展示**（产品说现阶段只做闭环、不加新入口）。
-            代码留着，把 SHOW_RESERVED_ACTIONS 打开就会出来。 */}
-        {SHOW_RESERVED_ACTIONS && !isEmpty && (
-          <section className={styles.hygiene}>
-            <div className={styles.hygieneHead}>
-              <h2>记忆体检</h2>
-              <button
-                type="button"
-                className={styles.hygieneRun}
-                onClick={() => void runHygiene()}
-                disabled={hygieneBusy}
-              >
-                {hygieneBusy ? "正在体检…" : "体检一遍"}
-              </button>
-            </div>
-            {hygieneNote ? <p className={styles.hygieneNote}>{hygieneNote}</p> : null}
-            {hygiene?.available &&
-              ([
-                ["长期未用", hygiene.stale],
-                ["低置信", hygiene.lowConfidence],
-                ["没标签", hygiene.untagged],
-              ] as const).map(([label, items]) =>
-                items.length ? (
-                  <div key={label} className={styles.hygieneGroup}>
-                    <b>
-                      {label} · {items.length} 条
-                    </b>
-                    {items.map((item) => (
-                      <div key={item.id} className={styles.hygieneItem}>
-                        <span>{(item.text || "").slice(0, 60)}</span>
-                        <button type="button" onClick={() => void archive(item.id)}>
-                          归档
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                ) : null,
-              )}
-            {hygiene?.available &&
-              hygiene.stale.length + hygiene.lowConfidence.length + hygiene.untagged.length === 0 && (
-                <p className={styles.hygieneNote}>这次没有需要过问的记忆。</p>
-              )}
-            {/* 冲突这一类后端一直是空的：EMOS 的 active_conflict_scan 还没接。
-                不写清的话，用户会把"没列出来"当成"没有冲突"。 */}
-            {hygiene?.available ? (
-              <p className={styles.hygieneNote}>
-                冲突检测还没接（EMOS 的 active_conflict_scan 未开），所以这里只列长期未用 / 低置信 / 没标签。
-              </p>
-            ) : null}
-          </section>
-        )}
-
+        {/* 「记忆体检 / 归档」这块原来挂在一个默认关掉的开关后面，而它依赖的两个函数是
+            永远返回"未接通"的空壳（旧独立后端那几条 /page2 路径已经不存在）。
+            产品口径是"先留存但不展示"，所以这里去掉假入口，将来要做得接 EMOS 侧的体检接口。 */}
         {!isEmpty && visibleGroups.map((group) => {
           const items = memoriesOf(view, group);
           return (

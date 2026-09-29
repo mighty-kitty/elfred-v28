@@ -14,3 +14,12 @@
 .v283-agent-chat-page .v283-agent-chat-composer{position:relative;left:auto;right:auto;bottom:auto;flex:none;margin:0 -6px max(12px,env(safe-area-inset-bottom));width:auto;box-sizing:border-box;}
 .v283-agent-chat-page .v283-agent-chat-welcome{min-height:min(62%,440px);}
 .v283-agent-chat-composer textarea:focus{outline:none!important;box-shadow:none!important;transform:none!important;}
+
+/* 输入框上方的附件行：能力卡以"卡名 + ✕"挂在输入框外面，输入框留给用户自己写话。
+   （以前是把整段说明书倒进输入框，输入框里就只剩一段看不懂的长文。） */
+.v283-agent-attach-row{flex:none;display:flex;flex-wrap:wrap;gap:6px;padding:0 10px 8px;}
+.v283-agent-attach-chip{display:inline-flex;align-items:center;gap:6px;max-width:100%;padding:6px 9px;border:1px solid #e3e8ef;border-radius:12px;background:#f7f9fc;color:#2b3440;font-size:12.5px;}
+.v283-agent-attach-chip>svg{flex:none;color:#2462cb;}
+.v283-agent-attach-chip>b{font-weight:620;max-width:44vw;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.v283-agent-attach-chip>small{color:#8b939b;font-size:11px;white-space:nowrap;}
+.v283-agent-attach-chip>button{flex:none;width:18px;height:18px;padding:0;border:0;border-radius:50%;background:#e8ecf2;color:#5b6673;font-size:11px;line-height:18px;cursor:pointer;}

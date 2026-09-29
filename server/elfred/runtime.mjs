@@ -3,6 +3,9 @@ import {tickObservations,tickRssObservations,observationUsage} from './observati
 import {cosine} from './embedding-provider.mjs';
 import {feedEvidence} from './feed.mjs';
 import {tickFeedPeerComments} from './feed-peer.mjs';
+import {tickSkillForge} from './skill-forge/index.mjs';
+import {tickGateway,gatewayPlanFor,stepsFromGatewayPlan} from './pa-gateway/index.mjs';
+import {tickJev} from './jev-verdict/index.mjs';
 import { fail, hash, id, now } from './store.mjs';
 import { DEFAULT_STOP, POLICY_VERSION, TOOLS, string, enumeration, stopPolicy, planGate, verify } from './policy.mjs';
 import {composePlan,roleFor,rolePrompt,reviewVerdict,resultReceipts,reviewPolicy,reviewerFor,capabilityPrompt,checkCapabilityOutput} from './agent-plan.mjs';
@@ -43,6 +46,9 @@ export function taskCommand(store,user,action,input) {
     if(project&&!store.role(project.id,user))fail('FORBIDDEN','任务所属项目需要当前成员资格',403);
     const notBefore=input.not_before||0;if(!Number.isSafeInteger(notBefore)||notBefore<0||notBefore>Date.now()+366*86400000)fail('INVALID_SCHEDULE','执行时间需在一年内');
     const task=store.add('task',user,{title:goal.slice(0,80),goal,criteria,mode,system,routing_suggestion:routing,capability:selected.capability,capability_selection:selected.selection,review_mode:reviewMode,source_refs:refs,access_space:project?.id||null,project_id:project?.id||null,not_before:notBefore,constraints:string(input.constraints||'仅在当前授权资料内完成；不发送、不公开、不执行用户代码','约束',3000),stop:stopPolicy(input.stop||DEFAULT_STOP),status:'draft',satisfaction:'unknown',calls:0,tokens:0,units:0,elapsed_ms:0,attempts:0,replans:0});
+    // 这里**不**登记规划请求：对话回复、群内回复这类系统流程的标记是创建之后才附上的，
+    // 创建这一刻分不清"用户自己的多步任务"和"只产出一句话的回话"。
+    // 登记改在运行时循环里按"还没跑的、用户自己的多步任务"扫（见 pa-gateway/index.mjs）。
     return {id:task.id};
   }
   if (action==='task.confirm'||action==='task.renew_approval') {
@@ -80,11 +86,16 @@ export function taskCommand(store,user,action,input) {
     const resume=sameRevision&&action==='run.start'&&prior&&['blocked','paused','partial','failed','cancelled'].includes(prior.data.status)&&!task.data.feedback_pending;
     const role=resume?prior.data.version_snapshot.role:task.data.capability||roleFor(task.data.system,task.data.goal);
     const reviewer=resume?prior.data.version_snapshot.reviewer:reviewerFor(task.data.reviewer_system||task.data.system);
+    // 网关方案：任务的规划请求在运行时循环里取回来。取到且能落成我们的步骤就用它，否则回落应用内计划。
+    const gatewayPlan=resume||task.data.mode!=='compose'?null:gatewayPlanFor(store,user,task.id);
+    const adopted=gatewayPlan?stepsFromGatewayPlan(gatewayPlan,role,task):null;
     const steps=resume?prior.data.plan.steps:task.data.mode==='read'
       ? task.data.source_refs.map((ref,index)=>({id:`read-${index}`,tool:'document.read',depends:[],ref}))
-      : task.data.mode==='compose'?composePlan(task,role):[{id:'work',tool:'search.local',depends:[]}];
+      : task.data.mode==='compose'?(adopted?.steps||composePlan(task,role)):[{id:'work',tool:'search.local',depends:[]}];
+    const planSource=resume?prior.data.plan.plan_source||'in-app-runtime':adopted?.steps?'pa-gateway':'in-app-runtime';
+    const gatewayReceipt=resume?prior.data.plan.gateway:gatewayPlan?{run_id:gatewayPlan.data.gateway_run_id,planner:gatewayPlan.data.planner,planning_ms:gatewayPlan.data.planning_ms,at:gatewayPlan.data.at,steps:gatewayPlan.data.steps.length,adopted:adopted?.adopted||0,skipped:adopted?.skipped||[]}:null;
     const review=resume?prior.data.plan.review:reviewPolicy(task,role);
-    const plan={steps,role:{id:role.id,name:role.name,version:role.version},review,selection:task.data.capability_selection||{provider:'legacy'},execution_style:'shared-runner',version:(prior?.data.plan.version||0)+1,goal_hash:hash(task.data.goal),parent_run:prior?.id||null,repair_scope:action==='run.replan'?'revise_with_owner_feedback':'retry_unfinished_steps',feedback:action==='run.replan'?task.data.feedback:sameRevision?prior?.data.plan.feedback||null:null};
+    const plan={steps,role:{id:role.id,name:role.name,version:role.version},review,selection:task.data.capability_selection||{provider:'legacy'},execution_style:'shared-runner',plan_source:planSource,...(gatewayReceipt?{gateway:gatewayReceipt}:{}),version:(prior?.data.plan.version||0)+1,goal_hash:hash(task.data.goal),parent_run:prior?.id||null,repair_scope:action==='run.replan'?'revise_with_owner_feedback':'retry_unfinished_steps',feedback:action==='run.replan'?task.data.feedback:sameRevision?prior?.data.plan.feedback||null:null};
     const gate=planGate(plan,{stop},approval.data.scopes);
     if(role.tool_allowlist&&steps.some(step=>!role.tool_allowlist.includes(step.tool)))fail('CAPABILITY_TOOL_FORBIDDEN','所选能力不允许该工具',403);
     const method=task.data.agent_chat?null:input.evaluation_candidate_id?store.owned(user,input.evaluation_candidate_id,'candidate'):store.visible(user,'method').find(item=>item.data.active&&item.data.scope_system===task.data.system)||store.visible(user,'method').find(item=>item.data.active&&!item.data.scope_system);
@@ -198,6 +209,11 @@ export class Runtime {
       tickFeedPeerComments(this.store,this.provider);
       job=this.claim();
       if (!job) {
+        // 闲下来的家务活在"没有任务要跑"这一支里做（和记忆同步一个位置）：
+        // 放在 claim() 之前会让 tick 提早 yield，正在等模型回执的那类流程会被打乱节奏。
+        await tickSkillForge(this.store,this.provider);
+        await tickGateway(this.store,this.provider);
+        await tickJev(this.store,this.provider);
         await syncMemoryHub(this.store,this.provider.config||process.env);
         if(this.store.list('observation').some(w=>w.data.source_url&&w.data.status==='active'&&Number(w.data.next_at)<=Date.now())) await tickRssObservations(this.store);
         return;

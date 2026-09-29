@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import { BadgeCheck, Star, Trophy } from "lucide-react";
 import { fetchBadges, type LiveBadge } from "../api/page2-api";
 import styles from "../styles/knowledge.module.css";
+import sheetStyles from "../styles/knowledge-sheet.module.css";
 
 // 荣誉勋章图鉴：**第二页（理解度弹层里那一栏）和第四页（我的 → 勋章）用同一份数据、同一个长相。**
 //
@@ -39,7 +40,7 @@ export function HonorGallery({ compact = false }: { compact?: boolean } = {}) {
     const Icon = iconFor(badge.id);
     return (
       <div
-        className={`${styles.medal}${badge.earned ? "" : ` ${styles.medalLocked}`}`}
+        className={`${sheetStyles.medal}${badge.earned ? "" : ` ${sheetStyles.medalLocked}`}`}
         key={badge.id}
       >
         <span>
@@ -51,8 +52,8 @@ export function HonorGallery({ compact = false }: { compact?: boolean } = {}) {
     );
   };
   return (
-    <div className={compact ? styles.honorCompact : undefined}>
-      <section className={styles.honorTop}>
+    <div className={compact ? sheetStyles.honorCompact : undefined}>
+      <section className={sheetStyles.honorTop}>
         <div>
           <b>勋章图鉴</b>
           <small>
@@ -65,18 +66,18 @@ export function HonorGallery({ compact = false }: { compact?: boolean } = {}) {
       </section>
       {earned.length > 0 && (
         <section>
-          <header className={styles.pathHead}>
+          <header className={sheetStyles.pathHead}>
             <h4>已获得（{earned.length} 枚）</h4>
           </header>
-          <div className={styles.medalGrid}>{earned.map(cell)}</div>
+          <div className={sheetStyles.medalGrid}>{earned.map(cell)}</div>
         </section>
       )}
       {locked.length > 0 && (
         <section>
-          <header className={styles.pathHead}>
+          <header className={sheetStyles.pathHead}>
             <h4>未获得（{locked.length} 枚）</h4>
           </header>
-          <div className={styles.medalGrid}>{locked.map(cell)}</div>
+          <div className={sheetStyles.medalGrid}>{locked.map(cell)}</div>
         </section>
       )}
     </div>

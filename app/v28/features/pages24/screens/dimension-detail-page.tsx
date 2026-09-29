@@ -14,6 +14,7 @@ import {
   readStage,
 } from "../data/knowledge-data";
 import styles from "../styles/knowledge.module.css";
+import libraryStyles from "../styles/knowledge-library.module.css";
 
 // 维度详情（L2）：以前点"策略 · 91"给的是一张知识卡，文不对题。
 // 这一屏回答"这一维是什么水平、由哪些卡撑着、最近有什么成果、下一步做一件事"。
@@ -22,14 +23,12 @@ export function DimensionDetailPage({
   go,
   onBack,
   onCreateTask,
-  onUpgrade,
 }: {
   id: string;
   go: (screen: Screen) => void;
   onBack: () => void;
   /** 和知识库那边同一套：带上"这次要做什么"才建得成真任务（见 skill-launch.ts） */
   onCreateTask: (card: SheetCard, goal: string) => Promise<{ ok: boolean; note?: string } | void>;
-  onUpgrade: (card: SheetCard) => void;
 }) {
   const [opened, setOpened] = useState<SheetCard | null>(null);
   const profile = readDimension(id);
@@ -56,8 +55,8 @@ export function DimensionDetailPage({
         onBack={onBack}
       />
       <div className={styles.screen}>
-        <section className={styles.heroCard} style={{ borderColor: tone }}>
-          <i className={styles.heroDot} style={{ background: tone }} />
+        <section className={libraryStyles.heroCard} style={{ borderColor: tone }}>
+          <i className={libraryStyles.heroDot} style={{ background: tone }} />
           <b>
             {profile.score ?? "未知"}
             {profile.score === null ? null : <small>/100</small>}
@@ -78,7 +77,7 @@ export function DimensionDetailPage({
               这一维还没有能力卡。做完相关任务并验收，Elfred 会自动建卡。
             </p>
           ) : (
-            <div className={styles.dimList}>
+            <div className={libraryStyles.dimList}>
               {cards.map((card) => (
                 <button
                   type="button"
@@ -94,7 +93,7 @@ export function DimensionDetailPage({
                       {card.evidence} 项成果
                     </small>
                   </span>
-                  <b className={styles.cardScore}>{card.score}</b>
+                  <b className={libraryStyles.cardScore}>{card.score}</b>
                   <ChevronRight size={16} />
                 </button>
               ))}
@@ -152,7 +151,6 @@ export function DimensionDetailPage({
             go({ name: "evidence" });
           }}
           onCreateTask={onCreateTask}
-          onUpgrade={onUpgrade}
         />
       )}
     </main>

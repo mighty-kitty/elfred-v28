@@ -56,17 +56,6 @@
   backdrop-filter: blur(8px);
 }
 
-.coverHint {
-  position: absolute;
-  left: 0;
-  right: 0;
-  bottom: 16px;
-  color: #97a1ac;
-  font-size: 12px;
-  font-style: normal;
-  text-align: center;
-}
-
 /* ── 头像（压在封面下沿，右下角相机徽标）──────────────────────────── */
 .avatarRow {
   display: flex;
@@ -225,16 +214,6 @@
 .switchOn {
   background: #4c6ef5;
   color: #fff !important;
-}
-
-.warn {
-  margin: 8px 2px 0;
-  padding: 10px 12px;
-  border-radius: 12px;
-  background: #fff8e6;
-  color: #8a6100;
-  font-size: 12px;
-  line-height: 1.55;
 }
 
 .footNote {

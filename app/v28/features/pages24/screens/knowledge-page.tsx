@@ -15,7 +15,6 @@ import {
   Compass,
   FileText,
   Layers3,
-  MessageCircle,
   PenLine,
   Plus,
   Target,
@@ -27,6 +26,7 @@ import type { Screen } from "../../../core/screen";
 import {
 } from "../../../legacy/legacy-ui";
 import { CapabilitySheet, type SheetCard } from "../parts/capability-sheet";
+import { CardOnboarding } from "../parts/card-onboarding";
 import { UnderstandingSheet } from "../parts/understanding-sheet";
 import { LibraryHeader } from "../parts/library-header";
 import {
@@ -35,23 +35,15 @@ import {
   abilityCardSamples,
   abilityInsight,
   documents,
-  livePendingMaterials,
-  readCardAdjustment,
   readStage,
   todayEvidence,
   type EvidenceKind,
 } from "../data/knowledge-data";
-import {
-  addPendingMaterial,
-  readPage2,
-  resolvePendingMaterial,
-  setPendingSkill,
-  setCardLevel,
-  takePendingCard,
-} from "../api/page2-store";
-import { QUESTIONNAIRE_AVAILABLE, PAGE2_API, importFile, importLink, resolveMaterial, usePage2Live } from "../api/page2-api";
+import { takePendingCard } from "../api/page2-store";
+import { PAGE2_API, importFile, importLink, usePage2Live } from "../api/page2-api";
 import { launchWithSkill } from "../api/skill-launch";
 import styles from "../styles/knowledge.module.css";
+import libraryStyles from "../styles/knowledge-library.module.css";
 
 /* 雷达图与趋势线的几何：都从数据算，不写死坐标。
    雷达外圈沿用原图的五边形（顶点固定），每一维的值决定顶点落在"中心 → 外圈顶点"的第几成。 */
@@ -136,6 +128,8 @@ export function KnowledgePage({
   const [urlEmpty, setUrlEmpty] = useState(false);
   const [importOpen, setImportOpen] = useState(false);
   const [importHint, setImportHint] = useState<string | null>(null);
+  /** 能力卡初始化（三步选框）的开合；只有这一块会用到它 */
+  const [onboardOpen, setOnboardOpen] = useState(false);
   useEffect(() => {
     setUrlEmpty(new URLSearchParams(window.location.search).has("empty"));
   }, []);
@@ -177,10 +171,7 @@ export function KnowledgePage({
     null,
   );
   const insightSwipe = useRef({ y: 0, moved: false });
-  const store = readPage2();
   const fileInputRef = useRef<HTMLInputElement>(null);
-  // 待确认素材：后端在跑就用后端那份（真素材、真解析结果），够不着才用本地兜底
-  const pendingList = livePendingMaterials ?? store.pendingMaterials;
 
   const takeFile = async (file: File | null) => {
     if (!file) return;
@@ -198,29 +189,10 @@ export function KnowledgePage({
   };
 
   void storeVersion;
-  // 固化出来的卡排在最前（刚建的能立刻看见），其余卡按成果裁定调整分数与成果数
+  // 卡片全部来自后端那份投影（`applyLiveData` 会把真数据就地上架，见 data/knowledge-data.ts）。
+  // 这里不再叠一层本地兜底：分数、等级、成果数只有服务端一个真相。
   const cards: (SheetCard & {owner: string;notRunYet?:boolean})[] = [
-    // 知识固化出来的卡：补上"归属 Agent"和图标，和内置的三张卡长得一样
-    ...store.fixedCards.map((card) => ({
-      ...card,
-      // 手动升级过的话，以本地记录为准
-      level: store.levelOverride[card.title] ?? card.level,
-      owner: "探索",
-      notRunYet: false,
-      icon: Sparkles,
-    })),
-    ...abilityCardSamples.map((sample) => {
-      const { scoreDelta, evidenceDelta } = readCardAdjustment(
-        sample.title,
-        store.verdicts,
-      );
-      return {
-        ...sample,
-        score: sample.score + scoreDelta,
-        evidence: sample.evidence + evidenceDelta,
-        level: store.levelOverride[sample.title] ?? sample.level,
-      };
-    }),
+    ...abilityCardSamples.map((sample) => ({ ...sample })),
   ];
   const visibleCards =
     filter === "全部" ? cards : cards.filter((card) => card.type === filter);
@@ -258,7 +230,7 @@ export function KnowledgePage({
   return (
     <main
       className={`v277-page v277-library-page v277-knowledge-overview${
-        insightEmpty ? ` ${styles.isEmpty}` : ""
+        insightEmpty ? ` ${libraryStyles.isEmpty}` : ""
       }`}
     >
       <LibraryHeader
@@ -278,25 +250,13 @@ export function KnowledgePage({
         </section>
 
           <>
-        {/* 待确认收件箱：有东西才出现，没有就整条不占高度 */}
-        {store.pendingMaterials.length > 0 && (
-          <div className={styles.rowBar}>
-            <button
-              type="button"
-              className={styles.inboxBar}
-              onClick={() => setImportOpen(true)}
-            >
-              <b>待确认 {store.pendingMaterials.length}</b>
-              <span>· 点头之后才会变成能力卡</span>
-              <ChevronRight size={16} />
-            </button>
-          </div>
-        )}
+        {/* 以前这里有一条"待确认素材"收件箱：后端从来没有这条数据（投影里 pending 恒为空），
+            也就是永远不出现的死界面。导进来的东西直接进"文档"，不再摆一个假的收件箱。 */}
         {/* 工具行：左边一块"导入 · 文档"（导入和文档是同一件事的两端），
             右边恢复成原来的两个圆形按钮（创建工具 / 我的工具）。
             这样"导入"和工具仍在同一族、同一行，但"我的工具"回到它原来的样子。 */}
         {/* 卡组标题行：图标 + "能力卡组"，右边两个圆钮；筛选条另起一行（和图 1 一致） */}
-        <div className={styles.cardsHead}>
+        <div className={libraryStyles.cardsHead}>
           <h2>
             <Layers3 size={19} />
             能力卡组
@@ -335,7 +295,7 @@ export function KnowledgePage({
               </span>
             ) : null}
           </h2>
-          <span className={styles.toolRound}>
+          <span className={libraryStyles.toolRound}>
             <button
               type="button"
               aria-label="创建工具"
@@ -352,7 +312,7 @@ export function KnowledgePage({
             </button>
           </span>
         </div>
-        <div className={styles.filterRow}>
+        <div className={libraryStyles.filterRow}>
         <div className="v277-ability-filters" aria-label="能力类型">
           {["全部", "Skill", "Mini App", "Agent"].map((name) => (
             <button
@@ -369,15 +329,16 @@ export function KnowledgePage({
         {cardsEmpty ? (
           /* 空态就放"一张和真卡同尺寸的引导卡"：它就是卡轨里的第一张卡，
              卡片长出来时位置不会跳；整张卡可点，不再在大虚线块里塞一个黑按钮。 */
-          /* 空态外观照图 2：圆图标 + 标题 + 一行说明 + 黑色胶囊按钮（动作和以前一样） */
+          /* 空态：主入口是「做一张能力卡」——选框初始化，不再靠纯文本对话引导
+             （口径见 9-27 会议：固定选框初始化 + 渐进式卡片引导）。
+             空态只留"一句话标题 + 一颗按钮"：说明小字与"或者直接跟 Elfred 说一句"都删了。 */
           <section className={styles.emptyBlock}>
             <i className={styles.emptyBlockIcon}>
-              <MessageCircle size={26} />
+              <Sparkles size={26} />
             </i>
-            <b>还没有可用工具</b>
-            <p>创建并启用工具后，这里会显示它的能力卡</p>
-            <button type="button" onClick={() => go({ name: "create-tool" })}>
-              创建工具
+            <b>暂时还没有能力卡</b>
+            <button type="button" onClick={() => setOnboardOpen(true)}>
+              做一张能力卡
             </button>
           </section>
         ) : visibleCards.length === 0 ? (
@@ -394,7 +355,7 @@ export function KnowledgePage({
             </button>
           </section>
         ) : (
-        <section className={`v277-ability-cards ${styles.cards}`}>
+        <section className={`v277-ability-cards ${libraryStyles.cards}`}>
           {visibleCards.map(
             (
               { id, type, dimension, title, copy, score, evidence, level, notRunYet, icon: Icon },
@@ -427,12 +388,12 @@ export function KnowledgePage({
                   })
                 }
               >
-                <span className={styles.cardHead}>
-                  <span className={styles.cardDim}>
+                <span className={libraryStyles.cardHead}>
+                  <span className={libraryStyles.cardDim}>
                     <i aria-hidden="true" />
                     {dimension}
                   </span>
-                  <span className={styles.cardLevel}>
+                  <span className={libraryStyles.cardLevel}>
                     {/* 还没跑过的真 skill：不显示假等级，写清状态 */}
                     {notRunYet ? (evidence ? "待评估" : "尚无成果") : `Lv.${level} · ${stage}`}
                   </span>
@@ -456,35 +417,13 @@ export function KnowledgePage({
                   </strong>
                   <span>{evidence} 项成果</span>
                 </footer>
-                <span className={styles.cardGap}>
-                  <span className={styles.cardGapText}>{gapLabel}</span>
+                <span className={libraryStyles.cardGap}>
+                  <span className={libraryStyles.cardGapText}>{gapLabel}</span>
                 </span>
               </button>
               );
             },
           )}
-          {store.knowledgeDrafts.map((draft) => (
-            <button
-              type="button"
-              key={draft.id}
-              className={styles.verifyCard}
-              onClick={() => setImportHint(`刚导入的「${draft.title}」还没跑过`)}
-            >
-              <span className={styles.cardHead}>
-                <span className={styles.cardDim}>
-                  <i aria-hidden="true" />
-                  待验证
-                </span>
-                <span className={styles.cardLevel}>{draft.source}</span>
-              </span>
-              <i className={styles.knowledgeVisual}>
-                <FileText size={24} />
-              </i>
-              <b>{displayTitle(draft.title,'')}</b>
-              <p className={styles.knowledgePurpose}>{draft.purpose}</p>
-              <span className={styles.knowledgeStrip}>跑出第一条成果就转正</span>
-            </button>
-          ))}
         </section>
         )}
           </>
@@ -494,11 +433,11 @@ export function KnowledgePage({
               <Sparkles size={19} />
               知识库
             </h2>
-            <span className={styles.inlineActions}>
+            <span className={libraryStyles.inlineActions}>
               {/* 导入放在知识库里：它俩是同一件事的两端（塞进来 / 存着的） */}
               <button
                 type="button"
-                className={styles.inlinePlus}
+                className={libraryStyles.inlinePlus}
                 aria-label="导入内容"
                 onClick={() => setImportOpen(true)}
               >
@@ -541,7 +480,7 @@ export function KnowledgePage({
             })}
           </div>
           {evidenceEmpty && (
-            <section className={styles.emptyEvidence}>
+            <section className={libraryStyles.emptyEvidence}>
               <CheckCircle2 size={20} />
               <span>{documents.length ? `已保存 ${documents.length} 份资料；今天还没有已验收成果。` : "今天还没有沉淀。做完一件并确认结果，它就会出现在这里。"}</span>
             </section>
@@ -556,18 +495,18 @@ export function KnowledgePage({
           </div>
           {/* 空态外观照图 3：不给全 0 的五维图，改成"轻量测试"的入口（问卷内容之后再定） */}
           {insightEmpty && (
-            <section className={`${styles.emptyBlock} ${styles.emptyBlockTall}`}>
+            <section className={`${styles.emptyBlock} ${libraryStyles.emptyBlockTall}`}>
               <i className={styles.emptyBlockIcon}>
                 <Target size={26} />
               </i>
               <b>还没有能力洞察</b>
-              <p>{QUESTIONNAIRE_AVAILABLE ? "完成一次轻量测试，生成你的初始能力画像" : "轻量测试服务尚未接通，已验收成果仍会保留"}</p>
-              {/* 以前这里跳到"能力画像"（对新人是一张全未知的雷达）。现在去填那份轻量测试：
-                  答完就有一张**起点图**（数值低），之后按真实成果慢慢更新。 */}
-              {QUESTIONNAIRE_AVAILABLE && <button type="button" onClick={() => go({ name: "questionnaire" })}>
+              {/* 空态只留"标题 + 一颗按钮"：说明文字都放进了按钮自己的语义里
+                  （点开就是那份测试，答完就有起点图），少两行小字更干净。
+                  题目与计分都在本仓库（core/dimensions.mjs），不存在"服务没接通"这一档，
+                  所以原来那条"轻量测试服务尚未接通"的分支已经删掉。 */}
+              <button type="button" onClick={() => go({ name: "questionnaire" })}>
                 开始测试
-              </button>}
-              {QUESTIONNAIRE_AVAILABLE && <em className={styles.emptyNote}>答完就有一张起点图；之后按真实结果慢慢更新</em>}
+              </button>
             </section>
           )}
           <div
@@ -614,7 +553,7 @@ export function KnowledgePage({
             全都在这一条曲线上，不另画一条"不算分"的线。
             （原来右边还挂了一个「做完事会变，久了也会回落」的角标，用户说多余，删了。） */}
         {!insightEmpty ? (
-          <p className={styles.radarNote}>
+          <p className={libraryStyles.radarNote}>
             {updatedLabels.length === 0
               ? "起点来自那次测试"
               : `${updatedLabels.join("、")} 已经按真实成果动过`}
@@ -814,12 +753,24 @@ export function KnowledgePage({
                 event.target.value = "";
               }}
             />
-            <div className={styles.importList}>
+            <div className={libraryStyles.importList}>
+              {/* 已有卡时"再来一张"的入口：不新增按钮，放进这个已有的面板里 */}
+              <button
+                type="button"
+                className={libraryStyles.importRow}
+                onClick={() => { setImportOpen(false); setOnboardOpen(true); }}
+              >
+                <span>
+                  <b>做一张能力卡</b>
+                  <small>选几个选项，30 秒生成一张能用的卡</small>
+                </span>
+                <ChevronRight size={16} />
+              </button>
               {IMPORT_SOURCES.map(({ title, note, kind }) => (
                 <button
                   type="button"
                   key={title}
-                  className={styles.importRow}
+                  className={libraryStyles.importRow}
                   onClick={() => {
                     if (kind === "link") {
                       void takeLink();
@@ -836,56 +787,19 @@ export function KnowledgePage({
                 </button>
               ))}
             </div>
-            {pendingList.length > 0 && (
-              <div className={styles.pendingList}>
-                <h4>待确认（{pendingList.length}）</h4>
-                {pendingList.map((item) => (
-                  <div key={item.id} className={styles.pendingRow}>
-                    <span>
-                      <b>{displayTitle(item.title,'')}</b>
-                      <small>{item.from} · 确认后才会上架</small>
-                    </span>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        // 后端在跑：确认后它会生成一张「待验证」能力卡；够不着就走本地
-                        if (livePendingMaterials !== null) void resolveMaterial(item.id, true);
-                        else resolvePendingMaterial(item.id, true);
-                        setStoreVersion((v) => v + 1);
-                        setImportHint(`已确认：${item.title} 现在在知识货架上`);
-                      }}
-                    >
-                      确认
-                    </button>
-                    <button
-                      type="button"
-                      className={styles.pendingDrop}
-                      onClick={() => {
-                        if (livePendingMaterials !== null) void resolveMaterial(item.id, false);
-                        else resolvePendingMaterial(item.id, false);
-                        setStoreVersion((v) => v + 1);
-                        setImportHint(`已丢弃：${item.title}`);
-                      }}
-                    >
-                      丢弃
-                    </button>
-                  </div>
-                ))}
-              </div>
-            )}
             {documents.length > 0 && (
-              <div className={styles.pendingList}>
+              <div className={libraryStyles.pendingList}>
                 <h4>文档（{documents.length}）</h4>
                 {documents.map((doc) => (
-                  <div key={doc.id} className={styles.pendingRow}>
+                  <div key={doc.id} className={libraryStyles.pendingRow}>
                     <span>
                       <b>{doc.name}</b>
                       <small>{doc.status}</small>
                     </span>
                     <button
                       type="button"
-                      className={styles.pendingDrop}
-                      onClick={() => setImportHint(`${doc.name}：预览还没接`)}
+                      className={libraryStyles.pendingDrop}
+                      onClick={() => go({ name: "knowledge-detail", id: doc.id })}
                     >
                       预览
                     </button>
@@ -893,7 +807,7 @@ export function KnowledgePage({
                 ))}
               </div>
             )}
-            <p className={styles.importFoot}>
+            <p className={libraryStyles.importFoot}>
               {importHint ?? "这一步只收下原始素材，不会直接变成卡片。"}
             </p>
           </section>
@@ -913,22 +827,27 @@ export function KnowledgePage({
             go({ name: "evidence" });
           }}
           onCreateTask={async (card, goal) => {
-            // ⚠️ 2026-09-26 对齐你们的新契约：`launchWithSkill` 现在返回 system + prompt，
-            //    直接带着可编辑的 prefill 进那个 Agent 的会话（我们原来那版是 conversationId）。
+            // 说明书不再倒进输入框：它变成对话页输入框上方的一张附件卡（挂在这条消息上），
+            // 输入框留给用户自己写话。发出去的内容和以前一致（说明书仍随消息一起发）。
             const result = await launchWithSkill(runtime, card.id||card.title, goal);
-            if (result.ok && result.system && result.prompt) {
-              setPendingSkill(card.title);
+            if (result.ok && result.system && result.attach) {
               setSelectedCapability(null);
-              go({ name: "chat", id: result.system, prefill: result.prompt });
+              go({ name: "chat", id: result.system, attach: result.attach });
               return { ok: true };
             }
             return { ok: false, note: result.note };
           }}
           tasks={state.tasks}
-          onUpgrade={(card) => {
-            setCardLevel(card.title, card.level + 1);
-            setStoreVersion((version) => version + 1);
-            setSelectedCapability({ ...card, level: card.level + 1 });
+        />
+      )}
+      {onboardOpen && (
+        <CardOnboarding
+          onClose={() => setOnboardOpen(false)}
+          onOpenCard={(title) => {
+            // 生成完想直接看某张卡：关掉初始化、打开那张卡的详情（列表已随投影刷新）
+            setOnboardOpen(false);
+            const target = cards.find((card) => card.title === title);
+            if (target) setSelectedCapability(target);
           }}
         />
       )}

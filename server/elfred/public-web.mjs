@@ -11,10 +11,17 @@ export function publicQuery(value){
 }
 export function webIntent(text,mode='auto'){
   if(!['auto','off','web'].includes(mode))fail('INVALID_INPUT','不支持的联网方式');
-  if(mode==='off'||/(?:不要|别|无需|不用|不能)\s*(?:联网|上网|搜索|搜)/.test(text))return null;
+  // "不联网 / 不搜索"也算关掉。原来只认"不要/别/无需/不用/不能"这几种写法，
+  // 于是"资料不够就写未知，不联网补充"这种句子会被当成"这一轮要联网"，整段消息还被当成关键词。
+  if(mode==='off'||/(?:不要|别|无需|不用|不必|不能|不)\s*(?:联网|上网|搜索|搜)/.test(text))return null;
   const url=text.match(/https:\/\/[^\s<>"）)]+/i)?.[0];
   if(url&&(mode==='web'||/阅读|读一下|打开|看看|总结|查阅|网页|链接/.test(text))){const parsed=new URL(validatedFeedUrl(url));if(parsed.search)fail('PRIVATE_WEB_QUERY','读取网页请使用不含查询参数的公开链接');return {tool:'web.read',query:parsed.href};}
-  if(mode==='web'||/联网|上网查|网上(?:查|搜)|搜索|搜一下|搜一搜|查(?:一下|找).*(?:最新|官网|新闻)|最新.*(?:资讯|新闻|价格|版本)/.test(text))return {tool:'web.search',query:publicQuery(text)};
+  if(mode==='web'||/联网|上网查|网上(?:查|搜)|搜索|搜一下|搜一搜|查(?:一下|找).*(?:最新|官网|新闻)|最新.*(?:资讯|新闻|价格|版本)/.test(text)){
+    // 一条长消息（例如对话里带着一整份工具说明书）不该整段当联网关键词：
+    // 自动模式下降级成普通对话，只有用户自己按了"本轮联网"才要求他缩短。
+    if(mode!=='web'&&String(text).trim().length>300)return null;
+    return {tool:'web.search',query:publicQuery(text)};
+  }
   return null;
 }
 const decode=s=>s.replace(/&#(x[\da-f]+|\d+);/gi,(_,v)=>{const n=v[0].toLowerCase()==='x'?parseInt(v.slice(1),16):Number(v);return n>0&&n<=0x10ffff?String.fromCodePoint(n):'';}).replace(/&(amp|lt|gt|quot|apos|nbsp);/gi,(_,v)=>({amp:'&',lt:'<',gt:'>',quot:'"',apos:"'",nbsp:' '}[v.toLowerCase()]));

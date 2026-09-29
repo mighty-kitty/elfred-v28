@@ -25,7 +25,7 @@ const prompts:Record<V277AgentId,string>={
   execute:'帮我拆解这件事的下一步',
 };
 
-export function AgentConversationPage({id,go,onBack,prefill,conversationId,messageId}:{id:V277AgentId;conversationId?:string;messageId?:string;go:(screen:Screen)=>void;onBack:()=>void;prefill?:string}){
+export function AgentConversationPage({id,go,onBack,prefill,attach,conversationId,messageId}:{id:V277AgentId;conversationId?:string;messageId?:string;go:(screen:Screen)=>void;onBack:()=>void;prefill?:string;attach?:{id:string;title:string;text:string;ask:string}}){
   const runtime=useRuntime();
   const agent=agentList.find(item=>item.id===id)!;
   const Icon=agent.icon;
@@ -45,6 +45,11 @@ export function AgentConversationPage({id,go,onBack,prefill,conversationId,messa
   const thread=useRef<HTMLElement>(null),anchorShown=useRef(false);
   const [taskOpen,setTaskOpen]=useState(false),[taskGoal,setTaskGoal]=useState(''),[taskMode,setTaskMode]=useState('compose'),[taskConsent,setTaskConsent]=useState(false),[startingTask,setStartingTask]=useState(false);
   const composer=useRef<HTMLTextAreaElement>(null);
+  // 从能力卡点「用它做一件事」带进来的说明书：挂成输入框**上方**的附件卡，不占输入框。
+  // 发送时按附件拼进消息正文，用户还能在输入框里写自己的话。
+  const [attaches,setAttaches]=useState<{id:string;title:string;text:string;ask:string}[]>([]);
+  const attachedIds=useRef<string[]>([]);
+  useEffect(()=>{if(!attach||attachedIds.current.includes(attach.id))return;attachedIds.current.push(attach.id);setAttaches(current=>[...current,attach]);},[attach]);
   const threads=(runtime?.snapshot?.objects.conversation||[]).filter(item=>item.data.kind==='agent'&&item.data.system===systemOf(id)).sort((a,b)=>b.updated.localeCompare(a.updated));
   const activeId=newThread?null:selectedId||threads[0]?.id||null;
   const messages=(runtime?.snapshot?.objects.message||[]).filter(item=>item.data.conversation_id===activeId).sort((a,b)=>Number(a.data.seq)-Number(b.data.seq));
@@ -62,14 +67,19 @@ export function AgentConversationPage({id,go,onBack,prefill,conversationId,messa
 
   const send=async(event?:FormEvent)=>{
     event?.preventDefault();
-    const text=input.trim();
+    // 本轮真正发出去的内容 = 用户打的那句话 + 附件里那份说明书。
+    // 用户一个字都没写时，用附件自己带的那句兜底（和改动前那条默认目标一模一样）。
+    const spoken=input.trim();
+    const fallback=attaches.map(item=>item.ask).join("\n");
+    const text=[spoken||fallback,...attaches.map(item=>item.text)].filter(Boolean).join("\n\n");
     if(!runtime||!text||sending||pending)return;
     setSending(true);
     try{
       let conversationId=activeId;
       if(!conversationId){const created=await runtime.command('agent.chat.create',{system:systemOf(id)});conversationId=created.id;setSelectedId(conversationId);setNewThread(false);}
       await runtime.command('agent.chat.send',{id:conversationId,text,model_consent:true,network:selectedTool?'off':network,...(selectedTool?{tool_id:selectedTool.id,tool_version_id:selectedVersion?.id,parameters}: {})});
-      setInput(current=>current.trim()===text?'':current);
+      setInput(current=>current.trim()===spoken?'':current);
+      setAttaches([]);
     }catch(error){runtime.report(error instanceof Error?error.message:'发送失败');}
     finally{setSending(false);}
   };
@@ -138,11 +148,19 @@ export function AgentConversationPage({id,go,onBack,prefill,conversationId,messa
 
       {(runtime?.snapshot?.objects.memory||[]).filter(m=>['candidate','pending_confirmation'].includes(String(m.data.status))&&!m.data.hidden&&(m.data.source_refs as {id:string}[]|undefined)?.some(ref=>messages.some(message=>message.id===ref.id))).slice(0,3).map(memory=><div className="v277-edit-card" key={memory.id}><small>待核对的理解 · {systemNames[String(memory.data.scope)]||'个人'}</small><p>{String(memory.data.content)}</p><div className="v284-memory-actions"><Action run={()=>runtime!.command('memory.decide',{...entityRef(memory),decision:'confirm'})}>确认记住</Action><button type="button" className="v277-secondary" onClick={()=>go({name:'memory-detail',id:memory.id})}>修改</button><Action run={()=>runtime!.command('memory.decide',{...entityRef(memory),decision:'reject'})}>不记这条</Action></div></div>)}
     </section>
+    {!!attaches.length&&<div className="v283-agent-attach-row" aria-label="本轮附上的能力卡">
+      {attaches.map(item=><span className="v283-agent-attach-chip" key={item.id}>
+        <Wrench size={14}/>
+        <b>{item.title}</b>
+        <small>能力卡说明</small>
+        <button type="button" aria-label={'移除能力卡：'+item.title} onClick={()=>setAttaches(current=>current.filter(entry=>entry.id!==item.id))}>✕</button>
+      </span>)}
+    </div>}
     <form className="v283-agent-chat-composer" onSubmit={event=>void send(event)}>
       <button type="button" className={'elfred-chat-network '+(network==='off'?'':'selected')} aria-label={'联网方式：'+({auto:'自动',off:'关闭',web:'本轮联网'}[network])} title="自动：提出联网要求时搜索；关闭：仅对话；本轮联网：将当前问题作为公开关键词" onClick={()=>setNetwork(current=>current==='auto'?'off':current==='off'?'web':'auto')}><Globe size={18}/></button>
       <button type="button" className={'elfred-chat-tool '+(selectedTool?'selected':'')} aria-label={selectedTool?'已选工具：'+String(selectedTool.data.title):'选择工具'} onClick={()=>setToolsOpen(true)}><Wrench size={18}/></button>
       <textarea ref={composer} value={input} onChange={event=>setInput(event.target.value)} onKeyDown={keyDown} rows={1} placeholder={`问${agent.name} Agent…`} aria-label={`问${agent.name} Agent`}/>
-      <button type="submit" disabled={!input.trim()||sending||Boolean(pending)} aria-label="发送消息"><ArrowUp size={20}/></button>
+      <button type="submit" disabled={(!input.trim()&&!attaches.length)||sending||Boolean(pending)} aria-label="发送消息"><ArrowUp size={20}/></button>
     </form>
     {toolsOpen&&<div className="v283-agent-chat-task-layer"><button type="button" className="v283-agent-chat-mask" aria-label="关闭工具选择" onClick={()=>setToolsOpen(false)}/><section role="dialog" aria-modal="true" aria-label="选择对话工具" className="v283-agent-chat-task-form"><header><b>使用我的工具</b><button type="button" onClick={()=>setToolsOpen(false)}>关闭</button></header><label>本轮使用<select aria-label="对话工具" value={toolId} onChange={event=>{setToolId(event.target.value);setToolVersionId(String(tools.find(tool=>tool.id===event.target.value)?.data.version_id||''));setParameters({});}}><option value="">不选择工具</option>{tools.map(tool=><option key={tool.id} value={tool.id}>{displayTitle(String(tool.data.title),'工具')}</option>)}</select></label>{!tools.length&&<p>还没有启用的工具。</p>}{selectedTool&&<p>{String(selectedTool.data.instructions||'')}</p>}{parameterFields.map(field=><label key={field.name}>{field.name}{field.required?'（必填）':''}<textarea rows={2} maxLength={1000} value={parameters[field.name]??field.default_value} placeholder={field.hint} aria-label={'工具输入：'+field.name} onChange={event=>setParameters(current=>({...current,[field.name]:event.target.value}))}/></label>)}{selectedTool?.data.kind==='Mini App'?<button type="button" className="v277-primary" onClick={()=>{setToolsOpen(false);setToolId('');go({name:'tool-detail',id:selectedTool.id});}}>打开 Mini App</button>:<><p>发送消息后按保存的工具版本执行，结果留在当前对话；关闭面板仍保留选择。</p><button type="button" className="v277-primary" disabled={parameterFields.some(field=>field.required&&!(parameters[field.name]??field.default_value).trim())} onClick={()=>setToolsOpen(false)}>使用此选择</button></>}</section></div>}
     {taskOpen&&<div className="v283-agent-chat-task-layer">

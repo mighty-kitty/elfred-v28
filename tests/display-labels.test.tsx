@@ -73,8 +73,12 @@ test('same displayed capability names still launch the selected original tool',a
   assert.equal(getPage2State().data.capabilities?.[0].title,getPage2State().data.capabilities?.[1].title);
   const result=await launchWithSkill({snapshot},second.id);
   assert.equal(result.ok,true);assert.equal(result.system,'execute');
-  assert.match(result.prompt||'',/第二项的独立说明/);
-  assert.doesNotMatch(result.prompt||'',/第一项的独立说明|1790485382411|second-tool/);
+  // 说明书现在是"随消息带过去的附件"，不再是倒进输入框的 prefill
+  assert.match(result.attach?.text||'',/第二项的独立说明/);
+  assert.doesNotMatch(result.attach?.text||'',/第一项的独立说明|1790485382411|second-tool/);
+  // 附件卡上显示的也是**去标识**的名字（时间戳不进界面）
+  assert.equal(result.attach?.title,'延迟选择验收');
+  assert.doesNotMatch(result.attach?.title||'',/1790485382411/);
  }finally{setPage2Runtime(null,null)}
 });
 

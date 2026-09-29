@@ -15,6 +15,11 @@ function deadlinePassed(store,project){
  return date<today;
 }
 
+function ensureParticipantCopy(store,user,project,slot){
+  if(store.list('copy').some(copy=>copy.owner===user&&copy.data.project_id===project.id&&(copy.data.slot_id||null)===(slot?.id||null)))return;
+  store.add('copy',user,{project_id:project.id,slot_id:slot?.id||null,format:project.data.format||'text',access_space:project.id,base_revision:project.data.revision,content:project.data.content,files:project.data.files||{},base_files:project.data.files||{},rules_snapshot:slot?.data||{criteria:project.data.criteria},status:'draft'});
+}
+
 export function communityCommand(store,user,action,input) {
   if(/^(post|project|claim|copy|contribution)\./.test(action)&&(!store.user(user)||input.actor_type==='agent'||input.auto_publish===true))fail('HUMAN_REQUIRED','社区内容只能由登录用户主动发布',403);
   const slotResult=slotCommand(store,user,action,input);if(slotResult)return slotResult;
@@ -93,13 +98,13 @@ export function communityCommand(store,user,action,input) {
     if(!slot&&store.list('project_slot').some(s=>s.space===project.id))fail('SLOT_REQUIRED','请选择具体任务位，并按其名额与审批规则参与');
     if(slot&&!(post.data.slots||[]).some(item=>item.id===slot.id))fail('INVALID_SLOT','任务位尚未公开');
     const previous=store.list('claim').find(item=>item.owner===user&&item.data.project_id===project.id&&(item.data.slot_id||null)===(slot?.id||null));
-    if(previous&&['accepted','pending','needs_reconfirmation'].includes(previous.data.status))return {id:previous.id,project_id:project.id};
+    if(previous&&['accepted','pending','needs_reconfirmation'].includes(previous.data.status)){if(previous.data.status==='accepted')ensureParticipantCopy(store,user,project,slot);return {id:previous.id,project_id:project.id};}
     checkSlot(store,project,slot,slot?.id);
     if(slot)store.expect(slot,input.slot_version??implicit?.rules_version);
     if(slot&&(post.data.slots||[]).find(published=>published.id===slot.id)?.rules_version!==slot.version)fail('SLOT_RULES_CHANGED','任务约定正在更新，请等待发起者重新公开后再确认');
-    if(previous){const status=requiresApproval(project,slot)?'pending':'accepted';store.update(previous,{...previous.data,status,withdrawn_at:null,rules_version:slot?.version||null,rules_snapshot:slot?.data||{criteria:project.data.criteria}},user);if(status==='accepted')store.join(project.id,user);return {id:previous.id,project_id:project.id};}
+    if(previous){const status=requiresApproval(project,slot)?'pending':'accepted';store.update(previous,{...previous.data,status,withdrawn_at:null,rules_version:slot?.version||null,rules_snapshot:slot?.data||{criteria:project.data.criteria}},user);if(status==='accepted'){store.join(project.id,user);ensureParticipantCopy(store,user,project,slot)}return {id:previous.id,project_id:project.id};}
     const claim=store.unique('claim',`${project.id}:${user}:${slot?.id||'general'}`,()=>store.add('claim',user,{project_id:project.id,slot_id:slot?.id||null,status:requiresApproval(project,slot)?'pending':'accepted',goal:slot?.data.title||project.data.task,rules_version:slot?.version||null,rules_snapshot:slot?.data||{criteria:project.data.criteria}}));
-    if(claim.data.status==='accepted') store.join(project.id,user);
+    if(claim.data.status==='accepted'){store.join(project.id,user);ensureParticipantCopy(store,user,project,slot)}
     return {id:claim.id,project_id:project.id};
   }
   if(action==='claim.review') {
@@ -107,7 +112,7 @@ export function communityCommand(store,user,action,input) {
     const project=store.owned(user,claim.data.project_id,'project');store.expect(claim,input.version);
     if(input.accept===true&&(!project.data.recruiting||deadlinePassed(store,project)))fail('CLOSED','项目已停止招募或超过截止日期');
     if(claim.data.status!=='pending') fail('INVALID_STATE','申请已处理',409);
-    if(input.accept===true){const slot=claim.data.slot_id?store.get(claim.data.slot_id):null;if(slot&&claim.data.rules_version!==slot.version)fail('SLOT_RULES_CHANGED','任务约定已变化，请由申请人重新确认');checkSlot(store,project,slot,claim.data.slot_id);store.join(claim.data.project_id,claim.owner);}
+    if(input.accept===true){const slot=claim.data.slot_id?store.get(claim.data.slot_id):null;if(slot&&claim.data.rules_version!==slot.version)fail('SLOT_RULES_CHANGED','任务约定已变化，请由申请人重新确认');checkSlot(store,project,slot,claim.data.slot_id);store.join(claim.data.project_id,claim.owner);ensureParticipantCopy(store,claim.owner,project,slot);}
     return {id:store.update(claim,{...claim.data,status:input.accept===true?'accepted':'declined',review_note:string(input.note||(input.accept===true?'发起者已批准':'本次申请未获接纳，可调整后重新申请'),'审核说明',1000)},user).id};
   }
   if(action==='project.remove_member') {

@@ -7,6 +7,23 @@ import {ModelProvider} from '../../server/elfred/providers.mjs';
 import {validateWebArtifact,PREVIEW_CSP} from '../../server/elfred/preview.mjs';
 import {Runtime} from '../../server/elfred/runtime.mjs';
 function setup(t){const store=new Store(':memory:'),service=new Service(store,new ModelProvider({}));t.after(()=>store.close());const users=['alice','bob','carol'].map(h=>authenticate(store,h,'local-test-password',true,h).user);users.forEach(u=>service.initialize(u));return {store,service,users,cmd:(u,a,input)=>service.command(u.id,id(),a,input),ref:o=>({id:o.id,version:store.get(o.id).version})};}
+test('参与共创后自动准备本人副本；待审核期间不提前开放工作',t=>{
+ const {store,users:[a,b,c],cmd,ref}=setup(t);
+ const project=cmd(a,'project.create',{basis:'公开基础',public_scope:'brief',reviewer_id:a.id,fee_terms:'各自承担费用',deadline_mode:'none',title:'共创',goal:'共同完成',criteria:'可核对',task:'完成任务',participation:'open'});
+ const openSlot=cmd(a,'project.slot.save',{project_id:project.id,title:'开放任务',criteria:'可核对',capacity:null});
+ const gatedSlot=cmd(a,'project.slot.save',{project_id:project.id,title:'受限任务',criteria:'可核对',capacity:1});
+ const post=cmd(a,'project.publish_post',{...ref(project),confirm:true});
+ const accepted=cmd(b,'project.claim',{post_id:post.id,slot_id:openSlot.id,slot_version:store.get(openSlot.id).version,confirm:true});
+ assert.equal(store.get(accepted.id).data.status,'accepted');
+ assert.equal(store.list('copy').filter(copy=>copy.owner===b.id&&copy.data.slot_id===openSlot.id).length,1);
+ cmd(b,'project.claim',{post_id:post.id,slot_id:openSlot.id,slot_version:store.get(openSlot.id).version,confirm:true});
+ assert.equal(store.list('copy').filter(copy=>copy.owner===b.id&&copy.data.slot_id===openSlot.id).length,1);
+ const pending=cmd(c,'project.claim',{post_id:post.id,slot_id:gatedSlot.id,slot_version:store.get(gatedSlot.id).version,confirm:true});
+ assert.equal(store.get(pending.id).data.status,'pending');
+ assert.equal(store.list('copy').filter(copy=>copy.owner===c.id&&copy.data.project_id===project.id).length,0);
+ cmd(a,'claim.review',{...ref(pending),accept:true});
+ assert.equal(store.list('copy').filter(copy=>copy.owner===c.id&&copy.data.slot_id===gatedSlot.id).length,1);
+});
 test('共创任务人数、前置依赖、截止日期与撤权不可绕过，撤回可重认领',t=>{
  const {store,users:[a,b,c],cmd,ref}=setup(t);
  const project=cmd(a,'project.create',{basis:'已有可公开基础',public_scope:'brief',reviewer_id:a.id,fee_terms:'各自承担费用',deadline_mode:'none',title:'共创',goal:'制作页面',criteria:'可用',task:'制作',participation:'open'});

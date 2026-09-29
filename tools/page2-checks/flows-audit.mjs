@@ -105,6 +105,26 @@ const expect = (ok, label, detail = '') => {
   await sleep(2500);
   await page.getByRole('button', { name: '编辑资料', exact: true }).click();
   await sleep(2000);
+  // 「个人信息」那四行必须是一整块卡：以前"用户名"是只读的 div，`:first-of-type/:last-of-type`
+  // 是按标签算的，于是它同时命中 first 和 last，自己在中间收了个圆角+底边，看着像被切成两块。
+  const infoRows = await page.evaluate(() => {
+    const section = [...document.querySelectorAll('section')].find((item) => item.querySelector('h2')?.textContent?.includes('个人信息'));
+    if (!section) return null;
+    return [...section.children].filter((node) => node.tagName !== 'H2').map((node) => ({
+      label: node.querySelector('span')?.textContent?.trim() || '',
+      bottomWidth: getComputedStyle(node).borderBottomWidth,
+      radius: getComputedStyle(node).borderBottomLeftRadius,
+      background: getComputedStyle(node).backgroundColor,
+    }));
+  });
+  expect(Array.isArray(infoRows) && infoRows.length === 4, '「个人信息」那一组是四行', `${infoRows?.length}`);
+  const userNameRow = infoRows?.find((row) => row.label === '用户名');
+  const tagsRow = infoRows?.find((row) => row.label === '领域标签');
+  expect(userNameRow?.bottomWidth === '0px', '「用户名」那一行不带底边（不在中间收口）', userNameRow?.bottomWidth);
+  expect(userNameRow?.radius === '0px', '「用户名」那一行不圆下角', userNameRow?.radius);
+  expect(tagsRow?.bottomWidth === '1px', '最后一行「领域标签」有底边', tagsRow?.bottomWidth);
+  expect(infoRows?.every((row) => row.background === 'rgb(255, 255, 255)'), '四行底色一致（看不出拼接缝）');
+  await page.screenshot({ path: path.join(OUT, 'profile-edit.png'), fullPage: true });
   const nickname = `审查昵称${Date.now() % 10000}`;
   await page.getByText('昵称', { exact: true }).first().click();
   await sleep(1200);

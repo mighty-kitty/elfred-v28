@@ -128,11 +128,16 @@
   cursor: pointer;
 }
 
-.row:first-of-type {
+/* ⚠️ 用位置（第几个孩子）而不是 `:first-of-type`：
+   `:*-of-type` 是按**标签**算的，而这个分组里"用户名"那一行是只读的 `<div>`、
+   其余是 `<button>`——于是那个 div 同时命中 first 和 last，自己在中间收了个圆角+底边，
+   看起来就像卡片被切成了两块（实测截图里就是"用户名"下面断了一刀）。
+   这样按位置定：分组的第一个 .row 圆上角、最后一个 .row 圆下角+补底边。 */
+.section > .row:nth-child(2) {
   border-radius: 16px 16px 0 0;
 }
 
-.row:last-of-type {
+.section > .row:last-child {
   border-bottom: 1px solid #eceef1;
   border-radius: 0 0 16px 16px;
 }

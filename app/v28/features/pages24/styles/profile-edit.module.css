@@ -221,25 +221,6 @@
   color: #fff !important;
 }
 
-.footNote {
-  margin: 22px 2px 0;
-  color: #9aa2ab;
-  font-size: 12px;
-  line-height: 1.6;
-}
-
-.footNote button {
-  display: block;
-  margin-top: 8px;
-  padding: 0;
-  border: 0;
-  background: none;
-  color: #4c6ef5;
-  font-size: 12.5px;
-  font-weight: 600;
-  cursor: pointer;
-}
-
 /* ── 单字段编辑弹层 ───────────────────────────────────────────────── */
 .sheet {
   position: fixed;

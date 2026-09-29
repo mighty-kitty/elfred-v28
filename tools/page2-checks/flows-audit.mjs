@@ -124,6 +124,9 @@ const expect = (ok, label, detail = '') => {
   expect(userNameRow?.radius === '0px', '「用户名」那一行不圆下角', userNameRow?.radius);
   expect(tagsRow?.bottomWidth === '1px', '最后一行「领域标签」有底边', tagsRow?.bottomWidth);
   expect(infoRows?.every((row) => row.background === 'rgb(255, 255, 255)'), '四行底色一致（看不出拼接缝）');
+  // 少解释：编辑资料不再挂那些冗余说明（"任何情况下都不会公开"、开关下面的解释小字、跳记忆库的链接）
+  const editText = await page.evaluate(() => document.body.innerText);
+  expect(!/任何情况下都不会公开|去看它记住了什么|主页上不显示等级与理解度|主页上会显示/.test(editText), '编辑资料不再挂冗余解释（开关小字、隐私说明那一整段）');
   await page.screenshot({ path: path.join(OUT, 'profile-edit.png'), fullPage: true });
   const nickname = `审查昵称${Date.now() % 10000}`;
   await page.getByText('昵称', { exact: true }).first().click();

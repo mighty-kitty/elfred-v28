@@ -248,24 +248,12 @@ export function ProfileEditPage({
         >
           <span>
             展示等级与能力
-            <small>
-              {showLevel
-                ? "主页上会显示「Lv.x · 阶段」和理解度"
-                : "主页上不显示等级与理解度（只看得到你自己）"}
-            </small>
           </span>
           <i className={`${styles.switch} ${showLevel ? styles.switchOn : ""}`}>
             {showLevel ? <Eye size={14} /> : <EyeOff size={14} />}
           </i>
         </button>
       </section>
-
-      <p className={styles.footNote}>
-        这里改的只有「别人能不能看到你」的那部分。私人记忆、任务和对话，任何情况下都不会公开。
-        <button type="button" onClick={() => go({ name: "memory" })}>
-          去看它记住了什么
-        </button>
-      </p>
 
       {/* ── 单字段编辑（小红书那种"点一个字段，单独改一个"）────────────── */}
       {sheet && (

@@ -237,8 +237,8 @@ export function KnowledgePage({
         active="knowledge"
         go={go}
         onContext={() => setAlignmentOpen(true)}
-        /* 空态（新用户）：理解度从零开始（不是老用户的 86%） */
-        alignment={emptyMode ? 0 : undefined}
+        /* 不再对空态强行写 0：理解度的起点由后端给（没见过你 ≈ 一成，见 core/agent-alignment.mjs 的 BASE），
+           这里写 0 会让"能力库"和"记忆库"两个页头显示成两个数（记忆库那边没有这个覆盖）。 */
       />
       <div
         className="v277-library-scroll"

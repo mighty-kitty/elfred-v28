@@ -117,6 +117,16 @@ const expect = (ok, label, detail = '') => {
   expect(progressCards.length === 3, '同一件验收产物不会在"资料"和"成果"里各显示一次', `这一排 ${progressCards.length} 张，成果 ${(snapshot.objects.outcome || []).length} 件`);
   await page.screenshot({ path: path.join(OUT, 'page2.png'), fullPage: true });
 
+  // 能力库 / 记忆库两个页头的理解度必须是同一个数：以前能力库那边在空态硬写了 0，
+  // 而记忆库用后端给的起点值（一成），同一个账号在同一页的两个标签下看到两个数。
+  await page.getByRole('button', { name: '记忆库' }).first().click();
+  await sleep(2500);
+  const memoryHeader = await page.evaluate(() => document.querySelector('.v277-library-head')?.innerText?.replace(/\n/g, ' | ') ?? '');
+  const memoryPercent = Number((memoryHeader.match(/(\d+)%/) || [])[1] ?? -1);
+  expect(memoryPercent === percent, '记忆库页头的理解度和能力库一致', `能力库 ${percent}% / 记忆库 ${memoryPercent}%`);
+  await page.getByRole('button', { name: '能力库' }).first().click();
+  await sleep(2500);
+
   // ── ③ 点开一张卡看说明书 ──────────────────────────────────────────
   const card = page.locator('.v277-ability-cards button').first();
   if (await card.count()) {

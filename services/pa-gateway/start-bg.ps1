@@ -1,4 +1,4 @@
-# 后台起 PA 网关（隐藏窗口），日志写到 %TEMP%。重复执行会先停掉旧进程。
+﻿# 后台起 PA 网关（隐藏窗口），日志写到 %TEMP%。重复执行会先停掉旧进程。
 $port = 8790
 $log = Join-Path $env:TEMP 'pa-gateway.log'
 $err = Join-Path $env:TEMP 'pa-gateway.err.log'

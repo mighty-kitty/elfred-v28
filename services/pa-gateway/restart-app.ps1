@@ -1,4 +1,4 @@
-# 重启本地 Elfred（隐藏窗口）并等它起来。日志写到 %TEMP%\elfred-app.log。
+﻿# 重启本地 Elfred（隐藏窗口）并等它起来。日志写到 %TEMP%\elfred-app.log。
 $root = (Resolve-Path (Join-Path $PSScriptRoot '..\..')).Path
 $log = Join-Path $env:TEMP 'elfred-app.log'
 $err = Join-Path $env:TEMP 'elfred-app.err.log'

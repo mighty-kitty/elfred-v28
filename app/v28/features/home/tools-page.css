@@ -2,6 +2,16 @@
   min-height: 0;
   padding: 20px 12px;
 }
+.elfred-tools-connected .v281-all-tools > .v277-empty {
+  min-height: 0;
+  margin: 12px 0;
+  padding: 20px 14px;
+  font-size: 13px;
+  line-height: 1.5;
+}
+.elfred-tools-connected .elfred-tools-expand {
+  margin-top: 8px;
+}
 .elfred-tools-connected .v281-recent-card {
   display: flex;
   align-items: flex-start;

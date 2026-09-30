@@ -4,6 +4,27 @@ import {Store,id} from '../../server/elfred/store.mjs';
 import {Service} from '../../server/elfred/service.mjs';
 import {Runtime} from '../../server/elfred/runtime.mjs';
 import {authenticate} from '../../server/elfred/auth.mjs';
+test('五个子 Agent 的真实任务验收后都能各自发布一条朋友圈',async t=>{
+ const store=new Store(':memory:');t.after(()=>store.close());
+ const provider={status:()=>({configured:true}),generate:async()=>({output:'已完成并可供核对的实际成果',usage:{total_tokens:2}})};
+ const service=new Service(store,provider),runtime=new Runtime(store,provider);
+ const user=authenticate(store,'five-agent-feed-test','test-password-long',true,'测试用户').user;
+ service.initialize(user);
+ const command=(action,input)=>service.command(user.id,id(),action,input);
+ const ref=object=>({id:object.id,version:store.get(object.id).version});
+ for(const system of ['explore','advise','create','connect','execute']){
+  const task=command('task.create',{goal:`${system} 完成一项实际任务`,system,review_mode:'single'});
+  command('task.confirm',{...ref(task),confirm:true,model_consent:true});
+  command('run.start',ref(task));
+  await runtime.tick();
+  command('task.accept',{...ref(task),accept:true});
+  const posts=store.visible(user.id,'feed').filter(item=>item.data.task_id===task.id);
+  assert.equal(posts.length,1,`${system} 应在真人验收后发主帖`);
+  assert.equal(posts[0].data.system,system);
+ }
+ assert.equal(store.visible(user.id,'feed').length,5);
+ assert.equal(store.list('post').length,0,'私人 Agent 朋友圈不能变成真人社区帖');
+});
 test('真人验收触发唯一私人主帖，协作与后续追问归入讨论，社区无AI帖',async t=>{
  const store=new Store(':memory:');t.after(()=>store.close());const calls=[],provider={status:()=>({configured:true}),generate:async p=>{calls.push(p);return {output:p.goal.phase==='collaboration'?'协作证据：需要补充样本':'可审核的本人成果',usage:{total_tokens:2}}}},service=new Service(store,provider),runtime=new Runtime(store,provider),a=authenticate(store,'feed-test-a','test-password-long',true,'甲').user,b=authenticate(store,'feed-test-b','test-password-long',true,'乙').user;service.initialize(a);service.initialize(b);const cmd=(action,input)=>service.command(a.id,id(),action,input),ref=o=>({id:o.id,version:store.get(o.id).version});
  const task=cmd('task.create',{goal:'整理发现并写成说明',system:'create',review_mode:'single'});cmd('task.collaboration',{...ref(task),confirm:true,steps:[{id:'evidence',system:'explore',goal:'找出证据缺口',source_refs:[],depends:[]}]});const execute=async task=>{cmd('task.confirm',{...ref(task),confirm:true,model_consent:true});cmd('run.start',ref(task));await runtime.tick();cmd('task.accept',{...ref(task),accept:true})};await execute(task);const feed=store.visible(a.id,'feed')[0];assert.equal(feed.data.comments.length,1);assert.equal(feed.data.comments[0].system,'explore');assert.match(feed.data.comments[0].content,/补充样本/);assert.equal(store.visible(b.id,'feed').length,0);

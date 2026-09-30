@@ -1,0 +1,16 @@
+.elfred-project-slots{padding:16px!important;background:#f5f7f8!important}
+.elfred-project-slots>h3{margin:0 0 12px!important;font-size:17px!important}
+.elfred-project-slot-card{margin:10px 0;padding:14px;border:1px solid #e1e6e9;border-radius:18px;background:#fff;box-shadow:0 4px 16px rgba(25,35,42,.04);overflow-wrap:anywhere}
+.elfred-project-slot-card>header{display:flex;flex-direction:column;gap:3px;margin-bottom:10px}
+.elfred-project-slot-card>header small{font-size:11px;color:#8b969f}
+.elfred-project-slot-card>header b{font-size:16px;line-height:1.45;color:#202a32}
+.elfred-project-requirements{display:grid;grid-template-columns:1fr;gap:8px}
+.elfred-project-requirements>div{min-width:0;padding:10px;border-radius:12px;background:#f6f8f9}
+.elfred-project-requirements small{display:block;margin-bottom:4px;font-size:11px;color:#798690}
+.elfred-project-requirements p{margin:0!important;font-size:13px!important;line-height:1.5!important;color:#2b3740;overflow-wrap:anywhere}
+.elfred-project-slot-meta{display:flex;flex-wrap:wrap;gap:6px;margin:11px 0}
+.elfred-project-slot-meta span{padding:4px 8px;border-radius:999px;background:#eff3f4;color:#60717b;font-size:11px;line-height:1.4}
+.elfred-project-dependencies{margin:6px 0!important;font-size:12px!important;color:#6a7882}
+.elfred-project-slot-card>.v277-secondary{width:100%;min-height:40px;margin-top:5px;border-radius:12px;background:#20282d;color:#fff;text-align:center}
+.elfred-project-slot-card details{margin-top:8px;font-size:12px;color:#66747e}
+@media(min-width:520px){.elfred-project-requirements{grid-template-columns:repeat(2,minmax(0,1fr))}}

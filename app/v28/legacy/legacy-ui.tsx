@@ -6,6 +6,7 @@ import {extractHtmlPreview} from '../core/inline-html-preview.mjs';
 import {PlayerRunLog} from '../features/home/player-run-log';
 import {PlayerModelSettings} from '../features/home/player-model-settings';
 import {FollowAuthor,RecruitmentSummary} from '../features/home/community-author';
+import {CommunityImageGallery} from '../features/home/community-gallery';
 import {Observations} from '../features/home/observations';
 import {ContextRecovery} from '../features/home/context-recovery';
 import {TaskContext} from '../features/home/task-context';
@@ -6348,7 +6349,7 @@ export function CommunityPage({
                 <p>{post.text}</p>
               </button>
               {originalPost&&<><RecruitmentSummary post={originalPost} onOpen={()=>go({name:"community-post",id:post.id})}/><FollowAuthor post={originalPost}/></>}
-              {originalPost&&((originalPost.data.attachments||[]) as FileRef[]).some(file=>file.mime.startsWith('image/'))&&<button type="button" className="community-post-image-preview" onClick={()=>go({name:'community-post',id:post.id})} aria-label="查看动态图片"><img src={`/api/elfred/attachments/${((originalPost.data.attachments||[]) as FileRef[]).find(file=>file.mime.startsWith('image/'))?.id}`} alt="动态配图" loading="lazy"/></button>}
+              {originalPost&&<CommunityImageGallery files={(originalPost.data.attachments||[]) as FileRef[]} onOpen={()=>go({name:'community-post',id:post.id})}/>}
               {post.gallery && (
                 <button
                   type="button"

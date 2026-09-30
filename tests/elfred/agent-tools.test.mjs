@@ -37,6 +37,14 @@ test('明确关闭联网不发公开请求；读取公开网页有单独回执�
  assert.throws(()=>e.command('agent.chat.send',{id:thread.id,text:'请阅读 https://127.0.0.1/private',model_consent:true}),{code:'INVALID_FEED_URL'});
  assert.throws(()=>publicQuery('联网搜索 密码:secret'),{code:'PRIVATE_WEB_QUERY'});assert.throws(()=>publicQuery('搜索我 user@example.com'),{code:'PRIVATE_WEB_QUERY'});
  assert.equal(webIntent('不用联网，帮我写一段简介'),null);assert.equal(pageText('<script>alert(1)</script><h1>正常标题</h1><p>正常正文</p>'),'正常标题 正常正文');
+ // 卡片说明书里写"不联网补充"这种句子，不该被当成"这一轮要联网"
+ assert.equal(webIntent('只在本人提供的材料里查；材料不够就写"未知"，不联网补充'),null);
+ assert.equal(webIntent('只说我这边的资料，不搜索'),null);
+ // 自动模式下，一条长消息（比如带着整份工具说明书）不该整段当联网关键词，降级成普通对话
+ assert.equal(webIntent(`联网 ${'补'.repeat(320)}`, 'auto'),null);
+ assert.equal(webIntent('允许联网检索公开来源', 'auto')?.tool,'web.search','短消息仍然照常联网');
+ // 用户自己按了"本轮联网"，超长才应该报错让他缩短
+ assert.throws(()=>webIntent(`联网 ${'补'.repeat(320)}`,'web'),{code:'INVALID_WEB_QUERY'});
  await assert.rejects(readPublicPage('https://example.com/',{resolver:async()=>[{address:'127.0.0.1'}]}),{code:'WEB_UNAVAILABLE'});
 });
 

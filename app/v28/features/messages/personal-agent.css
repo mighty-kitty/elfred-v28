@@ -37,3 +37,10 @@
 .v280-device .v279-human-chat-page{display:flex;flex-direction:column;min-height:0}
 .v280-device .v279-human-chat-head{flex:0 0 74px}
 .v280-device .v279-human-chat-stream{flex:1;min-height:0;height:auto!important;overflow-y:auto!important;overscroll-behavior-y:contain;padding-bottom:calc(var(--elfred-composer-height,64px) + 32px)!important}
+.elfred-private-layer{position:absolute;z-index:39;left:12px;right:12px;bottom:calc(var(--elfred-composer-height,64px) + 24px);max-height:min(50%,calc(100% - var(--elfred-composer-height,64px) - 94px));overflow-y:auto;overscroll-behavior:contain;border:1px solid #e0e5e8;border-radius:20px;background:#f5f7f8;box-shadow:0 10px 30px rgba(20,30,40,.14)}
+.elfred-private-layer:has(.is-expanded){top:74px;max-height:none}
+.elfred-private-layer .elfred-personal-panel,.elfred-private-layer .elfred-personal-panel.is-expanded{position:static;inset:auto;max-height:none;overflow:visible;margin:0;border:0;border-radius:0}
+.elfred-private-layer .elfred-personal-panel>header{top:0}
+.elfred-private-intents{display:flex;gap:6px;flex-wrap:wrap;margin:8px 0}
+.elfred-private-intents button{font-size:12px;padding:7px 10px}
+.elfred-private-layer .elfred-search-results{border-top:1px solid #e0e5e8}

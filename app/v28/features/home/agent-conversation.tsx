@@ -11,7 +11,7 @@ import type {Screen} from '../../core/screen';
 import {useRuntime,entityRef} from '../../core/runtime-context';
 import {Action} from '../../core/runtime-panels';
 import {statuses,text as entityText} from '../live/types';
-import {InlineHtmlPreview} from '../../core/inline-html-preview';
+import {InlineHtmlPreview} from '../../core/html-preview-component';
 import {extractHtmlPreview} from '../../core/inline-html-preview.mjs';
 import {Globe,Wrench} from 'lucide-react';
 import './agent-conversation-tools.css';

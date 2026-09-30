@@ -44,6 +44,16 @@
     right: calc(14px + env(safe-area-inset-right, 0px)) !important;
   }
   .v280-device .v277-sticky-actions { position: absolute; left: 16px; right: 16px; }
+  .v280-device[data-keyboard-open="true"] .phone-stage {
+    padding-bottom: 0 !important;
+  }
+  .v280-device[data-keyboard-open="true"] .v279-human-composer {
+    bottom: 4px !important;
+  }
+  .v280-device[data-keyboard-open="true"] .elfred-private-layer,
+  .v280-device[data-keyboard-open="true"] .elfred-mention-picker {
+    bottom: calc(var(--elfred-composer-height, 64px) + 12px);
+  }
 }
 
 .v280-device {

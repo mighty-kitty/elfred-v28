@@ -7,7 +7,7 @@ import {ArrowLeft} from 'lucide-react';
 import {useRuntime,entityRef} from '../../core/runtime-context';
 import {Action,Field} from '../../core/runtime-panels';
 import {type Entity,text} from '../live/types';
-import {InlineHtmlPreview} from '../../core/inline-html-preview';
+import {InlineHtmlPreview} from '../../core/html-preview-component';
 import {extractHtmlPreview} from '../../core/inline-html-preview.mjs';
 import type {Screen} from '../../core/screen';
 import './community-post.css';

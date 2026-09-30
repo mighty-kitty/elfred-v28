@@ -1,0 +1,683 @@
+/* 弹层那几件：能力卡详情 / 理解度面板 / 荣誉勋章 / 轻量测试的阶梯与流程块。
+ * 只被 capability-sheet、understanding-sheet、honor-gallery、questionnaire-page 使用。 */
+
+.statCaption {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+}
+/* 量词（项 / 天 …）贴在数字右边、小一号：像游戏里的"1,250 分"那样，
+   数字是主角、量词是附注，别让量词跟着数字一起变大，也别把它赶到下一行当标签 */
+.statUnit {
+  margin-left: 1px;
+  color: #4b5563;
+  font-size: 12.5px;
+  font-style: normal;
+  font-weight: 500;
+}
+/* 下一步：门槛是"目标"，可以露；分数怎么算不露 */
+.nextBox {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 12px 14px;
+  border-radius: 16px;
+  background: rgba(15, 23, 42, 0.035);
+}
+.nextBox > b {
+  color: #23282e;
+  font-size: 13px;
+}
+.nextBox > small {
+  color: #8b939b;
+  font-size: 11px;
+}
+.nextBar {
+  width: 100%;
+  height: 5px;
+  overflow: hidden;
+  border-radius: 3px;
+  background: #dfe3e6;
+}
+.nextBar > span {
+  display: block;
+  height: 100%;
+  border-radius: 3px;
+  transition: width 240ms cubic-bezier(0.2, 0, 0, 1);
+}
+.recordRow {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 8px 10px;
+  border-radius: 13px;
+  background: rgba(15, 23, 42, 0.03);
+}
+.recordRow > b {
+  font-size: 12.5px;
+  font-weight: 500;
+}
+.recordRow > small {
+  color: #8b939b;
+  font-size: 10.5px;
+}
+/* ── 使用说明：流程图（SVG，替代原来的三栏文字）──────────────────
+ * 就是那张实例卡的图：输入（圆角方块）汇进「处理」，处理里一串步骤，再分叉出输出。
+ * 中间我一度把它换成 HTML 三栏 —— 那是改坏了，用户要的就是这张图，已经还原。
+ *
+ * 还原时补了两道保护，免得再出现"文字糊成一团"：
+ *   ① 一行最多 5 个步骤方块，每块宽度**按字数**算，装不下就省略号收尾
+ *      （原来固定 N 等分，6 步时每块只剩 26px，SVG 的 <text> 不换行 → 互相盖住）；
+ *   ② 输入/输出各有上限（2 / 3），多的折成"…"。
+ * 详见 capability-sheet.tsx 里 FlowDiagram 上方的说明。
+ */
+:global(.v279-capability-sheet) .flowSvg {
+  display: block !important;
+  width: 100% !important;
+  height: auto !important;
+  margin-top: 4px !important;
+}
+/* 数据方块：白底 + 极细描边 + 一点阴影 */
+:global(.v279-capability-sheet) .flowBox {
+  fill: #ffffff !important;
+  stroke: #e6e9ec !important;
+  filter: drop-shadow(0 1px 2px rgba(15, 23, 42, 0.05));
+}
+:global(.v279-capability-sheet) .flowText {
+  fill: #23282e !important;
+  font-size: 9px !important;
+  font-weight: 600 !important;
+}
+/* 这一栏这条 skill 没声明时占位用的短横：灰一档，别当成正经内容看 */
+:global(.v279-capability-sheet) .flowTextEmpty {
+  fill: #b6bec6 !important;
+  font-weight: 500 !important;
+}
+/* 处理链里的小步骤字：**字号跟着方块宽度算**（见 FlowDiagram 的 fit()），
+   所以哪怕 5 步排一行也不会互相盖住 */
+:global(.v279-capability-sheet) .flowStep {
+  fill: #3f4650 !important;
+  font-size: 8.5px !important;
+}
+/* 汇入 / 分叉的连线：和主连线同一个颜色、同一个粗细 */
+:global(.v279-capability-sheet) .flowLine {
+  fill: none !important;
+  stroke: var(--tone, #6d7680) !important;
+  stroke-linecap: round !important;
+  stroke-width: 1.4 !important;
+}
+/* 处理节点那层很淡的辉光：让它像"引擎" */
+:global(.v279-capability-sheet) .flowCore {
+  filter: drop-shadow(
+    0 4px 14px color-mix(in srgb, var(--tone, #6d7680) 26%, transparent)
+  ) !important;
+}
+/* 图里的字用界面字体，别用 SVG 默认那个 */
+:global(.v279-capability-sheet) .flowSvg text {
+  font-family: inherit !important;
+}
+:global(.v279-capability-sheet) .flowSvg line,
+:global(.v279-capability-sheet) .flowSvg path {
+  stroke-linecap: round !important;
+  stroke-linejoin: round !important;
+}
+.segTabs {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4px;
+  margin: 14px 0 14px;
+  padding: 4px;
+  border-radius: 14px;
+  background: #f2f4f6;
+}
+.segTab {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  height: 34px;
+  border: 0;
+  border-radius: 11px;
+  background: transparent;
+  color: #6b7379;
+  font-size: 13.5px;
+  font-weight: 600;
+}
+.segTabOn {
+  background: #fff;
+  color: #171a1d;
+  box-shadow: 0 1px 3px rgba(20, 28, 36, 0.12);
+}
+.stageTop {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+/* 当前档是这块面板的主角：给它自己的浅蓝底块，其余块用中性灰底 */
+.stage {
+  padding: 14px 13px;
+  border-radius: 20px;
+  background: #f4f8ff;
+}
+.orb {
+  position: relative;
+  flex: none;
+  width: 46px;
+  height: 46px;
+  border-radius: 50%;
+  /* 不用 background-image 画球：全局有一条 .phone-stage * { background-image: none !important }，
+     渐变会被抹掉；这里用纯色 + 内阴影做出球感 */
+  background: #414b54;
+  box-shadow:
+    inset 8px 9px 14px rgba(255, 255, 255, 0.5),
+    inset -9px -10px 18px rgba(0, 0, 0, 0.5),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.08);
+}
+/* 高光点：让球看起来是圆的 */
+.orb::after {
+  content: "";
+  position: absolute;
+  top: 8px;
+  left: 9px;
+  width: 11px;
+  height: 8px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.85);
+  filter: blur(1.5px);
+  transform: rotate(-28deg);
+}
+.stageName {
+  font-size: 20px;
+  font-weight: 800;
+  line-height: 1.2;
+  color: #171a1d;
+}
+.stageName em {
+  margin-left: 7px;
+  font-size: 13px;
+  font-style: normal;
+  color: #6b7379;
+}
+.stageSub {
+  margin-top: 3px;
+  color: #8b939b;
+  font-size: 11.5px;
+}
+.stagePct {
+  margin-left: auto;
+  text-align: right;
+}
+.stagePct b {
+  display: block;
+  font-size: 22px;
+  font-weight: 800;
+  line-height: 1.1;
+  color: #171a1d;
+}
+.stagePct small {
+  color: #8b939b;
+  font-size: 10.5px;
+}
+.bar {
+  position: relative;
+  display: block;
+  height: 10px;
+  margin-top: 13px;
+  border-radius: 999px;
+  background: #eceff3;
+  box-shadow: inset 0 1px 2px rgba(20, 28, 36, 0.07);
+}
+.barFill {
+  position: relative;
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+  background: #2f6fed;
+  transition: width 0.6s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+/* 圆头游标：停在填充的末端，像游戏经验条上"你在这儿"那个点 */
+.barKnob {
+  position: absolute;
+  top: 50%;
+  right: -1px;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 1px 3px rgba(20, 28, 36, 0.28);
+  transform: translateY(-50%);
+}
+/* 目标点：压在轨道最右端，表示"下一档的门槛"——眼睛有个要追的点 */
+.barGoal {
+  position: absolute;
+  top: 50%;
+  right: 1px;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #c3cddb;
+  transform: translateY(-50%);
+}
+@media (prefers-reduced-motion: reduce) {
+  .barFill {
+    transition: none;
+  }}
+.next {
+  margin-top: 14px;
+  padding: 12px 13px;
+  border-radius: 16px;
+  background: #f7f9fc;
+}
+.nextHead {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 700;
+  color: #171a1d;
+}
+.nextHead b {
+  color: #2f6fed;
+  font-variant-numeric: tabular-nums;
+}
+.next .bar {
+  margin-top: 9px;
+  height: 9px;
+  background: #e6ecf4;
+}
+.nextNote {
+  margin-top: 8px;
+  color: #7b8ea8;
+  font-size: 11.5px;
+}
+.stat {
+  text-align: center;
+}
+.stat + .stat {
+  border-left: 1px solid #e7ecf1;
+}
+.stat b {
+  display: block;
+  font-size: 19px;
+  font-weight: 800;
+  color: #171a1d;
+  font-variant-numeric: tabular-nums;
+}
+.stat small {
+  color: #8b939b;
+  font-size: 10.5px;
+}
+.pathHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 16px;
+}
+.pathHead h4 {
+  font-size: 13.5px;
+  font-weight: 700;
+  color: #171a1d;
+}
+.pathHead button {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  border: 0;
+  background: none;
+  color: #6b7379;
+  font-size: 12px;
+}
+.pathRow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 9px;
+  padding: 7px 12px;
+  border-radius: 14px;
+  background: #f7f9fc;
+}
+.pathRow > b {
+  flex: none;
+  width: 34px;
+  color: #6b7379;
+  font-size: 12.5px;
+}
+.pathInfo {
+  min-width: 0;
+}
+.pathInfo strong {
+  display: block;
+  font-size: 13px;
+  font-weight: 700;
+  color: #171a1d;
+}
+.pathInfo small {
+  display: block;
+  margin-top: 2px;
+  color: #8b939b;
+  font-size: 11px;
+}
+.pathTag {
+  flex: none;
+  margin-left: auto;
+  padding: 3px 9px;
+  border-radius: 999px;
+  background: #1c2126;
+  color: #fff;
+  font-size: 10.5px;
+  font-weight: 600;
+}
+/* 铺开六档时用两列格子，比一行一档省一半高度，一屏就放得下 */
+.pathGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-top: 9px;
+}
+.pathCell {
+  padding: 10px 11px;
+  border-radius: 14px;
+  background: #f7f9fc;
+}
+.pathCellCurrent {
+  background: #eef4ff;
+  box-shadow: inset 0 0 0 1px #cfe0f7;
+}
+.pathCell > b {
+  display: block;
+  color: #171a1d;
+  font-size: 12px;
+  font-weight: 700;
+}
+.pathCell > small {
+  display: block;
+  margin-top: 3px;
+  color: #8b939b;
+  font-size: 10.5px;
+  line-height: 1.45;
+}
+.pathLink {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 12px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: #2f6fed;
+  font-size: 13px;
+  font-weight: 600;
+}
+.honorTop {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 13px;
+  border-radius: 16px;
+  background: #f7f9fc;
+}
+.honorTop b {
+  font-size: 13.5px;
+  color: #171a1d;
+}
+.honorTop small {
+  display: block;
+  margin-top: 2px;
+  color: #8b939b;
+  font-size: 11px;
+}
+.honorTop strong {
+  margin-left: auto;
+  font-size: 16px;
+  font-weight: 800;
+  color: #171a1d;
+}
+.medalGrid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  margin-bottom: 12px;
+}
+.medal {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 12px 6px;
+  border: 0;
+  border-radius: 14px;
+  background: #f7f9fc;
+  color: #3f4650;
+  font-size: 11.5px;
+}
+.medal span {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 38px;
+  height: 38px;
+  border-radius: 12px;
+  background: #fff;
+  color: #2f6fed;
+}
+.medalLocked {
+  background: #fafbfc;
+  color: #9aa3ab;
+}
+.medalLocked span {
+  color: #c3cbd3;
+}
+.medalLocked small {
+  color: #b6bdc4;
+  font-size: 10px;
+}
+/* 第四页（我的 → 勋章）用这块时给点上边距，和那一页其它块对齐 */
+.honorCompact {
+  margin-top: 14px;
+}
+/* 成长块里那颗"去做一件事 / 可以升级了"的按钮：门槛那句"还差 N 项"要有出口 */
+:global(.v279-capability-sheet) .nextAction {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 5px !important;
+  height: 32px !important;
+  margin-top: 2px !important;
+  border: 1px solid rgba(15, 23, 42, 0.08) !important;
+  border-radius: 12px !important;
+  background: #fff !important;
+  color: #23282e !important;
+  font-size: 12px !important;
+  font-weight: 600 !important;
+}
+:global(.v279-capability-sheet) .nextAction:active {
+  transform: scale(0.985) !important;
+}
+/* 生成任务草稿后的那一行提示 */
+:global(.v279-capability-sheet) .draftNote {
+  margin: 0 !important;
+  padding: 9px 12px !important;
+  border-radius: 12px !important;
+  background: rgba(47, 143, 106, 0.1) !important;
+  color: #2f7f61 !important;
+  font-size: 11.5px !important;
+}
+:global(.v279-capability-sheet) .statUnit {
+  font-size: 15px !important;
+}
+:global(.v279-capability-sheet) .statCellHint,
+:global(.v279-capability-sheet) .statCellOpen {
+  margin-top: 1px !important;
+  color: #b6bdc4 !important;
+  transition: transform 180ms cubic-bezier(0.2, 0, 0, 1) !important;
+}
+:global(.v279-capability-sheet) .statCellOpen {
+  transform: rotate(90deg) !important;
+}
+:global(.v279-capability-sheet) .ladder {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 2px !important;
+  margin: 2px 0 0 !important;
+  padding: 0 !important;
+  list-style: none !important;
+}
+:global(.v279-capability-sheet) .rung {
+  position: relative !important;
+  display: grid !important;
+  grid-template-columns: 30px minmax(0, 1fr) !important;
+  align-items: start !important;
+  gap: 8px !important;
+  padding: 8px 8px 8px 0 !important;
+}
+/* 串起每一档的竖线：节点之间的连线 */
+:global(.v279-capability-sheet) .rung::before {
+  position: absolute !important;
+  top: 26px !important;
+  bottom: -2px !important;
+  left: 14px !important;
+  width: 1px !important;
+  background: #e4e8eb !important;
+  content: "" !important;
+}
+:global(.v279-capability-sheet) .rung:last-child::before {
+  display: none !important;
+}
+:global(.v279-capability-sheet) .rungNode {
+  display: grid !important;
+  width: 30px !important;
+  height: 30px !important;
+  place-items: center !important;
+  border-radius: 50% !important;
+  background: #f1f3f5 !important;
+  color: #2f8f6a !important;
+}
+:global(.v279-capability-sheet) .rungBody {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 2px !important;
+  padding-top: 1px !important;
+}
+:global(.v279-capability-sheet) .rungBody > b {
+  display: flex !important;
+  align-items: center !important;
+  gap: 6px !important;
+  color: #171a1d !important;
+  font-size: 13px !important;
+}
+:global(.v279-capability-sheet) .rungBody > small {
+  color: #4b5563 !important;
+  font-size: 12px !important;
+  line-height: 1.45 !important;
+}
+:global(.v279-capability-sheet) .rungNeed {
+  color: #98a1a9 !important;
+  font-size: 10.5px !important;
+  font-style: normal !important;
+}
+/* 当前档：整行上底色 + 节点用这一维的颜色，其它档退到后面 */
+:global(.v279-capability-sheet) .rungNow {
+  /* 底色往外扩，但内容位置不变——否则这一行的节点会比别的行右移 8px，竖线就断了 */
+  border-radius: 14px !important;
+  background: color-mix(in srgb, var(--tone, #6d7680) 8%, #ffffff) !important;
+  margin-left: -8px !important;
+  padding-left: 8px !important;
+}
+:global(.v279-capability-sheet) .rungNow .rungNode {
+  background: var(--tone, #6d7680) !important;
+  color: #fff !important;
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--tone, #6d7680) 14%, #ffffff) !important;
+}
+:global(.v279-capability-sheet) .rungDot {
+  width: 9px !important;
+  height: 9px !important;
+  border-radius: 50% !important;
+  background: #fff !important;
+}
+:global(.v279-capability-sheet) .rungLocked .rungNode {
+  background: #f6f7f8 !important;
+  color: #b6bdc4 !important;
+}
+:global(.v279-capability-sheet) .rungLocked .rungBody > b {
+  color: #6b757d !important;
+}
+:global(.v279-capability-sheet) .rungLocked .rungBody > small {
+  color: #98a1a9 !important;
+}
+/* 弹层第二层：成长。权限那套（现在能碰到哪、升级多给什么）从这里出现一次 */
+:global(.v279-capability-sheet) .nextMeta {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 5px !important;
+  margin-top: 2px !important;
+  color: #6b757d !important;
+  font-size: 11.5px !important;
+}
+:global(.v279-capability-sheet) .nextMeta > span {
+  display: flex !important;
+  align-items: center !important;
+  gap: 5px !important;
+}
+:global(.v279-capability-sheet) .nextMeta > span > svg {
+  flex-shrink: 0 !important;
+  color: #2f8f6a !important;
+}
+:global(.v279-capability-sheet) .nextLocked {
+  color: #8b939b !important;
+}
+:global(.v279-capability-sheet) .nextLocked > svg {
+  color: #aab2b9 !important;
+}
+
+/* 「使用说明」里的完整说明：默认收起，展开后按 markdown 正常排版（标题、列表、表格都有）；
+   以前是把 SKILL.md 压成一行字塞进 <p>，标题和列表糊在一起，看着像乱码。 */
+.fullDoc {
+  margin-top: 8px;
+  border-top: 1px dashed #e2e6ea;
+  padding-top: 8px;
+}
+
+.fullDoc > summary {
+  cursor: pointer;
+  color: #4c6ef5;
+  font-size: 12px;
+  list-style: none;
+}
+
+.fullDoc > summary::-webkit-details-marker {
+  display: none;
+}
+
+.fullDoc > summary::after {
+  content: " ▾";
+  font-size: 10px;
+}
+
+.fullDoc[open] > summary::after {
+  content: " ▴";
+}
+
+.fullDoc :global(.elfred-markdown) {
+  margin-top: 6px;
+  max-height: 260px;
+  overflow-y: auto;
+  font-size: 12px;
+  line-height: 1.6;
+  color: #3d4650;
+}
+
+.fullDoc :global(.elfred-markdown) h1,
+.fullDoc :global(.elfred-markdown) h2,
+.fullDoc :global(.elfred-markdown) h3 {
+  font-size: 12.5px;
+  margin: 8px 0 4px;
+  color: #1f2731;
+}
+
+.fullDoc :global(.elfred-markdown) ul,
+.fullDoc :global(.elfred-markdown) ol {
+  margin: 4px 0 4px 16px;
+  padding: 0;
+}

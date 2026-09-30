@@ -1,3 +1,6 @@
+/* 跨屏共用的样式：页头（能力库 / 记忆库）、资料与设置里那几个块、以及被 4 个以上文件共用的类。
+ * 只被第二页自己那块用的类在 knowledge-library.module.css，弹层相关在 knowledge-sheet.module.css。 */
+
 /*
  * 知识页专属样式（页面负责人维护）。
  *
@@ -25,216 +28,32 @@
   line-height: 1 !important;
 }
 
+
 .headerAvatar::after {
   content: "理";
 }
-
-:global(.v277-knowledge-overview) .cards {
-  display: flex !important;
-  flex-direction: row !important;
-  height: auto !important;
-  gap: 8px !important;
-  overflow-x: auto !important;
-  overflow-y: hidden !important;
-  scroll-snap-type: x proximity;
-  -webkit-overflow-scrolling: touch;
-  overscroll-behavior-x: contain;
-  /* 滑动条隐藏，但保留可滑；左右各留一点内边距，露出半张卡的暗示 */
-  scrollbar-width: none;
-  padding: 0 0 2px !important;
-}:global(.v277-knowledge-overview) .cards::-webkit-scrollbar {
-  display: none;
-}/* 一屏两个半：卡片宽 = 38%（两个 38% + 间距后，第三张露出约一半）。
-   边框换成"透明描边 + 两层阴影"（见下方按需说明），所以 border 归零。 */
-:global(.v277-knowledge-overview) .cards > button {
-  flex: 0 0 38% !important;
-  min-width: 0 !important;
-  height: 165px !important;
-  overflow: hidden !important;
-  padding: 8px !important;
-  border: 0 !important;
-  border-radius: 16px !important;
-  box-shadow:
-    0 0 0 1px rgba(15, 23, 42, 0.06),
-    0 1px 2px rgba(15, 23, 42, 0.04),
-    0 8px 20px rgba(61, 74, 85, 0.05) !important;
-  scroll-snap-align: start;
-  transition: transform 140ms cubic-bezier(0.2, 0, 0, 1) !important;
-}/* 按下缩一点点，给手指一个回落（0.96~0.98 是有手感的区间，再小就夸张了） */
-:global(.v277-knowledge-overview) .cards > button:active {
-  transform: scale(0.97) !important;
-}/* ── 卡面：信息就这些，活儿全在"轻重"上 ──────────────────────────
- *
- * 一张卡只有 137 × 165，要放的信息是固定的：维度 / 能力名 / 图 / 能力分 / 证据数 / 等级 / 还差几件。
- * 所以设计目标不是"多放"，而是把轻重排对，让用户 1 秒看完还能爽：
- *
- *   ① 能力名最大（用户先问"我能干什么"）
- *   ② 能力分第二（次问"我练到哪了"，数字用等宽数字，跳动时不抖）
- *   ③ "还差几件"画成一根进度条（数字门槛是最枯燥的信息，画出来才有"马上要升级"的感觉）
- *   ④ 顶部两个胶囊改成"一个彩点 + 两行小字"，去掉边框：卡片里少一层盒子，图才立得住
- *
- * 参考的公开做法：
- *   - Duolingo 任务条：把"还差 3 次"画成进度条，而不是写一句话
- *   - Material 3 卡片：支持性文字不超过两行，一张卡不安排三个以上动作
- *   - Refactoring UI 层级原则：同一张卡里不要出现五种一样重的灰字
- *   - Apple HIG 进度指示：确定性进度要有明确的"总目标"，所以进度条只表示"到下一档"
- */
-
-/* 行 1：左「彩点 + 维度名」、右「Lv.X · 阶段名」 */
-:global(.v277-knowledge-overview) .cardHead {
-  height: 18px !important;
-  display: flex !important;
-  flex-shrink: 0 !important;
-  align-items: center !important;
-  justify-content: space-between !important;
-  gap: 4px !important;
-}:global(.v277-knowledge-overview) .cardDim {
-  display: flex !important;
-  align-items: center !important;
-  gap: 4px !important;
-  color: #4b5563 !important;
-  font-size: 10.5px !important;
-  font-weight: 600 !important;
-  letter-spacing: 0.01em !important;
-  white-space: nowrap !important;
-}:global(.v277-knowledge-overview) .cardDim > i {
-  width: 6px !important;
-  height: 6px !important;
-  flex-shrink: 0 !important;
-  border-radius: 50% !important;
-  background: var(--dim, #6d7680) !important;
-}/* 等级是"练到哪一档"，比维度轻一档：不抢彩点，但比灰字重 */
-:global(.v277-knowledge-overview) .cardLevel {
-  color: #8b939b !important;
-  font-size: 8.6px !important;
-  font-weight: 600 !important;
-  letter-spacing: 0.01em !important;
-  white-space: nowrap !important;
-}/* 行 2：能力图。图是卡上最好看的东西，所以给足高度；描边用纯黑 10% 的细线，
-   不用带色调的灰——带色调的描边会把底下的卡片颜色吸上来，看着像脏边。 */
-:global(.v277-knowledge-overview) .cards > button > :global(.v277-ability-visual) {
-  height: 48px !important;
-  min-height: 48px !important;
-  margin-top: 5px !important;
-  border-radius: 8px !important;
-  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.1) !important;
-  /* 公共 CSS 把卡面设成了示例图库（reference-knowledge.png 切块）。给用户用不能这样：
-     没设置封面就是**中性占位**，并把卡自己的图标放出来（公共 CSS 原本把 svg 藏了）。 */
-  background-image: linear-gradient(160deg, #eef3fb 0%, #e6ecf7 60%, #dfe7f4 100%) !important;
-  background-size: cover !important;
-  background-position: center !important;
-  display: grid !important;
-  place-items: center !important;
-}
-:global(.v277-knowledge-overview) .cards > button > :global(.v277-ability-visual) > svg {
-  display: block !important;
-  color: #7d8899 !important;
-  opacity: 0.9 !important;
-}/* 行 3：能力名 —— 卡上唯一的大字 */
-:global(.v277-knowledge-overview) .cards > button > b {
-  flex-shrink: 0 !important;
-  margin-top: 6px !important;
-  font-size: 15px !important;
-  line-height: 19px !important;
-  letter-spacing: -0.01em !important;
-}/* 行 4：能力分（左，等宽数字）＋ 证据数（右）。中间那根竖线去掉：
-   下面已经有进度条了，再画分隔线就是多余的一道横线。 */
-:global(.v277-knowledge-overview) .cards footer {
-  height: 22px !important;
-  display: flex !important;
-  align-items: flex-end !important;
-  justify-content: space-between !important;
-  gap: 6px !important;
-  margin-top: 4px !important;
-  padding-top: 0 !important;
-  border-top: 0 !important;
-}:global(.v277-knowledge-overview) .cards footer::after {
-  display: none !important;
-}:global(.v277-knowledge-overview) .cards footer strong {
-  display: flex !important;
-  align-items: baseline !important;
-  font-size: 20px !important;
-  line-height: 20px !important;
-  font-variant-numeric: tabular-nums;
-}:global(.v277-knowledge-overview) .cards footer strong em {
-  display: inline !important;
-  margin: 0 0 0 3px !important;
-  color: #8b939b !important;
-  font-size: 8px !important;
-  line-height: 8px !important;
-}:global(.v277-knowledge-overview) .cards footer > span {
-  max-width: none !important;
-  /* 两个数字的基线要对上：底边齐平即可（两个字号的下沿空隙都是 1.9px，实测） */
-  align-self: flex-end !important;
-  margin-bottom: 0 !important;
-  overflow: hidden;
-  color: #8b939b !important;
-  font-size: 8.6px !important;
-  line-height: 11px !important;
-  text-overflow: ellipsis;
-  white-space: nowrap !important;
-}/* 行 5：「到下一档还差几件」——整卡最低调的一条底，也是最该让人想动一下的一条。
-   进度条用这一维的颜色，和左上角的彩点是同一个意思。整条淡底，和上面三行分开。 */
-:global(.v277-knowledge-overview) .cardGap {
-  height: 20px !important;
-  display: flex !important;
-  flex-shrink: 0 !important;
-  align-items: center !important;
-  gap: 4px !important;
-  margin-top: 5px !important;
-  padding: 0 6px !important;
-  overflow: hidden !important;
-  border-radius: 8px !important;
-  background: rgba(15, 23, 42, 0.045) !important;
-  color: #3f4650 !important;
-  font-size: 8.4px !important;
-  font-weight: 500 !important;
-  line-height: 20px !important;
-  white-space: nowrap !important;
-}/* 文案是 flex 里的匿名文本，截断要包一层容器才生效（否则会顶出卡片被硬裁） */
-:global(.v277-knowledge-overview) .cardGapText {
-  min-width: 0 !important;
-  overflow: hidden !important;
-  text-overflow: ellipsis !important;
-  white-space: nowrap !important;
-}:global(.v277-knowledge-overview) .cardBar {
-  width: 26px !important;
-  height: 3px !important;
-  flex-shrink: 0 !important;
-  overflow: hidden !important;
-  border-radius: 2px !important;
-  background: #dde1e5 !important;
-}/* 打开这一屏时进度条从左长出来（每张卡错开 70ms），"我快升级了"是看得出进度才成立的 */
-:global(.v277-knowledge-overview) .cardBar > span {
-  display: block !important;
-  height: 100% !important;
-  border-radius: 2px !important;
-  background: var(--dim, #6d7680) !important;
-  transform-origin: left center;
-  animation: cardBarIn 520ms cubic-bezier(0.2, 0, 0, 1) both;
-  animation-delay: calc(var(--i, 0) * 70ms);
-}@keyframes cardBarIn {
+@keyframes cardBarIn {
   from {
     transform: scaleX(0);
   }to {
     transform: scaleX(1);
-  }}/* ── 没有数据时的样子：写"未知 / 还没有"，不画 0，也不拿别处的数据顶 ────── */
+  }}
+/* ── 没有数据时的样子：写"未知 / 还没有"，不画 0，也不拿别处的数据顶 ────── */
 
 :global(.v277-knowledge-overview) :global(.v277-progress-empty) {
   margin: 0 !important;
   padding: 18px 2px !important;
   color: #8b939b !important;
   font-size: 12px !important;
-}:global(.v277-knowledge-overview) :global(.v279-trend-body) > p {
+}
+:global(.v277-knowledge-overview) :global(.v279-trend-body) > p {
   margin: 0 !important;
   align-self: center !important;
   color: #8b939b !important;
   font-size: 12px !important;
   line-height: 1.5 !important;
-}/* 雷达上"未知"的那一维：颜色退一档，避免被当成 0 分顶点 */
-:global(.v277-knowledge-overview) :global(.v277-radar-body) text.is-unknown {
-  fill: #aab2b9;
-}/* ══ 以下给第二页的三个"点开"用：能力卡详情 / 证据 / 维度 ══════════════
+}
+/* ══ 以下给第二页的三个"点开"用：能力卡详情 / 证据 / 维度 ══════════════
  * 共同点：都是"把卡面上的数字讲清楚"，所以复用同一套块、行、空态样式。
  */
 
@@ -246,9 +65,11 @@
   overflow-y: auto;
   padding: 14px 18px 96px;
   scrollbar-width: none;
-}.screen::-webkit-scrollbar {
+}
+.screen::-webkit-scrollbar {
   display: none;
-}.block {
+}
+.block {
   display: flex;
   flex-direction: column;
   gap: 8px;
@@ -258,7 +79,8 @@
   box-shadow:
     0 0 0 1px rgba(15, 23, 42, 0.06),
     0 8px 20px rgba(61, 74, 85, 0.04);
-}.block > h3 {
+}
+.block > h3 {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -266,51 +88,16 @@
   margin: 0;
   color: #171a1d;
   font-size: 14px;
-}.block > h3 > small {
+}
+.block > h3 > small {
   display: flex;
   align-items: center;
   gap: 4px;
   color: #8b939b;
   font-size: 11px;
   font-weight: 500;
-}.heroCard {
-  position: relative;
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  padding: 16px;
-  border: 1px solid #e6e9ec;
-  border-radius: 20px;
-  background: #fff;
-  box-shadow: 0 8px 22px rgba(59, 72, 82, 0.05);
-}.heroCard > b {
-  display: flex;
-  align-items: baseline;
-  color: #0d0f11;
-  font-size: 34px;
-  line-height: 36px;
-  font-variant-numeric: tabular-nums;
-}.heroCard > b > small {
-  margin-left: 2px;
-  color: #8b939b;
-  font-size: 13px;
-  font-weight: 500;
-}.heroCard > p {
-  margin: 2px 0 0;
-  color: #4b5563;
-  font-size: 12.5px;
-}.heroCard > span {
-  margin-top: 6px;
-  color: #8b939b;
-  font-size: 11px;
-}.heroDot {
-  position: absolute;
-  top: 18px;
-  right: 16px;
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-}/* 三格数字条：能力分 / 证据 / 等级，卡面与详情共用同一组数字 */
+}
+/* 三格数字条：能力分 / 证据 / 等级，卡面与详情共用同一组数字 */
 .statRow {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
@@ -321,7 +108,8 @@
   box-shadow:
     0 0 0 1px rgba(15, 23, 42, 0.06),
     0 8px 20px rgba(61, 74, 85, 0.04);
-}.statRow > span,
+}
+.statRow > span,
 .statRow > .statCell {
   display: flex;
   flex-direction: column;
@@ -329,13 +117,15 @@
   gap: 2px;
   color: #8b939b;
   font-size: 10.5px;
-}.statRow > span > b,
+}
+.statRow > span > b,
 .statRow > .statCell > b {
   color: #171a1d;
   font-size: 20px;
   line-height: 22px;
   font-variant-numeric: tabular-nums;
-}/* 第三个格子是按钮（点开等级阶梯），但**必须和其它两格长得一模一样**：
+}
+/* 第三个格子是按钮（点开等级阶梯），但**必须和其它两格长得一模一样**：
    字体、字号、颜色都继承同一套规则，只多一个小箭头当"可点"的提示。 */
 .statRow > .statCell {
   align-self: stretch;
@@ -343,57 +133,13 @@
   border: 0;
   background: none;
   font-weight: 500;
-}.statCaption {
-  display: inline-flex;
-  align-items: center;
-  gap: 2px;
-}/* 量词（项 / 天 …）贴在数字右边、小一号：像游戏里的"1,250 分"那样，
-   数字是主角、量词是附注，别让量词跟着数字一起变大，也别把它赶到下一行当标签 */
-.statUnit {
-  margin-left: 1px;
-  color: #4b5563;
-  font-size: 12.5px;
-  font-style: normal;
-  font-weight: 500;
-}/* 下一步：门槛是"目标"，可以露；分数怎么算不露 */
-.nextBox {
+}
+.timeline {
   display: flex;
   flex-direction: column;
   gap: 6px;
-  padding: 12px 14px;
-  border-radius: 16px;
-  background: rgba(15, 23, 42, 0.035);
-}.nextBox > b {
-  color: #23282e;
-  font-size: 13px;
-}.nextBox > small {
-  color: #8b939b;
-  font-size: 11px;
-}.nextBar {
-  width: 100%;
-  height: 5px;
-  overflow: hidden;
-  border-radius: 3px;
-  background: #dfe3e6;
-}.nextBar > span {
-  display: block;
-  height: 100%;
-  border-radius: 3px;
-  transition: width 240ms cubic-bezier(0.2, 0, 0, 1);
-}.unlocked {
-  color: #23282e;
-}.unlocked > svg {
-  color: #2f8f6a;
-}.locked {
-  color: #98a1a9;
-}.locked > small {
-  margin-left: auto;
-  font-size: 10.5px;
-}.timeline {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}.evidenceRow {
+}
+.evidenceRow {
   display: grid;
   grid-template-columns: 66px minmax(0, 1fr) 16px;
   grid-template-rows: auto auto;
@@ -403,39 +149,47 @@
   border-radius: 13px;
   background: rgba(15, 23, 42, 0.03);
   text-align: left;
-}/* 显式放格子：自动排会把副标题挤到 16px 的箭头列里（实测被裁成"任.."） */
+}
+/* 显式放格子：自动排会把副标题挤到 16px 的箭头列里（实测被裁成"任.."） */
 .evidenceRow > b {
   grid-column: 2;
   grid-row: 1;
-}.evidenceRow > small {
+}
+.evidenceRow > small {
   grid-column: 2;
   grid-row: 2;
-}.evidenceRow > svg {
+}
+.evidenceRow > svg {
   grid-column: 3;
   grid-row: 1 / span 2;
-}.evidenceTime {
+}
+.evidenceTime {
   grid-row: span 2;
   align-self: center;
   color: #8b939b;
   font-size: 10.5px;
   font-variant-numeric: tabular-nums;
-}.evidenceRow > b {
+}
+.evidenceRow > b {
   overflow: hidden;
   color: #171a1d;
   font-size: 12.5px;
   text-overflow: ellipsis;
   white-space: nowrap;
-}.evidenceRow > small {
+}
+.evidenceRow > small {
   overflow: hidden;
   color: #8b939b;
   font-size: 10.5px;
   text-overflow: ellipsis;
   white-space: nowrap;
-}.evidenceRow > svg {
+}
+.evidenceRow > svg {
   grid-row: span 2;
   align-self: center;
   color: #aab2b9;
-}.trace,
+}
+.trace,
 .footNote {
   display: flex;
   align-items: center;
@@ -444,25 +198,13 @@
   color: #8b939b;
   font-size: 11px;
   line-height: 1.5;
-}.recordRow {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 8px;
-  padding: 8px 10px;
-  border-radius: 13px;
-  background: rgba(15, 23, 42, 0.03);
-}.recordRow > b {
-  font-size: 12.5px;
-  font-weight: 500;
-}.recordRow > small {
-  color: #8b939b;
-  font-size: 10.5px;
-}.chips {
+}
+.chips {
   display: flex;
   flex-wrap: wrap;
   gap: 6px;
-}.chips > span {
+}
+.chips > span {
   display: flex;
   align-items: center;
   gap: 4px;
@@ -471,29 +213,8 @@
   background: rgba(15, 23, 42, 0.04);
   color: #3f4650;
   font-size: 11.5px;
-}.structure {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 6px;
-}.structure > div {
-  display: flex;
-  flex-direction: column;
-  gap: 5px;
-  padding: 9px 10px;
-  border: 1px solid #e9ecef;
-  border-radius: 13px;
-}.structure > div > b {
-  color: #3c7591;
-  font-size: 11.5px;
-}.structure > div > span {
-  color: #5b6670;
-  font-size: 11px;
-}/* 维度与卡的行 */
-.dimList {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}.dimRow,
+}
+.dimRow,
 .cardRow {
   display: flex;
   align-items: center;
@@ -504,43 +225,46 @@
   background: rgba(15, 23, 42, 0.03);
   text-align: left;
   transition: transform 140ms cubic-bezier(0.2, 0, 0, 1);
-}.dimRow:active,
+}
+.dimRow:active,
 .cardRow:active,
 .evidenceRow:active,
 .sourceRow:active {
   transform: scale(0.985);
-}.dimRow > i,
+}
+.dimRow > i,
 .cardRow > i {
   width: 8px;
   height: 8px;
   flex-shrink: 0;
   border-radius: 50%;
-}.dimRow > span,
+}
+.dimRow > span,
 .cardRow > span {
   display: flex;
   min-width: 0;
   flex: 1;
   flex-direction: column;
   gap: 2px;
-}.dimRow b,
+}
+.dimRow b,
 .cardRow b {
   color: #171a1d;
   font-size: 13px;
-}.dimRow small,
+}
+.dimRow small,
 .cardRow small {
   overflow: hidden;
   color: #8b939b;
   font-size: 10.5px;
   text-overflow: ellipsis;
   white-space: nowrap;
-}.dimRow > svg,
+}
+.dimRow > svg,
 .cardRow > svg {
   color: #aab2b9;
-}.cardScore {
-  color: #171a1d !important;
-  font-size: 15px !important;
-  font-variant-numeric: tabular-nums;
-}.actionBox {
+}
+.actionBox {
   display: flex;
   gap: 8px;
   padding: 13px 14px;
@@ -549,18 +273,22 @@
   color: #3f4650;
   font-size: 11.5px;
   line-height: 1.55;
-}.actionBox > svg {
+}
+.actionBox > svg {
   flex-shrink: 0;
   margin-top: 1px;
   color: #2f6fed;
-}.actionBox > span {
+}
+.actionBox > span {
   display: flex;
   flex-direction: column;
   gap: 3px;
-}.actionBox b {
+}
+.actionBox b {
   color: #23282e;
   font-size: 12px;
-}/* 证据详情 */
+}
+/* 证据详情 */
 .sourceRow {
   display: flex;
   align-items: center;
@@ -571,21 +299,26 @@
   border-radius: 14px;
   background: rgba(15, 23, 42, 0.03);
   text-align: left;
-}.sourceRow > span {
+}
+.sourceRow > span {
   display: flex;
   min-width: 0;
   flex-direction: column;
   gap: 2px;
-}.sourceRow b {
+}
+.sourceRow b {
   color: #171a1d;
   font-size: 12.5px;
-}.sourceRow small {
+}
+.sourceRow small {
   color: #8b939b;
   font-size: 10.5px;
-}.sourceRow > svg {
+}
+.sourceRow > svg {
   flex-shrink: 0;
   color: #6b757d;
-}.quote {
+}
+.quote {
   margin: 0;
   padding: 11px 12px;
   border-left: 3px solid #dfe3e6;
@@ -594,21 +327,25 @@
   color: #3f4650;
   font-size: 12.5px;
   line-height: 1.7;
-}.impactRow {
+}
+.impactRow {
   display: flex;
   flex-direction: column;
   gap: 5px;
   padding: 10px 11px;
   border-radius: 13px;
   background: rgba(15, 23, 42, 0.03);
-}.impactRow > b {
+}
+.impactRow > b {
   color: #171a1d;
   font-size: 12.5px;
-}.impactRow > span {
+}
+.impactRow > span {
   display: flex;
   flex-wrap: wrap;
   gap: 6px;
-}.impactRow em {
+}
+.impactRow em {
   padding: 3px 7px;
   border-radius: 8px;
   background: #fff;
@@ -616,21 +353,25 @@
   font-size: 10.5px;
   font-style: normal;
   font-variant-numeric: tabular-nums;
-}.upgrade {
+}
+.upgrade {
   display: flex;
   align-items: center;
   gap: 4px;
   color: #2f8f6a !important;
-}.note {
+}
+.note {
   margin: 0;
   color: #8b939b;
   font-size: 11px;
   line-height: 1.5;
-}.actions {
+}
+.actions {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 7px;
-}.actions > button {
+}
+.actions > button {
   display: flex;
   align-items: center;
   justify-content: center;
@@ -641,14 +382,11 @@
   background: rgba(15, 23, 42, 0.04);
   color: #3f4650;
   font-size: 12px;
-}.actions > button:active {
+}
+.actions > button:active {
   transform: scale(0.985);
-}.actionOn {
-  background: rgba(47, 143, 106, 0.12) !important;
-  color: #2f7f61 !important;
-}.danger {
-  color: #a3453d !important;
-}.linkBtn {
+}
+.linkBtn {
   /* 公共样式给页面里的 button 定了 15px/600，这里要压回来（文字链接不该比正文还重） */
   align-self: flex-start !important;
   height: auto !important;
@@ -658,72 +396,25 @@
   color: #2f6fed !important;
   font-size: 12px !important;
   font-weight: 500 !important;
-}.empty {
+}
+.empty {
   margin: 0;
   color: #8b939b;
   font-size: 12px;
   line-height: 1.6;
-}/* ── 使用说明：流程图（SVG，替代原来的三栏文字）──────────────────
- * 就是那张实例卡的图：输入（圆角方块）汇进「处理」，处理里一串步骤，再分叉出输出。
- * 中间我一度把它换成 HTML 三栏 —— 那是改坏了，用户要的就是这张图，已经还原。
- *
- * 还原时补了两道保护，免得再出现"文字糊成一团"：
- *   ① 一行最多 5 个步骤方块，每块宽度**按字数**算，装不下就省略号收尾
- *      （原来固定 N 等分，6 步时每块只剩 26px，SVG 的 <text> 不换行 → 互相盖住）；
- *   ② 输入/输出各有上限（2 / 3），多的折成"…"。
- * 详见 capability-sheet.tsx 里 FlowDiagram 上方的说明。
- */
-:global(.v279-capability-sheet) .flowSvg {
-  display: block !important;
-  width: 100% !important;
-  height: auto !important;
-  margin-top: 4px !important;
-}/* 数据方块：白底 + 极细描边 + 一点阴影 */
-:global(.v279-capability-sheet) .flowBox {
-  fill: #ffffff !important;
-  stroke: #e6e9ec !important;
-  filter: drop-shadow(0 1px 2px rgba(15, 23, 42, 0.05));
-}:global(.v279-capability-sheet) .flowText {
-  fill: #23282e !important;
-  font-size: 9px !important;
-  font-weight: 600 !important;
-}/* 这一栏这条 skill 没声明时占位用的短横：灰一档，别当成正经内容看 */
-:global(.v279-capability-sheet) .flowTextEmpty {
-  fill: #b6bec6 !important;
-  font-weight: 500 !important;
-}/* 处理链里的小步骤字：**字号跟着方块宽度算**（见 FlowDiagram 的 fit()），
-   所以哪怕 5 步排一行也不会互相盖住 */
-:global(.v279-capability-sheet) .flowStep {
-  fill: #3f4650 !important;
-  font-size: 8.5px !important;
-}/* 汇入 / 分叉的连线：和主连线同一个颜色、同一个粗细 */
-:global(.v279-capability-sheet) .flowLine {
-  fill: none !important;
-  stroke: var(--tone, #6d7680) !important;
-  stroke-linecap: round !important;
-  stroke-width: 1.4 !important;
-}/* 处理节点那层很淡的辉光：让它像"引擎" */
-:global(.v279-capability-sheet) .flowCore {
-  filter: drop-shadow(
-    0 4px 14px color-mix(in srgb, var(--tone, #6d7680) 26%, transparent)
-  ) !important;
-}/* 图里的字用界面字体，别用 SVG 默认那个 */
-:global(.v279-capability-sheet) .flowSvg text {
-  font-family: inherit !important;
-}:global(.v279-capability-sheet) .flowSvg line,
-:global(.v279-capability-sheet) .flowSvg path {
-  stroke-linecap: round !important;
-  stroke-linejoin: round !important;
-}/* 详情头：标题长成两三行时**绝不能被 flex 压扁**——压扁后标题会溢出到正文上
+}
+/* 详情头：标题长成两三行时**绝不能被 flex 压扁**——压扁后标题会溢出到正文上
    （用户截图里标题压住"它能替你做"就是这个） */
 :global(.v279-capability-sheet .v279-capability-head) {
   flex: 0 0 auto !important;
-}:global(.v279-capability-sheet .v279-capability-head h2) {
+}
+:global(.v279-capability-sheet .v279-capability-head h2) {
   display: -webkit-box !important;
   -webkit-box-orient: vertical !important;
   -webkit-line-clamp: 3 !important;
   overflow: hidden !important;
-}/* 成果详情里"带来了什么变化"那一行的卡名：做成可点的链接样式（点了直接跳到那张卡） */
+}
+/* 成果详情里"带来了什么变化"那一行的卡名：做成可点的链接样式（点了直接跳到那张卡） */
 .impactCard {
   display: inline-flex !important;
   align-items: center !important;
@@ -736,7 +427,8 @@
   color: #2f6fed !important;
   font-size: 12.5px !important;
   font-weight: 600 !important;
-}/* ── 能力画像：四块图（雷达 / 五维对比条 / 贡献条 / 趋势）──────── */
+}
+/* ── 能力画像：四块图（雷达 / 五维对比条 / 贡献条 / 趋势）──────── */
 
 /* ── 页头弹层（理解与成长）──────────────────────────────────
  * 旧做法：公共样式里那个居中的 modal（外框写死 388px、内层 526px 靠滚），
@@ -750,7 +442,8 @@
   border: 0;
   background: rgba(18, 26, 34, 0.32);
   animation: sheetFade 0.18s ease-out;
-}.sheet {
+}
+.sheet {
   position: absolute;
   z-index: 121;
   right: 10px;
@@ -766,31 +459,39 @@
   box-shadow: 0 18px 44px rgba(20, 28, 36, 0.26);
   scrollbar-width: none;
   animation: sheetUp 0.24s cubic-bezier(0.2, 0.8, 0.2, 1);
-}.sheet::-webkit-scrollbar {
+}
+.sheet::-webkit-scrollbar {
   display: none;
-}@keyframes sheetFade {
-  from { opacity: 0; }to { opacity: 1; }}@keyframes sheetUp {
-  from { transform: translateY(26px); opacity: 0.5; }to { transform: none; opacity: 1; }}.sheetHandle {
+}
+@keyframes sheetFade {
+  from { opacity: 0; }to { opacity: 1; }}
+@keyframes sheetUp {
+  from { transform: translateY(26px); opacity: 0.5; }to { transform: none; opacity: 1; }}
+.sheetHandle {
   display: block;
   width: 40px;
   height: 4px;
   margin: 2px auto 12px;
   border-radius: 2px;
   background: #dfe4e9;
-}.sheetHead {
+}
+.sheetHead {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
   gap: 10px;
-}.sheetTitle {
+}
+.sheetTitle {
   font-size: 19px;
   font-weight: 800;
   color: #171a1d;
-}.sheetNote {
+}
+.sheetNote {
   margin-top: 3px;
   color: #8b939b;
   font-size: 11.5px;
-}.sheetClose {
+}
+.sheetClose {
   flex: none;
   display: flex;
   align-items: center;
@@ -801,387 +502,26 @@
   border-radius: 50%;
   background: #f2f4f6;
   color: #3f4650;
-}.segTabs {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 4px;
-  margin: 14px 0 14px;
-  padding: 4px;
-  border-radius: 14px;
-  background: #f2f4f6;
-}.segTab {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-  height: 34px;
-  border: 0;
-  border-radius: 11px;
-  background: transparent;
-  color: #6b7379;
-  font-size: 13.5px;
-  font-weight: 600;
-}.segTabOn {
-  background: #fff;
-  color: #171a1d;
-  box-shadow: 0 1px 3px rgba(20, 28, 36, 0.12);
-}.stageTop {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}/* 当前档是这块面板的主角：给它自己的浅蓝底块，其余块用中性灰底 */
-.stage {
-  padding: 14px 13px;
-  border-radius: 20px;
-  background: #f4f8ff;
-}.orb {
-  position: relative;
-  flex: none;
-  width: 46px;
-  height: 46px;
-  border-radius: 50%;
-  /* 不用 background-image 画球：全局有一条 .phone-stage * { background-image: none !important }，
-     渐变会被抹掉；这里用纯色 + 内阴影做出球感 */
-  background: #414b54;
-  box-shadow:
-    inset 8px 9px 14px rgba(255, 255, 255, 0.5),
-    inset -9px -10px 18px rgba(0, 0, 0, 0.5),
-    inset 0 0 0 1px rgba(255, 255, 255, 0.08);
-}/* 高光点：让球看起来是圆的 */
-.orb::after {
-  content: "";
-  position: absolute;
-  top: 8px;
-  left: 9px;
-  width: 11px;
-  height: 8px;
-  border-radius: 50%;
-  background: rgba(255, 255, 255, 0.85);
-  filter: blur(1.5px);
-  transform: rotate(-28deg);
-}.stageName {
-  font-size: 20px;
-  font-weight: 800;
-  line-height: 1.2;
-  color: #171a1d;
-}.stageName em {
-  margin-left: 7px;
-  font-size: 13px;
-  font-style: normal;
-  color: #6b7379;
-}.stageSub {
-  margin-top: 3px;
-  color: #8b939b;
-  font-size: 11.5px;
-}.stagePct {
-  margin-left: auto;
-  text-align: right;
-}.stagePct b {
-  display: block;
-  font-size: 22px;
-  font-weight: 800;
-  line-height: 1.1;
-  color: #171a1d;
-}.stagePct small {
-  color: #8b939b;
-  font-size: 10.5px;
-}.bar {
-  position: relative;
-  display: block;
-  height: 10px;
-  margin-top: 13px;
-  border-radius: 999px;
-  background: #eceff3;
-  box-shadow: inset 0 1px 2px rgba(20, 28, 36, 0.07);
-}.barFill {
-  position: relative;
-  display: block;
-  height: 100%;
-  border-radius: 999px;
-  background: #2f6fed;
-  transition: width 0.6s cubic-bezier(0.2, 0.8, 0.2, 1);
-}/* 圆头游标：停在填充的末端，像游戏经验条上"你在这儿"那个点 */
-.barKnob {
-  position: absolute;
-  top: 50%;
-  right: -1px;
-  width: 12px;
-  height: 12px;
-  border-radius: 50%;
-  background: #fff;
-  box-shadow: 0 1px 3px rgba(20, 28, 36, 0.28);
-  transform: translateY(-50%);
-}/* 目标点：压在轨道最右端，表示"下一档的门槛"——眼睛有个要追的点 */
-.barGoal {
-  position: absolute;
-  top: 50%;
-  right: 1px;
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: #c3cddb;
-  transform: translateY(-50%);
-}@media (prefers-reduced-motion: reduce) {
-  .barFill {
-    transition: none;
-  }}.next {
-  margin-top: 14px;
-  padding: 12px 13px;
-  border-radius: 16px;
-  background: #f7f9fc;
-}.nextHead {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 8px;
-  font-size: 13px;
-  font-weight: 700;
-  color: #171a1d;
-}.nextHead b {
-  color: #2f6fed;
-  font-variant-numeric: tabular-nums;
-}.next .bar {
-  margin-top: 9px;
-  height: 9px;
-  background: #e6ecf4;
-}.nextNote {
-  margin-top: 8px;
-  color: #7b8ea8;
-  font-size: 11.5px;
-}.statRow {
+}
+.statRow {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   margin-top: 12px;
   padding: 12px 0;
   border-radius: 16px;
   background: #f7f9fc;
-}.stat {
-  text-align: center;
-}.stat + .stat {
-  border-left: 1px solid #e7ecf1;
-}.stat b {
-  display: block;
-  font-size: 19px;
-  font-weight: 800;
-  color: #171a1d;
-  font-variant-numeric: tabular-nums;
-}.stat small {
-  color: #8b939b;
-  font-size: 10.5px;
-}.pathHead {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-top: 16px;
-}.pathHead h4 {
-  font-size: 13.5px;
-  font-weight: 700;
-  color: #171a1d;
-}.pathHead button {
-  display: inline-flex;
-  align-items: center;
-  gap: 2px;
-  border: 0;
-  background: none;
-  color: #6b7379;
-  font-size: 12px;
-}.pathRow {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  margin-top: 9px;
-  padding: 7px 12px;
-  border-radius: 14px;
-  background: #f7f9fc;
-}.pathRow > b {
-  flex: none;
-  width: 34px;
-  color: #6b7379;
-  font-size: 12.5px;
-}.pathInfo {
-  min-width: 0;
-}.pathInfo strong {
-  display: block;
-  font-size: 13px;
-  font-weight: 700;
-  color: #171a1d;
-}.pathInfo small {
-  display: block;
-  margin-top: 2px;
-  color: #8b939b;
-  font-size: 11px;
-}.pathTag {
-  flex: none;
-  margin-left: auto;
-  padding: 3px 9px;
-  border-radius: 999px;
-  background: #1c2126;
-  color: #fff;
-  font-size: 10.5px;
-  font-weight: 600;
-}/* 铺开六档时用两列格子，比一行一档省一半高度，一屏就放得下 */
-.pathGrid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 8px;
-  margin-top: 9px;
-}.pathCell {
-  padding: 10px 11px;
-  border-radius: 14px;
-  background: #f7f9fc;
-}.pathCellCurrent {
-  background: #eef4ff;
-  box-shadow: inset 0 0 0 1px #cfe0f7;
-}.pathCell > b {
-  display: block;
-  color: #171a1d;
-  font-size: 12px;
-  font-weight: 700;
-}.pathCell > small {
-  display: block;
-  margin-top: 3px;
-  color: #8b939b;
-  font-size: 10.5px;
-  line-height: 1.45;
-}.pathLink {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  margin-top: 12px;
-  padding: 0;
-  border: 0;
-  background: none;
-  color: #2f6fed;
-  font-size: 13px;
-  font-weight: 600;
-}.honorTop {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 12px 13px;
-  border-radius: 16px;
-  background: #f7f9fc;
-}.honorTop b {
-  font-size: 13.5px;
-  color: #171a1d;
-}.honorTop small {
-  display: block;
-  margin-top: 2px;
-  color: #8b939b;
-  font-size: 11px;
-}.honorTop strong {
-  margin-left: auto;
-  font-size: 16px;
-  font-weight: 800;
-  color: #171a1d;
-}.filterRow {
-  display: flex;
-  gap: 8px;
-  margin: 14px 0 10px;
-}.filterRow button {
-  height: 30px;
-  padding: 0 13px;
-  border: 1px solid #e3e8ed;
-  border-radius: 999px;
-  background: #fff;
-  color: #5b646c;
-  font-size: 12.5px;
-}.filterRow button.on {
-  border-color: #1c2126;
-  background: #1c2126;
-  color: #fff;
-}.medalGrid {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 8px;
-  margin-bottom: 12px;
-}.medal {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 6px;
-  padding: 12px 6px;
-  border: 0;
-  border-radius: 14px;
-  background: #f7f9fc;
-  color: #3f4650;
-  font-size: 11.5px;
-}.medal span {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 38px;
-  height: 38px;
-  border-radius: 12px;
-  background: #fff;
-  color: #2f6fed;
-}.medalLocked {
-  background: #fafbfc;
-  color: #9aa3ab;
-}.medalLocked span {
-  color: #c3cbd3;
-}.medalLocked small {
-  color: #b6bdc4;
-  font-size: 10px;
-}/* 第四页（我的 → 勋章）用这块时给点上边距，和那一页其它块对齐 */
-.honorCompact {
-  margin-top: 14px;
-}:global(.v277-page) .radarWrap {
+}
+:global(.v277-page) .radarWrap {
   position: relative;
-}/* 手写 SVG 当块级图用：不留 baseline 缝、宽度吃满 */
+}
+/* 手写 SVG 当块级图用：不留 baseline 缝、宽度吃满 */
 :global(.v277-page) .radarWrap > svg,
 :global(.v277-page) .block > svg {
   display: block;
   width: 100%;
   height: auto;
-}/* 综合能力的数字压在雷达中心：给一块白底，压住底下的网格线才读得清 */
-:global(.v277-page) .radarCenter {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  display: flex;
-  align-items: baseline;
-  justify-content: center;
-  width: 74px;
-  height: 74px;
-  padding-top: 22px;
-  border-radius: 50%;
-  background: #fff;
-  box-shadow:
-    0 0 0 1px rgba(15, 23, 42, 0.05),
-    0 6px 16px rgba(61, 74, 85, 0.07);
-  transform: translate(-50%, -50%);
-  pointer-events: none;
-}:global(.v277-page) .radarCenter > b {
-  color: #0d0f11;
-  font-size: 27px;
-  line-height: 27px;
-  font-variant-numeric: tabular-nums;
-}:global(.v277-page) .radarCenter > span {
-  margin-left: 2px;
-  color: #8b939b;
-  font-size: 10.5px;
-}:global(.v277-page) .chartLegend {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 5px;
-  margin: 4px 0 0;
-  color: #8b939b;
-  font-size: 10.5px;
-}:global(.v277-page) .chartLegend > i {
-  width: 14px;
-  height: 2px;
-  margin-left: 8px;
-  border-radius: 1px;
-}:global(.v277-page) .legendNow {
-  background: #525a61;
-}/* 五维对比条：一行一维，粗条＝本期，灰竖标＝上期 */
-:global(.v277-page) .dimList {
-  display: flex;
-  flex-direction: column;
-  gap: 11px;
-}:global(.v277-page) .dimRow {
+}
+:global(.v277-page) .dimRow {
   display: grid;
   /* 分数那一列给固定宽度：跳数时 0→91 会多一位，用 auto 的话轨道会跟着变宽、上期那根竖标就会滑 */
   grid-template-columns: 34px minmax(0, 1fr) 46px 13px;
@@ -1192,220 +532,35 @@
   border: 0;
   background: none;
   text-align: left;
-}:global(.v277-page) .dimName {
-  color: #3f4650;
-  font-size: 12px;
-}:global(.v277-page) .dimTrack {
-  position: relative;
-  display: block;
-  height: 10px;
-  border-radius: 5px;
-  background: #eef1f3;
-}:global(.v277-page) .dimFill {
-  position: absolute;
-  top: 0;
-  bottom: 0;
-  left: 0;
-  border-radius: 5px;
-}/* 上期那根灰竖标要压在本期条上、略微出头，看上去才像"刻度"而不是缺口 */
-:global(.v277-page) .dimPrev {
-  position: absolute;
-  top: -3px;
-  bottom: -3px;
-  width: 2px;
-  margin-left: -1px;
-  border-radius: 1px;
-  background: #5f686f;
-  box-shadow: 0 0 0 1.5px #fff;
-}:global(.v277-page) .dimUnknown {
-  position: absolute;
-  inset: 0;
-  border-radius: 5px;
-  background: repeating-linear-gradient(
-    45deg,
-    #e3e7ea 0 4px,
-    #f1f3f5 4px 8px
-  );
-}:global(.v277-page) .dimValue {
-  display: inline-flex;
-  flex-direction: row;
-  align-items: baseline;
-  gap: 3px;
-  color: #171a1d;
-  font-size: 12.5px;
-  font-weight: 700;
-  font-variant-numeric: tabular-nums;
-}:global(.v277-page) .dimValue > em {
-  font-size: 10.5px;
-  font-style: normal;
-  font-weight: 600;
-}:global(.v277-page) .dimUp {
-  color: #0f9d63;
-}:global(.v277-page) .dimDown {
-  color: #d1584c;
-}:global(.v277-page) .dimFlat {
-  color: #9aa2a9;
-}:global(.v277-page) .dimArrow {
-  color: #c7cdd3;
-}:global(.v277-page) .legendPrev {
-  background: repeating-linear-gradient(
-    90deg,
-    #b6bdc4 0 4px,
-    transparent 4px 7px
-  );
-}:global(.v277-page) .chartHint {
-  margin: 6px 0 0;
-  color: #8b939b;
-  font-size: 10.5px;
-}/* "分是谁撑起来的"：一张卡一行 —— 上一行是卡名 + 维度标签 + 条数，下面一条是占比 */
-:global(.v277-page) .contribList {
-  display: flex;
-  flex-direction: column;
-  gap: 9px;
-}:global(.v277-page) .contribRow {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto 13px;
-  grid-template-areas:
-    "head meta arrow"
-    "bar bar bar";
-  align-items: center;
-  gap: 7px 8px;
-  padding: 10px 11px;
-  border: 0;
-  border-radius: 13px;
-  background: #f8f9fa;
-  text-align: left;
-}:global(.v277-page) .contribHead {
-  display: flex;
-  grid-area: head;
-  align-items: center;
-  gap: 6px;
-  min-width: 0;
-}:global(.v277-page) .contribHead > b {
-  overflow: hidden;
-  color: #171a1d;
-  font-size: 13px;
-  font-weight: 600;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}/* 维度标签用那一维的颜色，和雷达 / 对比条对得上 */
-:global(.v277-page) .contribHead > i {
-  flex: none;
-  padding: 1px 6px;
-  border-radius: 999px;
-  font-size: 10px;
-  font-style: normal;
-  font-weight: 600;
-  white-space: nowrap;
-}:global(.v277-page) .contribMeta {
-  grid-area: meta;
-  color: #5b646c;
-  font-size: 11.5px;
-  font-weight: 600;
-  font-variant-numeric: tabular-nums;
-  white-space: nowrap;
-}:global(.v277-page) .contribBar {
-  display: block;
-  grid-area: bar;
-  height: 8px;
-  overflow: hidden;
-  border-radius: 4px;
-  background: #e4e8ec;
-}:global(.v277-page) .contribBar > i {
-  display: block;
-  height: 100%;
-  border-radius: 4px;
-}:global(.v277-page) .contribEmptyNote {
-  margin: 0;
-  color: #8b939b;
-  font-size: 11.5px;
-}:global(.v277-page) .contribArrow {
-  grid-area: arrow;
-  color: #c7cdd3;
-}/* 块标题里"图标 + 文字"要挨在一起（块标题默认是两端对齐，单放会把图标和标题拉散） */
+}
+/* 块标题里"图标 + 文字"要挨在一起（块标题默认是两端对齐，单放会把图标和标题拉散） */
 .titleInline {
   display: inline-flex !important;
   align-items: center !important;
   gap: 6px !important;
-}/* 成长块里那颗"去做一件事 / 可以升级了"的按钮：门槛那句"还差 N 项"要有出口 */
-:global(.v279-capability-sheet) .nextAction {
-  display: flex !important;
-  align-items: center !important;
-  justify-content: center !important;
-  gap: 5px !important;
-  height: 32px !important;
-  margin-top: 2px !important;
-  border: 1px solid rgba(15, 23, 42, 0.08) !important;
-  border-radius: 12px !important;
-  background: #fff !important;
-  color: #23282e !important;
-  font-size: 12px !important;
-  font-weight: 600 !important;
-}:global(.v279-capability-sheet) .nextAction:active {
-  transform: scale(0.985) !important;
-}/* 生成任务草稿后的那一行提示 */
-:global(.v279-capability-sheet) .draftNote {
-  margin: 0 !important;
-  padding: 9px 12px !important;
-  border-radius: 12px !important;
-  background: rgba(47, 143, 106, 0.1) !important;
-  color: #2f7f61 !important;
-  font-size: 11.5px !important;
-}/* 知识详情页里那两个动作：主动作实心，次动作描边 */
+}
+/* 知识详情页里那两个动作：主动作实心，次动作描边 */
 :global(.v277-page) :global(.v277-library-page) .actionPrimary,
 .actionPrimary {
   background: #171a1d !important;
   color: #fff !important;
   border-color: #171a1d !important;
-}:global(.v277-knowledge-overview) .knowledgeVisual {
-  display: grid !important;
-  height: 48px !important;
-  min-height: 48px !important;
-  margin-top: 5px !important;
-  place-items: center !important;
-  border-radius: 8px !important;
-  /* 和能力卡那块灰阶图同一个"体量感"：给一点斜向渐变 + 描边，避免一片死灰显得空 */
-  background: linear-gradient(135deg, #f7f8f9 0%, #e9edf0 100%) !important;
-  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.08) !important;
-  color: #5b6670 !important;
-}:global(.v277-knowledge-overview) .knowledgePurpose {
-  margin: 2px 0 0 !important;
-  overflow: hidden !important;
-  color: #6d7680 !important;
-  font-size: 10.8px !important;
-  line-height: 14px !important;
-  text-overflow: ellipsis !important;
-  white-space: nowrap !important;
-}:global(.v277-knowledge-overview) .knowledgeStrip {
-  display: flex !important;
-  height: 20px !important;
-  flex-shrink: 0 !important;
-  align-items: center !important;
-  margin-top: auto !important;
-  padding: 0 7px !important;
-  overflow: hidden !important;
-  border-radius: 8px !important;
-  background: rgba(15, 23, 42, 0.045) !important;
-  color: #3f4650 !important;
-  font-size: 9px !important;
-  font-weight: 500 !important;
-  line-height: 20px !important;
-  text-overflow: ellipsis !important;
-  white-space: nowrap !important;
-}/* 弹层里那几块（三格数字 / 它能替你做 / 使用说明 / 成长 / 相关成果）之间收一点：
+}
+/* 弹层里那几块（三格数字 / 它能替你做 / 使用说明 / 成长 / 相关成果）之间收一点：
    原来的空隙 = 块间距 12 + 上下各自 14 的内边距 ≈ 40px，看着太空。这里只收弹层里的。 */
 :global(.v279-capability-sheet) .sheetBody > .block {
   padding: 11px 12px !important;
-}:global(.v279-capability-sheet) .sheetBody > .statRow {
+}
+:global(.v279-capability-sheet) .sheetBody > .statRow {
   padding: 10px 8px !important;
-}/* 弹层里那排数字再放大一档（只看这一屏，成果列表页的三格保持原样） */
+}
+/* 弹层里那排数字再放大一档（只看这一屏，成果列表页的三格保持原样） */
 :global(.v279-capability-sheet) .statRow > span > b,
 :global(.v279-capability-sheet) .statRow > .statCell > b {
   font-size: 26px !important;
   line-height: 28px !important;
-}:global(.v279-capability-sheet) .statUnit {
-  font-size: 15px !important;
-}/* ── 等级阶梯（卡详情里点 Lv 那一格打开）────────────────────────
+}
+/* ── 等级阶梯（卡详情里点 Lv 那一格打开）────────────────────────
  * 形制：一条竖线串起每一档，节点表示状态（✓ 已过 / ● 当前 / 🔒 未到）。
  * 为什么是竖的：屏幕只有 430 宽，每档要写"解锁什么 + 还差多少"两行字，横排放不下字。
  * 当前档给一块带维度色的底 + 放大节点，一眼看到"我在这"。
@@ -1421,113 +576,14 @@
   color: #8b939b !important;
   font-size: 10.5px !important;
   font-weight: 500 !important;
-}:global(.v279-capability-sheet) .statCellHint,
-:global(.v279-capability-sheet) .statCellOpen {
-  margin-top: 1px !important;
-  color: #b6bdc4 !important;
-  transition: transform 180ms cubic-bezier(0.2, 0, 0, 1) !important;
-}:global(.v279-capability-sheet) .statCellOpen {
-  transform: rotate(90deg) !important;
-}:global(.v279-capability-sheet) .ladder {
-  display: flex !important;
-  flex-direction: column !important;
-  gap: 2px !important;
-  margin: 2px 0 0 !important;
-  padding: 0 !important;
-  list-style: none !important;
-}:global(.v279-capability-sheet) .rung {
-  position: relative !important;
-  display: grid !important;
-  grid-template-columns: 30px minmax(0, 1fr) !important;
-  align-items: start !important;
-  gap: 8px !important;
-  padding: 8px 8px 8px 0 !important;
-}/* 串起每一档的竖线：节点之间的连线 */
-:global(.v279-capability-sheet) .rung::before {
-  position: absolute !important;
-  top: 26px !important;
-  bottom: -2px !important;
-  left: 14px !important;
-  width: 1px !important;
-  background: #e4e8eb !important;
-  content: "" !important;
-}:global(.v279-capability-sheet) .rung:last-child::before {
-  display: none !important;
-}:global(.v279-capability-sheet) .rungNode {
-  display: grid !important;
-  width: 30px !important;
-  height: 30px !important;
-  place-items: center !important;
-  border-radius: 50% !important;
-  background: #f1f3f5 !important;
-  color: #2f8f6a !important;
-}:global(.v279-capability-sheet) .rungBody {
-  display: flex !important;
-  flex-direction: column !important;
-  gap: 2px !important;
-  padding-top: 1px !important;
-}:global(.v279-capability-sheet) .rungBody > b {
-  display: flex !important;
-  align-items: center !important;
-  gap: 6px !important;
-  color: #171a1d !important;
-  font-size: 13px !important;
-}:global(.v279-capability-sheet) .rungBody > small {
-  color: #4b5563 !important;
-  font-size: 12px !important;
-  line-height: 1.45 !important;
-}:global(.v279-capability-sheet) .rungNeed {
-  color: #98a1a9 !important;
-  font-size: 10.5px !important;
-  font-style: normal !important;
-}/* 当前档：整行上底色 + 节点用这一维的颜色，其它档退到后面 */
-:global(.v279-capability-sheet) .rungNow {
-  /* 底色往外扩，但内容位置不变——否则这一行的节点会比别的行右移 8px，竖线就断了 */
-  border-radius: 14px !important;
-  background: color-mix(in srgb, var(--tone, #6d7680) 8%, #ffffff) !important;
-  margin-left: -8px !important;
-  padding-left: 8px !important;
-}:global(.v279-capability-sheet) .rungNow .rungNode {
-  background: var(--tone, #6d7680) !important;
-  color: #fff !important;
-  box-shadow: 0 0 0 4px color-mix(in srgb, var(--tone, #6d7680) 14%, #ffffff) !important;
-}:global(.v279-capability-sheet) .rungDot {
-  width: 9px !important;
-  height: 9px !important;
-  border-radius: 50% !important;
-  background: #fff !important;
-}:global(.v279-capability-sheet) .rungLocked .rungNode {
-  background: #f6f7f8 !important;
-  color: #b6bdc4 !important;
-}:global(.v279-capability-sheet) .rungLocked .rungBody > b {
-  color: #6b757d !important;
-}:global(.v279-capability-sheet) .rungLocked .rungBody > small {
-  color: #98a1a9 !important;
-}/* 弹层第二层：成长。权限那套（现在能碰到哪、升级多给什么）从这里出现一次 */
-:global(.v279-capability-sheet) .nextMeta {
-  display: flex !important;
-  flex-direction: column !important;
-  gap: 5px !important;
-  margin-top: 2px !important;
-  color: #6b757d !important;
-  font-size: 11.5px !important;
-}:global(.v279-capability-sheet) .nextMeta > span {
-  display: flex !important;
-  align-items: center !important;
-  gap: 5px !important;
-}:global(.v279-capability-sheet) .nextMeta > span > svg {
-  flex-shrink: 0 !important;
-  color: #2f8f6a !important;
-}:global(.v279-capability-sheet) .nextLocked {
-  color: #8b939b !important;
-}:global(.v279-capability-sheet) .nextLocked > svg {
-  color: #aab2b9 !important;
-}/* 弹层内部：内容可滚，底部动作固定（旧版此处是一大片空白） */
+}
+/* 弹层内部：内容可滚，底部动作固定（旧版此处是一大片空白） */
 /* 旧弹层不是 flex 容器，所以"内容区自动撑高 + 滚动"必须先把弹层改成纵向 flex */
 :global(.v279-capability-sheet) {
   display: flex !important;
   flex-direction: column !important;
-}:global(.v279-capability-sheet) .sheetBody {
+}
+:global(.v279-capability-sheet) .sheetBody {
   display: flex;
   flex: 1 1 auto;
   flex-direction: column;
@@ -1537,14 +593,17 @@
   /* 弹层自身已用 padding-bottom 给绝对定位的动作条留了位置 */
   padding: 4px 18px 12px;
   scrollbar-width: none;
-}:global(.v279-capability-sheet) .sheetBody::-webkit-scrollbar {
+}
+:global(.v279-capability-sheet) .sheetBody::-webkit-scrollbar {
   display: none;
-}/* ── 2. 收紧「今天的新证据」与「能力洞察」的间距 ───────────────── */
+}
+/* ── 2. 收紧「今天的新证据」与「能力洞察」的间距 ───────────────── */
 
 :global(.v277-knowledge-overview) :global(.v277-cave-section) {
   /* 原来约 35px，这里收到 22px：小一点但仍留呼吸感 */
   margin-top: 22px !important;
-}/* ── 3. 今天的新证据：同样的横向轨道（固定高度，条目变多也不顶下面的模块） ── */
+}
+/* ── 3. 今天的新证据：同样的横向轨道（固定高度，条目变多也不顶下面的模块） ── */
 
 :global(.v277-knowledge-overview) :global(.v277-progress-cards) {
   display: flex !important;
@@ -1558,21 +617,25 @@
   overscroll-behavior-x: contain;
   scrollbar-width: none;
   padding: 0 0 2px !important;
-}:global(.v277-knowledge-overview) :global(.v277-progress-cards)::-webkit-scrollbar {
+}
+:global(.v277-knowledge-overview) :global(.v277-progress-cards)::-webkit-scrollbar {
   display: none;
-}/* 每条占 54%：一屏露出约 1.8 条 —— 第一条完整、第二条露一半多，明确提示"还能滑"；
+}
+/* 每条占 54%：一屏露出约 1.8 条 —— 第一条完整、第二条露一半多，明确提示"还能滑"；
    条目变宽后副标题（如"1 条 Outcome 已沉淀"）也有更宽的空间，不会被截断。 */
 :global(.v277-knowledge-overview) :global(.v277-progress-cards) > button {
   flex: 0 0 54% !important;
   min-width: 0 !important;
   height: 66px !important;
   scroll-snap-align: start;
-}/* 副标题不换行、超出省略，避免"1 条 Outcome 已沉淀"被切成半行 */
+}
+/* 副标题不换行、超出省略，避免"1 条 Outcome 已沉淀"被切成半行 */
 :global(.v277-knowledge-overview) :global(.v277-progress-cards) > button > small {
   overflow: hidden !important;
   text-overflow: ellipsis !important;
   white-space: nowrap !important;
 }
+
 /* 标题同样只占一行、超出省略。
    这不是审美选择，是实测出来的破版：同事那边验收过来的成果，标题就是他写的整句目标
    （"把这段课程通知整理成三条待办，标出负责人和截止时间。"），不夹住会折成三行，
@@ -1584,24 +647,8 @@
   white-space: nowrap !important;
   /* 右边的 "+1"（strong）是绝对定位的；标题不 reserve 位置就会滑到它下面叠在一起 */
   padding-right: 30px !important;
-}/* 空态引导卡：和真卡同尺寸同圆角，整张可点 —— 它是"卡轨里的第一张卡" */
-.cardsHead {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  /* 负边距只在这一处用（页头与标题行之间收紧）；筛选条不能再负，否则两行压在一起 */
-  margin: -50px 0 6px;
-}.cardsHead > h2 {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  margin: 0;
-  color: #171a1d;
-  font-size: 16px;
-  font-weight: 700;
-}.cardsHead > h2 > svg {
-  color: #2f6fed;
-}/* 空态块（卡组 / 洞察共用）：圆图标 + 标题 + 一行说明 + 黑色胶囊按钮 */
+}
+/* 空态块（卡组 / 洞察共用）：圆图标 + 标题 + 一行说明 + 黑色胶囊按钮 */
 .emptyBlock {
   display: flex;
   flex-direction: column;
@@ -1616,10 +663,8 @@
   border-radius: 20px;
   background: #fbfcff;
   text-align: center;
-}/* 洞察空块 = 洞察卡本身的高度（实测 184）；标题行在外面已经有了，不能再算一遍 */
-.emptyBlockTall {
-  height: 184px;
-}.emptyBlockIcon {
+}
+.emptyBlockIcon {
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1628,17 +673,20 @@
   border-radius: 50%;
   background: #eef3ff;
   color: #2f6fed;
-}.emptyBlock > b {
+}
+.emptyBlock > b {
   margin-top: 2px;
   color: #171a1d;
   font-size: 15px;
   font-weight: 700;
-}.emptyBlock > p {
+}
+.emptyBlock > p {
   margin: 0;
   color: #8b939b;
   font-size: 12px;
   line-height: 1.45;
-}.emptyBlock > button {
+}
+.emptyBlock > button {
   height: 36px;
   margin-top: 4px;
   padding: 0 20px;
@@ -1648,88 +696,21 @@
   color: #fff !important;
   font-size: 13px;
   font-weight: 600;
-}.emptyNote {
+}
+.emptyNote {
   color: #a8b0b7;
   font-size: 10.5px;
   font-style: normal;
-}/* 空态下把洞察那两张卡收起来（换成上面的测试入口） */
-:global(.v277-page.v277-library-page).isEmpty :global(.v278-insight-stack) {
-  display: none !important;
-}/* 今天的新成果的空态：和真成果那一排等高（实测 67px），切空态时下面不跳 */
-.emptyEvidence {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  /* 和"今天的新成果"那一排真实尺寸一致（实测 67） */
-  height: 67px;
-  margin-top: 8px;
-  padding: 0 16px;
-  border: 1.5px dashed #d7dee6;
-  border-radius: 18px;
-  background: #fbfcfd;
-  color: #8b939b;
-  font-size: 12.5px;
-}.emptyEvidence > svg {
-  flex: none;
-  color: #b6bfc8;
-}/* 空态下，两个货架里"真卡"的那条轨道整体收起——能力那边已经被占位块替换，
-   剩下会被收掉的就是知识货架那一条。 */
-.isEmpty :global(.v277-ability-cards) {
-  display: none;
-}/* 待验证卡：还没跑出成果的能力卡。不是另一类东西，只是能力卡的一个状态 */
-.inboxBar {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  flex: 1;
-  padding: 11px 13px;
-  border: 0;
-  border-radius: 14px;
-  background: #eef4ff;
-  text-align: left;
-}.inboxBar > b { font-size: 13px; font-weight: 700; color: #2f6fed; }.inboxBar > span { font-size: 11.5px; color: #7b8ea8; }.inboxBar > svg { margin-left: auto; color: #9db4d6; }/* 知识库标题右侧：＋导入 和 查看全部 并排 */
-/* 知识库标题右侧那组：必须用高权重，否则会被公共的 .v277-section-title button 撑大换行 */
-:global(.v277-page.v277-library-page .v277-section-title) .inlineActions {
-  display: inline-flex !important;
-  align-items: center !important;
-  gap: 8px !important;
-}:global(.v277-page.v277-library-page .v277-section-title) .inlinePlus {
-  display: inline-flex !important;
-  align-items: center !important;
-  justify-content: center !important;
-  width: 28px !important;
-  height: 28px !important;
-  padding: 0 !important;
-  border: 0 !important;
-  border-radius: 50% !important;
-  /* 和上面两个圆钮统一：白底 + 浅描边 */
-  background: #fff !important;
-  color: #3f4650 !important;
-  box-shadow:
-    0 0 0 1px rgba(15, 23, 42, 0.07),
-    0 4px 10px rgba(61, 74, 85, 0.07);
-}/* "查看全部"要保持原来的样子（现在它被包在 span 里，公共选择器够不到它） */
-:global(.v277-page.v277-library-page .v277-section-title) .inlineActions > button:last-child {
-  display: inline-flex !important;
-  align-items: center !important;
-  gap: 2px !important;
-  width: auto !important;
-  height: auto !important;
-  padding: 0 !important;
-  border: 0 !important;
-  background: none !important;
-  color: #2f6fed !important;
-  font-size: 12.5px !important;
-  font-weight: 500 !important;
-  line-height: 1 !important;
-}/* 筛选条 + 工具圆钮 同一行 */
+}
+/* 筛选条 + 工具圆钮 同一行 */
 /* 卡片做大一点：这一页要"看得爽"，卡面信息也更清楚。
    注意：公共 CSS 里图片区写死 50px、说明写死 25px 且 overflow:hidden，
    权重都比单个类名高，所以这里必须用"高权重 + !important"才盖得住。 */
 :global(.v277-page.v277-library-page .v277-ability-cards > button) {
   height: 208px !important;
   padding: 8px 8px 6px !important;
-}/* 能力名：真 skill 的名字可能很长（比如"用《document-summary》完成一次任务"）。
+}
+/* 能力名：真 skill 的名字可能很长（比如"用《document-summary》完成一次任务"）。
    原来是一行 + 卡片 overflow:hidden —— 字被从中间**硬切**，看着像坏了。
    现在固定给两行，超出才用省略号收尾；短名字也占两行高度，一排卡的基线才对得齐。 */
 :global(.v277-page.v277-library-page .v277-ability-cards > button > b) {
@@ -1744,10 +725,12 @@
   letter-spacing: -0.01em !important;
   white-space: normal !important;
   word-break: break-word !important;
-}:global(.v277-page.v277-library-page .v277-ability-cards > button > .v277-ability-visual) {
+}
+:global(.v277-page.v277-library-page .v277-ability-cards > button > .v277-ability-visual) {
   height: 48px !important;
   min-height: 48px !important;
-}/* 说明那行同理：原来是 max-height 30px + overflow:hidden，第三行被拦腰切掉。
+}
+/* 说明那行同理：原来是 max-height 30px + overflow:hidden，第三行被拦腰切掉。
    现在老实做两行截断，末尾给省略号，用户一眼看得出"还有下文"，点开卡看全文。 */
 :global(.v277-page.v277-library-page .v277-ability-cards > button > p) {
   flex: none !important;
@@ -1764,7 +747,8 @@
   white-space: normal !important;
   text-overflow: clip !important;
   overflow: hidden !important;
-}/* 底下那行"83 能力分 / 4 项成果"：数字和单位基线对不上，
+}
+/* 底下那行"83 能力分 / 4 项成果"：数字和单位基线对不上，
    量出来内容比盒子高 3px，被裁掉一截。给够高度 + 基线对齐。 */
 :global(.v277-page.v277-library-page .v277-ability-cards footer) {
   height: 27px !important;
@@ -1772,182 +756,46 @@
   margin-top: 4px !important;
   align-items: flex-end !important;
   overflow: visible !important;
-}:global(.v277-page.v277-library-page .v277-ability-cards footer > span) {
+}
+:global(.v277-page.v277-library-page .v277-ability-cards footer > span) {
   align-self: flex-end !important;
   padding-bottom: 2px !important;
   overflow: hidden !important;
   text-overflow: ellipsis !important;
   white-space: nowrap !important;
-}/* 底部那条"还差 N 项成果"：收 2px，把上面两行标题多占的高度让回来。
-   注意 .cardGap 是 CSS Module 的类名，必须挂在 :global(...) 外面当模块类写，
-   写成 :global(... .cardGap) 是匹配不到的（类名被编译成 _cardGap_xxx）。 */
-:global(.v277-page.v277-library-page .v277-ability-cards) .cardGap {
-  height: 18px !important;
-  margin-top: 2px !important;
-  line-height: 18px !important;
-}.filterRow {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin: 0 0 8px;
-}.filterRow > :global(.v277-ability-filters) {
-  flex: 1;
-  min-width: 0;
-  overflow-x: auto;
-  scrollbar-width: none;
-}.filterRow > :global(.v277-ability-filters)::-webkit-scrollbar {
-  display: none;
-}/* 四个筛选胶囊要在一行里放得下（右边还给工具圆钮留了 44px） */
+}
+/* 四个筛选胶囊要在一行里放得下（右边还给工具圆钮留了 44px） */
 :global(.v277-page.v277-library-page .v277-ability-filters) {
   gap: 6px !important;
-}:global(.v277-page.v277-library-page .v277-ability-filters > button) {
+}
+:global(.v277-page.v277-library-page .v277-ability-filters > button) {
   padding: 0 10px !important;
   font-size: 12px !important;
-}/* 实测出来的真问题：这一页的 .v277-library-scroll 是 overflow:hidden，
+}
+/* 实测出来的真问题：这一页的 .v277-library-scroll 是 overflow:hidden，
    内容高度 758 ≤ 容器 751 —— 既不滚动也不裁切，于是"能力洞察"直接压在低栏下面
    （低栏 top=814，洞察底部=831，被盖住 17px）。
    修法：让它真的能滚，并把底部让出低栏的高度（页高 820 - 161 = 659）。
    161 = 容器距页顶 69 + 低栏 57 + 留白 35。 */
 :global(.v277-page.v277-library-page .v277-library-scroll) {
   scrollbar-width: none;
-}:global(.v277-page.v277-library-page .v277-library-scroll)::-webkit-scrollbar {
+}
+:global(.v277-page.v277-library-page .v277-library-scroll)::-webkit-scrollbar {
   display: none;
-}/* 三块之间各加 4px，滚到底时最后一块和低栏之间至少留 16px */
+}
+/* 三块之间各加 4px，滚到底时最后一块和低栏之间至少留 16px */
 :global(.v277-page.v277-library-page .v277-progress-section),
 :global(.v277-page.v277-library-page .v277-cave-section) {
   margin-top: 6px;
-}/* 洞察卡里的雷达图收一点高度（这一页是一屏放下、不滚动，多出来的 24px 从这里腾） */
+}
+/* 洞察卡里的雷达图收一点高度（这一页是一屏放下、不滚动，多出来的 24px 从这里腾） */
 :global(.v277-page.v277-library-page .v277-radar-body > svg) {
   height: 120px !important;
-}/* 这一页是"一屏放下、不滚动"的设计（滚轮用来切换洞察卡）。
-   所以正确做法是压缩上面的工具行，而不是打开滚动、也不是压扁下面。 */
-
-.toolRound {
-  display: flex;
-  flex: none;
-  align-items: center;
-  gap: 10px;
-}:global(.v277-page.v277-library-page) .toolRound > button {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 44px;
-  height: 44px;
-  border: 0;
-  border-radius: 50%;
-  /* 白底 + 一圈浅描边：灰底放在浅灰页面上看不出来（按反馈改） */
-  background: #fff !important;
-  color: #3f4650 !important;
-  box-shadow:
-    0 0 0 1px rgba(15, 23, 42, 0.07),
-    0 4px 10px rgba(61, 74, 85, 0.07);
-}.rowBar {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-bottom: 10px;
-}.verifyCard {
-  flex: none;
-  width: calc((361px - 16px) / 2.5);
-  height: 165px;
-  display: flex;
-  flex-direction: column;
-  gap: 0;
-  padding: 12px;
-  border: 1.5px dashed #dfe4e9;
-  border-radius: 20px;
-  background: #f7f9fb;
-  text-align: left;
-}.importList {
-  display: flex;
-  flex-direction: column;
-  gap: 9px;
-  margin-top: 14px;
-}.importRow {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 12px 13px;
-  border: 0;
-  border-radius: 16px;
-  background: #f7f9fc;
-  text-align: left;
-}.importRow > span {
-  min-width: 0;
-}.importRow b {
-  display: block;
-  font-size: 13.5px;
-  font-weight: 700;
-  color: #171a1d;
-}.importRow small {
-  display: block;
-  margin-top: 2px;
-  color: #8b939b;
-  font-size: 11.5px;
-}.importRow > svg {
-  margin-left: auto;
-  flex: none;
-  color: #c7cdd3;
-}.importFoot {
-  margin: 12px 0 0;
-  color: #8b939b;
-  font-size: 11.5px;
-  text-align: center;
-}/* 待确认：导进来的素材先躺在这儿，用户点头才上架 */
-.pendingList {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  margin-top: 14px;
-  padding-top: 12px;
-  border-top: 1px solid #eef1f3;
-}.pendingList > h4 {
-  font-size: 12.5px;
-  font-weight: 700;
-  color: #6b7379;
-}.pendingRow {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 10px 12px;
-  border-radius: 14px;
-  background: #f7f9fc;
-}.pendingRow > span {
-  min-width: 0;
-  margin-right: auto;
-}.pendingRow b {
-  display: block;
-  font-size: 13px;
-  font-weight: 700;
-  color: #171a1d;
-}.pendingRow small {
-  display: block;
-  margin-top: 2px;
-  color: #8b939b;
-  font-size: 11px;
-}.pendingRow > button {
-  flex: none;
-  height: 30px;
-  padding: 0 12px;
-  border: 0;
-  border-radius: 999px;
-  background: #1c2126;
-  color: #fff;
-  font-size: 12px;
-  font-weight: 600;
-}.pendingRow > button.pendingDrop {
-  background: #eef1f3;
-  color: #6b7379;
-}/* ── 一屏放下：标题行与筛选胶囊之间不留空 ─────────────────────
-   公共样式和文件里更早的 .filterRow 规则会把这几个边距覆盖回去，
-   所以放在文件最后 + 高权重，确保生效。 */
-:global(.v277-page.v277-library-page) .cardsHead {
-  margin: -50px 0 0 !important;
-}:global(.v277-page.v277-library-page) .filterRow {
-  margin: -12px 0 6px !important;
-}:global(.v277-page.v277-library-page .v277-ability-filters) {
+}
+:global(.v277-page.v277-library-page .v277-ability-filters) {
   margin-top: 0 !important;
 }
+
 /* 能力卡组（library-page）里那张更大的卡面同样不许套示例图库。 */
 :global(.v277-page.v277-library-page .v277-ability-cards > button > .v277-ability-visual) {
   background-image: linear-gradient(160deg, #eef3fb 0%, #e6ecf7 60%, #dfe7f4 100%) !important;
@@ -1956,19 +804,9 @@
   display: grid !important;
   place-items: center !important;
 }
+
 :global(.v277-page.v277-library-page .v277-ability-cards > button > .v277-ability-visual) > svg {
   display: block !important;
   color: #7d8899 !important;
   opacity: 0.9 !important;
-}
-
-/* 雷达上那句"起点来自测试 / 哪几维已经动过"的说明。
-   口径（用户定过）：起点就是这条曲线的一部分，不另画"不算分"的虚线。
-   （右边原来挂过一个「做完事会变，久了也会回落」的角标 —— 用户说多余，连样式一起删了。） */
-.radarNote {
-  display: flex;
-  align-items: center;
-  margin: 2px 0 6px;
-  font-size: 11px;
-  color: #7b848a;
 }

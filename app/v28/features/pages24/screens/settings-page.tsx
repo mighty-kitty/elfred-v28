@@ -20,7 +20,6 @@ import {
   ChevronRight,
   Database,
   HelpCircle,
-  PlugZap,
   ShieldCheck,
   SlidersHorizontal,
   Sparkles,
@@ -31,13 +30,12 @@ import type { Screen } from "../../../core/screen";
 import { AppHeader, RootPortal } from "../../../legacy/legacy-ui";
 import { SettingsPanel } from "../parts/settings-panels";
 import {
-  fetchHealthDeps,
   fetchProfile,
-  type LiveDeps,
   type LiveProfile,
 } from "../api/page2-api";
 import {
   hasLiveAlignment,
+  libraryHeader,
 } from "../data/knowledge-data";
 import {useRuntime} from '../../../core/runtime-context';
 import {memoryOverview} from '../../../core/agent-alignment.mjs';
@@ -47,7 +45,7 @@ import { UnderstandingSheet } from "../parts/understanding-sheet";
 import styles from "../styles/settings.module.css";
 
 // ⚠️ 没有 "appearance"：外观还没做切换，那一行是**只读**的（不摆假开关，见调研文档 §6.2）
-type PanelKey = "account" | "notifications" | "privacy" | "data" | "help" | "deps";
+type PanelKey = "account" | "notifications" | "privacy" | "data" | "help";
 
 const PANEL_TITLE: Record<PanelKey, string> = {
   account: "账号与身份",
@@ -55,7 +53,6 @@ const PANEL_TITLE: Record<PanelKey, string> = {
   privacy: "隐私与授权",
   data: "数据与额度",
   help: "帮助与反馈",
-  deps: "上游服务状态",
 };
 
 export function SettingsPage({
@@ -76,21 +73,18 @@ export function SettingsPage({
   const [understandingOpen, setUnderstandingOpen] = useState(false);
   const [logoutOpen, setLogoutOpen] = useState(false);
   const [live, setLive] = useState<LiveProfile | null>(null);
-  const [deps, setDeps] = useState<LiveDeps | null>(null);
-  // ⚠️ 上游体检要挨个探三个服务（实测 4 秒上下），所以"还没读到"和"读不到"必须分开说：
-  //    以前只有 null 一种状态，界面就会先显示"读不到"、过几秒又变成"全部正常"，像在骗人。
-  const [depsTried, setDepsTried] = useState(false);
 
-  // 后端那两份真数据：个人资料（昵称/简介）与上游状态。拿不到就保持 null —— 行里显示本地那份，
-  // 不编数字。
+  // 后端那份真数据：个人资料（昵称/简介）。拿不到就保持 null —— 行里显示本地那份，不编数字。
+  //
+  // 上游服务状态（EMOS / Skill Foundry / 网关 / Jev 探活与"有没有真用上"）**只留在后端**：
+  // `GET /api/elfred/health/deps` 还在，排查时直接打这个接口；设置页不再摆那一栏 ——
+  // 普通用户看不懂那几个服务名，看到了也没法处理。
   useEffect(() => {
     let alive = true;
     void (async () => {
-      const [profile, health] = await Promise.all([fetchProfile(), fetchHealthDeps()]);
+      const profile = await fetchProfile();
       if (!alive) return;
       if (profile?.available) setLive(profile);
-      if (health) setDeps(health);
-      setDepsTried(true);
     })();
     return () => {
       alive = false;
@@ -104,9 +98,11 @@ export function SettingsPage({
   const handle = account ? `@${account}` : "";
   const memoryCount = buildMemoryView(state.memories).totalCount;
   const memoryRuntime=useRuntime();
-  const alignmentValue=memoryOverview(memoryRuntime?.snapshot?.objects.memory||[]).label;
-  const depsOffline = deps ? [deps.emos, deps.skill_foundry, deps.gateway].filter((item) => !item.ok).length : 0;
-  const depsValue = !depsTried ? "读取中…" : !deps ? "读不到" : depsOffline === 0 ? "全部正常" : `${depsOffline} 项未接入`;
+  // 这一行叫「理解度」，就得显示理解度。以前它显示的是 `memoryOverview().label`——
+  // 那是"记忆领域覆盖"（N/5 个领域有记录），和页头那个百分比根本不是一回事，
+  // 同一个设置页里两条口径并列，用户会以为是两套数。领域覆盖挪到下面"记忆与理解"那一行去说。
+  const memoryCoverage = memoryOverview(memoryRuntime?.snapshot?.objects.memory || []).label;
+  const alignmentValue = hasLiveAlignment ? `${libraryHeader.alignment}% · Lv.${libraryHeader.level}` : "还没有数据";
 
   return (
     <main className="v277-page v279-settings-page">
@@ -156,7 +152,7 @@ export function SettingsPage({
         <Row
           icon={<Database size={19} />}
           title="记忆与理解"
-          value={memoryCount ? `已确认 ${memoryCount} 条` : "还没有记忆"}
+          value={memoryCount ? `已确认 ${memoryCount} 条 · ${memoryCoverage}` : "还没有记忆"}
           onClick={() => go({ name: "memory" })}
         />
       </section>
@@ -178,12 +174,6 @@ export function SettingsPage({
           title="模型、额度与数据导出"
           value="本地调用配额，不代表人民币"
           onClick={() => setPanel("data")}
-        />
-        <Row
-          icon={<PlugZap size={19} />}
-          title="上游服务状态"
-          value={depsValue}
-          onClick={() => setPanel("deps")}
         />
       </section>
 
@@ -231,11 +221,7 @@ export function SettingsPage({
                 ✕
               </button>
             </header>
-            {panel === "deps" ? (
-              <DepsPanel deps={deps} tried={depsTried} />
-            ) : (
-              <SettingsPanel panel={panel} runtime={runtime} go={go} notify={notify} />
-            )}
+            <SettingsPanel panel={panel} runtime={runtime} go={go} notify={notify} />
           </section>
         </RootPortal>
       )}
@@ -311,45 +297,5 @@ function Row({
       {value ? <small>{value}</small> : <span />}
       <ChevronRight size={16} className={styles.rowArrow} />
     </button>
-  );
-}
-
-/** 上游服务状态：我们后端 /health/deps 的真数据 —— 用户看到"记忆库是空的"时能自己查原因 */
-function DepsPanel({ deps, tried }: { deps: LiveDeps | null; tried: boolean }) {
-  if (!tried) {
-    return <p className={styles.confirmNote}>正在读取服务配置状态…</p>;
-  }
-  if (!deps) {
-    return (
-      <p className={styles.confirmNote}>
-        暂时无法读取当前登录会话的服务状态，请刷新重试。
-      </p>
-    );
-  }
-  const rows = [
-    ...(deps.memory ? [{label:"应用记忆库",ok:deps.memory.ok,reason:deps.memory.reason,impact:""}] : []),
-    { label: "外部记忆服务（EMOS）", ...deps.emos },
-    { label: "Skill Foundry（能力生成）", ...deps.skill_foundry },
-    { label: "PA 网关（规划与执行）", ...deps.gateway },
-  ];
-  return (
-    <div className={styles.deps}>
-      {rows.map((row) => (
-        <div key={row.label} className={styles.depRow}>
-          <b>
-            {row.ok ? "✅" : "⚠️"} {row.label}
-          </b>
-          <small>{row.reason || "状态未知"}{row.impact ? " · "+row.impact : ""}</small>
-        </div>
-      ))}
-      <div className={styles.depRow}>
-        <b>{deps.jev.configured ? "✅" : "⚠️"} Jev（记忆侧判定）</b>
-        <small>
-          {deps.jev.configured
-            ? "已配置，实际调用效果待验收"
-            : "没配 key：记忆侧的判定会退回规则，不编概率"}
-        </small>
-      </div>
-    </div>
   );
 }

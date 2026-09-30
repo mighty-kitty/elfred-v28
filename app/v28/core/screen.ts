@@ -36,7 +36,9 @@ export type Screen =
   | { name: "agent-moments"; id: V277AgentId }
   | { name: "agent-moment-detail"; id: V277AgentId; postId: string }
   | { name: "agent-settings"; id: V277AgentId }
-  | { name: "chat"; id: string; messageId?:string; prefill?:string }
+  // attach：从能力卡点「用它做一件事」带进对话的那张卡的说明书（界面把它挂成输入框上方的附件，
+  // 输入框本身留给用户自己写话）。prefill 仍然只用于"把一句话放进输入框"。
+  | { name: "chat"; id: string; messageId?:string; prefill?:string; attach?:{ id: string; title: string; text: string; ask: string } }
   | { name: "friend-profile"; id: string }
   | {name:'search-source';id:string;anchor?:string}
   | { name: "knowledge-detail"; id: string; anchor?:string }

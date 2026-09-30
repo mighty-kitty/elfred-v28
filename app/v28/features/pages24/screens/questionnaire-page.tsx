@@ -75,7 +75,7 @@ export function QuestionnairePage({
             这几维就按真实表现往上走；做得不好、或者很久不碰，也会回落。
           </p>
         </section>
-        <div className={styles.foot}>
+        <div className={`${styles.foot} ${styles.footSingle}`}>
           <button type="button" data-primary="true" onClick={() => go({ name: "knowledge" })}>
             去看看我的能力洞察
           </button>
@@ -98,7 +98,7 @@ export function QuestionnairePage({
           <b>现在做不了这份测试</b>
           <p className={styles.hint}>{failed}</p>
         </section>
-        <div className={styles.foot}>
+        <div className={`${styles.foot} ${styles.footSingle}`}>
           <button type="button" data-primary="true" onClick={onBack}>
             先回去
           </button>

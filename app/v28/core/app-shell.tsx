@@ -28,7 +28,7 @@ import {
 import { HomePage } from "../features/home/home-page";
 import { FeedDetailPage } from "../features/home/feed-detail-page";
 import { EveningReflectionPage } from "../features/home/evening-reflection-page";
-import {AbilityProfilePage,DimensionDetailPage,EvidenceDetailPage,EvidenceListPage,KnowledgeDetailPage,KnowledgePage,launchWithSkill,MemoryPage,ProfileEditPage,ProfilePage,QuestionnairePage,SettingsPage,setCardLevel} from "../features/pages24";
+import {AbilityProfilePage,DimensionDetailPage,EvidenceDetailPage,EvidenceListPage,KnowledgeDetailPage,KnowledgePage,launchWithSkill,MemoryPage,ProfileEditPage,ProfilePage,QuestionnairePage,SettingsPage} from "../features/pages24";
 import { MessagesPage } from "../features/messages/messages-page";
 import {Page2Identity} from "./page2-identity";
 import type { Screen } from "./screen";
@@ -530,14 +530,14 @@ export function V277App() {
     if (screen.name === "dimension") return <DimensionDetailPage id={screen.id} go={go} onBack={back}
       onCreateTask={async(card,goal)=>{
         const result=await launchWithSkill(runtime,card.id||card.title,goal);
-        if(result.ok&&result.system&&result.prompt){go({name:'chat',id:result.system,prefill:result.prompt});return {ok:true};}
+        if(result.ok&&result.system&&result.attach){go({name:'chat',id:result.system,attach:result.attach});return {ok:true};}
         return {ok:false,note:result.note};
-      }} onUpgrade={card=>setCardLevel(card.title,card.level+1)}/>;
+      }}/>;
     if (screen.name === "ability-profile") return <AbilityProfilePage go={go} onBack={back}/>;
     // 新用户的「轻量测试」：题目与计分都在我们这边，界面照第二页的风格
     if (screen.name === "questionnaire") return <QuestionnairePage go={go} onBack={back}/>;
     if (screen.name === "chat" && runtime && ['explore','advisor','create','connect','execute'].includes(screen.id))
-      return <AgentConversationPage id={screen.id as 'explore'|'advisor'|'create'|'connect'|'execute'} go={go} onBack={back} prefill={screen.prefill}/>;
+      return <AgentConversationPage id={screen.id as 'explore'|'advisor'|'create'|'connect'|'execute'} go={go} onBack={back} prefill={screen.prefill} attach={screen.attach}/>;
     if (screen.name === "chat")
       return (
         <ChatPage

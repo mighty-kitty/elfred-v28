@@ -1,7 +1,13 @@
 /* 「轻量测试」问卷：沿用第二页的视觉语言 —— 圆角白卡、#111416 主按钮、灰阶副文案。 */
 
 .wrap {
-  min-height: 100%;
+  /* 这一屏本身要能滚：手机（640 高）上题目卡 + 两颗按钮 + 提示一共 700 多，
+     原来 `min-height:100%` 没有滚动条，父层 `.v277-root` 又是 overflow:hidden，
+     于是最下面那行提示被裁在屏幕外、怎么划都看不到。 */
+  height: 100%;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
   display: flex;
   flex-direction: column;
   /* ⚠️ 底部要留出**悬浮导航栏**的高度：`.foot` 用了 `margin-top:auto`，
@@ -27,8 +33,7 @@
   text-align: center;
 }
 
-.back,
-.ghost {
+.back {
   height: 40px;
   border: 0;
   border-radius: 20px;
@@ -112,20 +117,40 @@
 
 .foot {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 132px;
+  /* 左边那颗（上一步）窄、右边那颗（下一步／完成）宽：主次一眼分得出来，
+     也不再把原来 220 / 132 那种"左重右轻"的比例留在窄机型上。 */
+  grid-template-columns: 120px minmax(0, 1fr);
   gap: 10px;
   margin-top: auto;
   padding-top: 18px;
 }
 
+/* 只有一颗按钮的页脚（结果页 / 取不到题时）：让它占满整行。
+   照栅格第一列走会只占左边 1fr，右边空出一条，看着像没对齐。 */
+.footSingle {
+  grid-template-columns: minmax(0, 1fr);
+}
+
 .foot button {
+  /* 图标（下一步那个箭头）必须和文字同一行：原来按钮是默认的 block 上下文，
+     svg 又是 display:block，于是箭头换到第二行、下半截被 50px 的按钮裁掉。 */
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
   height: 50px;
+  padding: 0 18px;
   border-radius: 25px;
   border: 1px solid #e7eaec;
   background: #fff;
   color: #111416;
   font-size: 15px;
   font-weight: 650;
+  white-space: nowrap;
+}
+
+.foot button svg {
+  flex: 0 0 auto;
 }
 
 .foot button[data-primary="true"] {
@@ -134,8 +159,20 @@
   color: #fff;
 }
 
-.foot button:disabled {
-  opacity: 0.4;
+/* 不可用要说清是"还没到那一步"，不是"坏了"：原来靠全局的 `opacity:.44`，
+   黑底主按钮一禁用就变成一块脏灰（截图里那颗就是）。
+   这里用 `.wrap` 前缀抬高优先级，把透明度拉回 1，自己给一套明确的禁用配色。 */
+.wrap .foot button:disabled {
+  opacity: 1;
+  border-color: #e7eaec;
+  background: #eef1f2;
+  color: #9aa3a8;
+}
+
+.wrap .foot button[data-primary="true"]:disabled {
+  border-color: #e7eaec;
+  background: #eef1f2;
+  color: #9aa3a8;
 }
 
 .hint {

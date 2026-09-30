@@ -2,6 +2,7 @@ import {hash,now,fail} from './store.mjs';
 import {memoryGroup} from '../../app/v28/core/memory-policy.mjs';
 import {allocateMemory,memoryRisk,memoryApplies,memoryScenarioApplies,semanticOverlap} from './memory-allocation.mjs';
 import {queueMemorySync} from './memory-hub.mjs';
+import {needsJevVerdict,registerJevVerdict} from './jev-verdict/index.mjs';
 import {memoryUsable,projectMemory,memoryCounterevidenceActive} from './memory-validity.mjs';
 
 // Only the owner's current statement can supply evidence. Assistant replies,
@@ -53,6 +54,8 @@ export function captureMemories(store,user,{text,system,source,proposals=[],orig
       }
     }
     queueMemorySync(store,memory);saved.push(memory);
+    // 改写出来的理解（不是原话照抄）交给 Jev 核对有没有加戏：命令式登记，判定在运行时循环里做。
+    if(needsJevVerdict(memory))registerJevVerdict(store,user,memory);
   }
   return saved;
 }

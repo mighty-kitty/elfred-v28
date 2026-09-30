@@ -1,4 +1,4 @@
-﻿/*
+/*
  * 记忆页专属样式（页面负责人维护）。
  *
  * 旧版这页只画了两张"身份 / 关系"卡，真正的记忆条目一条都没露面，所以：
@@ -66,82 +66,7 @@
   font-size: 10px !important;
 }
 
-/* 记忆体检：后端有接口、界面以前没入口，这块是补上的真入口 */
-.hygiene {
-  margin: 4px 0 14px;
-  padding: 12px 14px;
-  border: 1px solid #e8eaee;
-  border-radius: 14px;
-  background: #fff;
-}
 
-.hygieneHead {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-}
-
-.hygieneHead h2 {
-  margin: 0;
-  font-size: 15px;
-  color: #171a1d;
-}
-
-.hygieneRun {
-  padding: 6px 12px;
-  border: 1px solid #dfe2e7;
-  border-radius: 999px;
-  background: #fff;
-  font-size: 12px;
-  color: #171a1d;
-}
-
-.hygieneRun:disabled {
-  opacity: 0.6;
-}
-
-.hygieneNote {
-  margin: 8px 0 0;
-  font-size: 12px;
-  color: #5c626b;
-}
-
-.hygieneGroup {
-  margin-top: 10px;
-}
-
-.hygieneGroup b {
-  display: block;
-  margin-bottom: 6px;
-  font-size: 12px;
-  color: #5c626b;
-}
-
-.hygieneItem {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-  padding: 6px 0;
-  border-top: 1px solid #f1f3f6;
-  font-size: 12px;
-  color: #171a1d;
-}
-
-.hygieneItem span {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.hygieneItem button {
-  flex: none;
-  padding: 4px 10px;
-  border: 1px solid #dfe2e7;
-  border-radius: 999px;
-  background: #fff;
-  font-size: 12px;
-}
 
 :global(.v277-memory-overview) .rowValue {
   overflow: hidden !important;

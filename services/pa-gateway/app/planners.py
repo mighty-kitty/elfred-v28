@@ -81,9 +81,12 @@ class LLMPlan:
     """Calls an OpenAI-compatible /chat/completions endpoint for a JSON plan when configured."""
     name = "llm"
     def __init__(self):
-        self.base_url = os.environ.get("LLM_BASE_URL", "")
-        self.api_key = os.environ.get("LLM_API_KEY", "")
-        self.model = os.environ.get("LLM_MODEL", "")
+        # LLM_* is this service's own switch; when it is not set, reuse the model
+        # config the app already has (ELFRED_MODEL_*), so one key serves both and
+        # nobody has to keep two copies of the same secret in sync.
+        self.base_url = os.environ.get("LLM_BASE_URL", "") or os.environ.get("ELFRED_MODEL_BASE_URL", "")
+        self.api_key = os.environ.get("LLM_API_KEY", "") or os.environ.get("ELFRED_MODEL_API_KEY", "")
+        self.model = os.environ.get("LLM_MODEL", "") or os.environ.get("ELFRED_MODEL_NAME", "")
         self.timeout = float(os.environ.get("PA_LLM_TIMEOUT", "25"))
         self.max_tokens = int(os.environ.get("PA_LLM_MAX_TOKENS", "500"))
         # Thinking mode costs ~2.5x the latency for a JSON plan and showed no gain

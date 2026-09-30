@@ -56,17 +56,6 @@
   backdrop-filter: blur(8px);
 }
 
-.coverHint {
-  position: absolute;
-  left: 0;
-  right: 0;
-  bottom: 16px;
-  color: #97a1ac;
-  font-size: 12px;
-  font-style: normal;
-  text-align: center;
-}
-
 /* ── 头像（压在封面下沿，右下角相机徽标）──────────────────────────── */
 .avatarRow {
   display: flex;
@@ -139,11 +128,16 @@
   cursor: pointer;
 }
 
-.row:first-of-type {
+/* ⚠️ 用位置（第几个孩子）而不是 `:first-of-type`：
+   `:*-of-type` 是按**标签**算的，而这个分组里"用户名"那一行是只读的 `<div>`、
+   其余是 `<button>`——于是那个 div 同时命中 first 和 last，自己在中间收了个圆角+底边，
+   看起来就像卡片被切成了两块（实测截图里就是"用户名"下面断了一刀）。
+   这样按位置定：分组的第一个 .row 圆上角、最后一个 .row 圆下角+补底边。 */
+.section > .row:nth-child(2) {
   border-radius: 16px 16px 0 0;
 }
 
-.row:last-of-type {
+.section > .row:last-child {
   border-bottom: 1px solid #eceef1;
   border-radius: 0 0 16px 16px;
 }
@@ -225,35 +219,6 @@
 .switchOn {
   background: #4c6ef5;
   color: #fff !important;
-}
-
-.warn {
-  margin: 8px 2px 0;
-  padding: 10px 12px;
-  border-radius: 12px;
-  background: #fff8e6;
-  color: #8a6100;
-  font-size: 12px;
-  line-height: 1.55;
-}
-
-.footNote {
-  margin: 22px 2px 0;
-  color: #9aa2ab;
-  font-size: 12px;
-  line-height: 1.6;
-}
-
-.footNote button {
-  display: block;
-  margin-top: 8px;
-  padding: 0;
-  border: 0;
-  background: none;
-  color: #4c6ef5;
-  font-size: 12.5px;
-  font-weight: 600;
-  cursor: pointer;
 }
 
 /* ── 单字段编辑弹层 ───────────────────────────────────────────────── */

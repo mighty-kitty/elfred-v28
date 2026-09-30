@@ -207,32 +207,6 @@
   cursor: pointer;
 }
 
-.deps {
-  display: grid;
-  gap: 10px;
-}
-
-.depRow {
-  padding: 12px 14px;
-  border: 1px solid #eceef1;
-  border-radius: 14px;
-  background: #fafbfc;
-}
-
-.depRow b {
-  display: block;
-  font-size: 14px;
-  color: #171a1d;
-}
-
-.depRow small {
-  display: block;
-  margin-top: 4px;
-  color: #6b7780;
-  font-size: 12.5px;
-  line-height: 1.55;
-}
-
 /* 面板里的动作行：一行一件事，点了就真的改 */
 .panelList {
   display: grid;

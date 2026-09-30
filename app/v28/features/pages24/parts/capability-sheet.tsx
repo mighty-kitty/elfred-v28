@@ -15,7 +15,8 @@ import {
 } from "lucide-react";
 import type { Screen } from "../../../core/screen";
 import { RootPortal } from "../../../legacy/legacy-ui";
-import { SHOW_RESERVED_ACTIONS, runSkill, usePage2Live } from "../api/page2-api";
+import { MarkdownContent } from "../../../core/markdown-content";
+import { usePage2Live } from "../api/page2-api";
 import {
   DIMENSION_COLOR,
   LEVEL_EVIDENCE_GATE,
@@ -25,6 +26,7 @@ import {
   type AbilityType,
 } from "../data/knowledge-data";
 import styles from "../styles/knowledge.module.css";
+import sheetStyles from "../styles/knowledge-sheet.module.css";
 
 export type SheetCard = {
   /** 后端卡 id（有它才能把"Agent 干完活"这条成果指认到这张卡上） */
@@ -122,7 +124,7 @@ function FlowDiagram({
   return (
     <svg
       viewBox={`0 0 ${W} ${H}`}
-      className={styles.flowSvg}
+      className={sheetStyles.flowSvg}
       style={{ ["--tone" as string]: tone }}
       role="img"
       aria-label={`输入：${structure.input.join("、") || "无"}；处理：${structure.process.join("、") || "无"}；输出：${structure.output.join("、") || "无"}`}
@@ -143,16 +145,16 @@ function FlowDiagram({
 
       {inBoxes.map((box, index) => (
         <g key={`in-${index}`}>
-          <rect x={box.x - box.w / 2} y={inY} width={box.w} height={boxH} rx="10" className={styles.flowBox} />
+          <rect x={box.x - box.w / 2} y={inY} width={box.w} height={boxH} rx="10" className={sheetStyles.flowBox} />
           <text
             x={box.x}
             y={inY + 20}
             textAnchor="middle"
-            className={`${styles.flowText}${inputsEmpty ? ` ${styles.flowTextEmpty}` : ""}`}
+            className={`${sheetStyles.flowText}${inputsEmpty ? ` ${sheetStyles.flowTextEmpty}` : ""}`}
           >
             {box.text}
           </text>
-          <path d={elbowDown(box.x, inY + boxH, mid, joinY)} className={styles.flowLine} />
+          <path d={elbowDown(box.x, inY + boxH, mid, joinY)} className={sheetStyles.flowLine} />
         </g>
       ))}
       <line
@@ -174,7 +176,7 @@ function FlowDiagram({
         rx="10"
         fill={`color-mix(in srgb, ${tone} 7%, #ffffff)`}
         stroke={`color-mix(in srgb, ${tone} 40%, #ffffff)`}
-        className={styles.flowCore}
+        className={sheetStyles.flowCore}
       />
       {steps.length > 0 ? (
         steps.map((step, index) => {
@@ -191,7 +193,7 @@ function FlowDiagram({
                 fill="#ffffff"
                 stroke={`color-mix(in srgb, ${tone} 35%, #ffffff)`}
               />
-              <text x={x + stepW / 2} y={procY + 32} textAnchor="middle" className={styles.flowStep}>
+              <text x={x + stepW / 2} y={procY + 32} textAnchor="middle" className={sheetStyles.flowStep}>
                 {fit(step, stepW - 2, 8.5)}
               </text>
               {index < steps.length - 1 && (
@@ -207,7 +209,7 @@ function FlowDiagram({
         })
       ) : (
         /* 这条 skill 自己没写步骤名 —— 如实留白，不编一句 */
-        <text x={mid} y={procY + 32} textAnchor="middle" className={styles.flowStep}>
+        <text x={mid} y={procY + 32} textAnchor="middle" className={sheetStyles.flowStep}>
           这条 skill 的步骤还没有名字
         </text>
       )}
@@ -229,12 +231,12 @@ function FlowDiagram({
             fill="none"
             markerEnd="url(#flowHead)"
           />
-          <rect x={box.x - box.w / 2} y={outY} width={box.w} height={boxH} rx="10" className={styles.flowBox} />
+          <rect x={box.x - box.w / 2} y={outY} width={box.w} height={boxH} rx="10" className={sheetStyles.flowBox} />
           <text
             x={box.x}
             y={outY + 20}
             textAnchor="middle"
-            className={`${styles.flowText}${outputsEmpty ? ` ${styles.flowTextEmpty}` : ""}`}
+            className={`${sheetStyles.flowText}${outputsEmpty ? ` ${sheetStyles.flowTextEmpty}` : ""}`}
           >
             {box.text}
           </text>
@@ -305,7 +307,6 @@ export function CapabilitySheet({
   onOpenEvidence,
   onOpenEvidenceList,
   onCreateTask,
-  onUpgrade,
   tasks = [],
 }: {
   card: SheetCard;
@@ -315,24 +316,18 @@ export function CapabilitySheet({
   onOpenEvidenceList: () => void;
   /** 返回结果：整合版里会真的去建一条任务并把契约带上；失败时把原因拿回来给用户看 */
   onCreateTask: (card: SheetCard, goal: string) => Promise<{ ok: boolean; note?: string } | void>;
-  onUpgrade: (card: SheetCard) => void;
   /** 应用里真实的任务（用它筛出"这张卡被用来做过的任务"） */
   tasks?: { title: string; source: string; status: string; updatedAt: string }[];
 }) {
   const [showRecords, setShowRecords] = useState(false);
   // 点第三格（等级）展开的是"还差多少升级"那块；等级阶梯先收起来，等后端给真实门槛再放回来
   const [showLevel, setShowLevel] = useState(false);
-  // 真跑一次：卡片是 skill 的可视化，所以要按"标题 → skill 名"找到后端那条 skill 才能真跑。
-  // 映射数据来自 live store 里已经拉好的 `/page2/skills`（不另发请求）。
   const live = usePage2Live();
-  const skillName = (live.data.skills ?? []).find((item) => (card.id ? item.name === card.id : item.title === card.title))?.name ?? "";
   // 跑完面板要跟着刷新：面板是用打开时的 card 快照渲染的，所以这里以 live store 里
   // 最新的那份为准（跑完 loadPage2 会把 /capabilities 拉一遍），别让用户看到旧数字。
   const liveCard = (live.data.capabilities ?? []).find((item) => card.id ? item.id === card.id : item.title === card.title);
   const shownScore = liveCard?.score == null ? "待验证" : liveCard.score;
   const shownEvidence = liveCard?.evidence ?? card.evidence;
-  const [running, setRunning] = useState(false);
-  const [runNote, setRunNote] = useState("");
   // 「用它做一件事」要建真任务，所以得先知道这次要做什么 —— 一句话就够，
   // 剩下的（怎么做、按什么规矩、算不算做完）由能力自身的契约补上。
   const [launching, setLaunching] = useState(false);
@@ -449,7 +444,7 @@ export function CapabilitySheet({
             <span>
               <b>
                 {shownEvidence}
-                <em className={styles.statUnit}>项</em>
+                <em className={sheetStyles.statUnit}>项</em>
               </b>
               成果
             </span>
@@ -462,18 +457,18 @@ export function CapabilitySheet({
               aria-label={`当前 Lv.${card.level} ${stage}，点开看成长说明`}
             >
               <b>Lv.{card.level}</b>
-              <span className={styles.statCaption}>
+              <span className={sheetStyles.statCaption}>
                 {stage}
                 <ChevronRight
                   size={11}
-                  className={showLevel ? styles.statCellOpen : styles.statCellHint}
+                  className={showLevel ? sheetStyles.statCellOpen : sheetStyles.statCellHint}
                 />
               </span>
             </button>
           </div>
 
           {drafted && (
-            <p className={styles.draftNote}>
+            <p className={sheetStyles.draftNote}>
               已带着工具说明进入对话 ·{" "}
               <button
                 type="button"
@@ -491,7 +486,7 @@ export function CapabilitySheet({
           {showLevel && SHOW_LADDER && (
             <section className={styles.block}>
               <h3>等级阶梯</h3>
-              <ol className={styles.ladder} style={{ ["--tone" as string]: tone }}>
+              <ol className={sheetStyles.ladder} style={{ ["--tone" as string]: tone }}>
                 {ladder.map((rung) => {
                   const reached = rung.level <= card.level;
                   const current = rung.level === card.level;
@@ -500,27 +495,27 @@ export function CapabilitySheet({
                   return (
                     <li
                       key={rung.level}
-                      className={`${styles.rung}${current ? ` ${styles.rungNow}` : ""}${
-                        reached ? "" : ` ${styles.rungLocked}`
+                      className={`${sheetStyles.rung}${current ? ` ${sheetStyles.rungNow}` : ""}${
+                        reached ? "" : ` ${sheetStyles.rungLocked}`
                       }`}
                     >
-                      <span className={styles.rungNode}>
+                      <span className={sheetStyles.rungNode}>
                         {/* 当前档用白点（"我在这"），已过档用 ✓，未到档用锁 */}
                         {current ? (
-                          <span className={styles.rungDot} />
+                          <span className={sheetStyles.rungDot} />
                         ) : reached ? (
                           <Check size={14} />
                         ) : (
                           <Lock size={11} />
                         )}
                       </span>
-                      <span className={styles.rungBody}>
+                      <span className={sheetStyles.rungBody}>
                         <b>
                           Lv.{rung.level} {rung.stage}
                         </b>
                         <small>{rung.unlock}</small>
                         {!reached && (
-                          <em className={styles.rungNeed}>
+                          <em className={sheetStyles.rungNeed}>
                             {rung.level === card.level + 1
                               ? `还差 ${need} 项成果`
                               : `共需 ${gate} 项成果`}
@@ -536,35 +531,31 @@ export function CapabilitySheet({
 
           {/* 点等级这一格展开的就是这块：还差多少能升级、升上去多给你什么、以及"去哪攒" */}
           {showLevel && (
-            <div className={styles.nextBox}>
-              {gap && <span className={styles.nextBar}><span style={{ width: `${Math.round((gap.have / gap.goal) * 100)}%`, background: tone }} /></span>}
+            <div className={sheetStyles.nextBox}>
+              {gap && <span className={sheetStyles.nextBar}><span style={{ width: `${Math.round((gap.have / gap.goal) * 100)}%`, background: tone }} /></span>}
               <b>{gapLabel}</b>
-              {gap && <small className={styles.nextMeta}>
+              {gap && <small className={sheetStyles.nextMeta}>
                 <span>
                   <Check size={13} />
                   现在：{unlocked[unlocked.length - 1]}
                 </span>
                 {nextUnlock && (
-                  <span className={styles.nextLocked}>
+                  <span className={sheetStyles.nextLocked}>
                     <Lock size={13} />
                     升到 Lv.{card.level + 1} 多给你：{nextUnlock}
                   </span>
                 )}
               </small>}
-              {/* 门槛够了就能升；不够就直接给一条"去哪攒"的路 */}
+              {/* 等级由服务端按"成果数 + 分数下界"算，不需要用户再点一下确认：
+                  成果够了但分数还没到，是差在"结果还没被核对稳"，如实说出来就好。 */}
               {gap && gap.need === 0 ? (
-                <button
-                  type="button"
-                  className={styles.nextAction}
-                  onClick={() => onUpgrade(card)}
-                >
-                  <Sparkles size={14} />
-                  可以升级了：升到 Lv.{card.level + 1} {readStage(card.level + 1)}
-                </button>
+                <p className={sheetStyles.nextNote}>
+                  成果已经够了；分数还没到 Lv.{card.level + 1} 的门槛 —— 再做一件并留下可核对的来源就会动。
+                </p>
               ) : (
                 <button
                   type="button"
-                  className={styles.nextAction}
+                  className={sheetStyles.nextAction}
                   disabled={launching}
                   onClick={startTask}
                 >
@@ -575,45 +566,9 @@ export function CapabilitySheet({
             </div>
           )}
 
-          {/* 真跑一次：跑的是后端那条真 skill——模型逐步产出、自动落一条成果、卡片分数跟着变。
-              以前只有"去做一件事"（进对话），这条真跑的入口是补上的。 */}
-          {/* 真跑一次：**预留功能，默认不展示**（产品说现阶段只做闭环、不加新入口）。
-              代码留着，把 SHOW_RESERVED_ACTIONS 打开就会出来。
-              只有 skill 类型的卡才有对应的后端 skill。**匹配不上要写清原因并禁用**，
-              不能像之前那样悄悄不显示（用户会以为"这张卡就是不能跑"，其实是我们没接）。 */}
-          {SHOW_RESERVED_ACTIONS ? (
-          <div className={styles.block}>
-            {skillName ? (
-              <button
-                type="button"
-                className={styles.nextAction}
-                disabled={running}
-                onClick={async () => {
-                  if (running) return;          // 防连点：进行中一律不重复提交
-                  setRunning(true);
-                  setRunNote("");
-                  const result = await runSkill(skillName, "试跑：用这张卡做一件小事");
-                  setRunNote(
-                    result?.ran
-                      ? `跑通了一次，分数已更新为 ${result.cardScore ?? "?"}`
-                      : `没跑通：${result?.reason ?? "后端没返回原因"}`,
-                  );
-                  setRunning(false);
-                }}
-              >
-                <Sparkles size={14} />
-                {running ? "正在真跑（逐步调模型）…" : "真跑一次"}
-              </button>
-            ) : (
-              <button type="button" className={styles.nextAction} disabled>
-                <Sparkles size={14} />
-                这类卡还不是 skill，暂时不能真跑
-              </button>
-            )}
-            {runNote ? <p className={styles.draftNote}>{runNote}</p> : null}
-          </div>
-          ) : null}
-
+          {/* 「真跑一次」原来挂在一个默认关掉的开关后面，而它调的函数永远返回"未接通"
+              （旧独立后端的那条路径已经不存在）。产品口径是"留存但不展示"，
+              所以这里去掉假入口：真要做的就是「用它做一件事」，那条路径是真跑。 */}
           {showRecords ? (
             <section className={styles.block}>
               <h3>
@@ -634,19 +589,19 @@ export function CapabilitySheet({
                   </p>
                   <button
                     type="button"
-                    className={styles.nextAction}
+                    className={sheetStyles.nextAction}
                     disabled={launching}
                     onClick={startTask}
                   >
                     <ArrowUpRight size={14} />
                     用它做一件事
                   </button>
-                  {launchNote ? <p className={styles.draftNote}>{launchNote}</p> : null}
+                  {launchNote ? <p className={sheetStyles.draftNote}>{launchNote}</p> : null}
                 </>
               ) : (
                 <div className={styles.timeline}>
                   {ownTasks.map((task) => (
-                    <div key={task.title} className={styles.recordRow}>
+                    <div key={task.title} className={sheetStyles.recordRow}>
                       <b>{displayTitle(task.title,'')}</b>
                       <small>
                         {task.status} · {task.updatedAt}
@@ -675,10 +630,21 @@ export function CapabilitySheet({
               )}
               <section className={styles.block}>
                 <h3>使用说明</h3>
-                {/* 流程图：起止（圆角）→ 处理（矩形，内含三步链）→ 起止（圆角） */}
-                {structure.input.length || structure.output.length
-                  ? <FlowDiagram structure={structure} tone={tone} />
-                  : <p className={styles.note}>{liveSkill?.summary || card.copy}</p>}
+                {/* 流程图：起止（圆角）→ 处理（矩形，内含三步链）→ 起止（圆角）。
+                    步骤来自 SKILL.md 的 Procedure / 怎么做 小节；输入输出缺一头就不画那一头。 */}
+                {(structure.input.length > 0 || structure.process.length > 0 || structure.output.length > 0) && (
+                  <FlowDiagram structure={structure} tone={tone} />
+                )}
+                {/* 说明书原文就在卡里（SKILL.md），按 markdown 渲染 —— 以前是把它压成一行字，
+                    标题和列表全糊在一起，看着像乱码。 */}
+                {liveSkill?.instructions ? (
+                  <details className={sheetStyles.fullDoc}>
+                    <summary>完整说明</summary>
+                    <MarkdownContent text={liveSkill.instructions} />
+                  </details>
+                ) : (
+                  <p className={styles.note}>{liveSkill?.summary || card.copy}</p>
+                )}
               </section>
             </>
           )}
@@ -727,7 +693,7 @@ export function CapabilitySheet({
           </section>
         </div>
 
-        {launchNote ? <p className={styles.draftNote}>{launchNote}</p> : null}
+        {launchNote ? <p className={sheetStyles.draftNote}>{launchNote}</p> : null}
         {/* 这一栏就是原来的两列：左「使用记录」，右「用它做一件事」（黑色那个）。
             ⚠️ 别在这栏里再加元素：它是 70px 高、两列的固定网格，
             多一个子项就会换行、被裁在栏外（之前塞过"这次要做什么"，就是这么顶出屏幕的）。 */}

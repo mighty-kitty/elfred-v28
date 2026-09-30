@@ -1,0 +1,940 @@
+/* 第二页自己的能力库那一块：卡片组 / 知识库列表 / 能力洞察（雷达·维度·贡献）/ 导入。
+ * 只被 knowledge-page、ability-profile-page、dimension-detail-page 使用，所以单独成文件。
+ * 拆分口径：一个类只要有别的屏在用，就留在 knowledge.module.css（跨屏共用那份）。 */
+
+
+
+:global(.v277-knowledge-overview) .cards {
+  display: flex !important;
+  flex-direction: row !important;
+  height: auto !important;
+  gap: 8px !important;
+  overflow-x: auto !important;
+  overflow-y: hidden !important;
+  scroll-snap-type: x proximity;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-x: contain;
+  /* 滑动条隐藏，但保留可滑；左右各留一点内边距，露出半张卡的暗示 */
+  scrollbar-width: none;
+  padding: 0 0 2px !important;
+}
+:global(.v277-knowledge-overview) .cards::-webkit-scrollbar {
+  display: none;
+}
+/* 一屏两个半：卡片宽 = 38%（两个 38% + 间距后，第三张露出约一半）。
+   边框换成"透明描边 + 两层阴影"（见下方按需说明），所以 border 归零。 */
+:global(.v277-knowledge-overview) .cards > button {
+  flex: 0 0 38% !important;
+  min-width: 0 !important;
+  height: 165px !important;
+  overflow: hidden !important;
+  padding: 8px !important;
+  border: 0 !important;
+  border-radius: 16px !important;
+  box-shadow:
+    0 0 0 1px rgba(15, 23, 42, 0.06),
+    0 1px 2px rgba(15, 23, 42, 0.04),
+    0 8px 20px rgba(61, 74, 85, 0.05) !important;
+  scroll-snap-align: start;
+  transition: transform 140ms cubic-bezier(0.2, 0, 0, 1) !important;
+}
+/* 按下缩一点点，给手指一个回落（0.96~0.98 是有手感的区间，再小就夸张了） */
+:global(.v277-knowledge-overview) .cards > button:active {
+  transform: scale(0.97) !important;
+}
+/* ── 卡面：信息就这些，活儿全在"轻重"上 ──────────────────────────
+ *
+ * 一张卡只有 137 × 165，要放的信息是固定的：维度 / 能力名 / 图 / 能力分 / 证据数 / 等级 / 还差几件。
+ * 所以设计目标不是"多放"，而是把轻重排对，让用户 1 秒看完还能爽：
+ *
+ *   ① 能力名最大（用户先问"我能干什么"）
+ *   ② 能力分第二（次问"我练到哪了"，数字用等宽数字，跳动时不抖）
+ *   ③ "还差几件"画成一根进度条（数字门槛是最枯燥的信息，画出来才有"马上要升级"的感觉）
+ *   ④ 顶部两个胶囊改成"一个彩点 + 两行小字"，去掉边框：卡片里少一层盒子，图才立得住
+ *
+ * 参考的公开做法：
+ *   - Duolingo 任务条：把"还差 3 次"画成进度条，而不是写一句话
+ *   - Material 3 卡片：支持性文字不超过两行，一张卡不安排三个以上动作
+ *   - Refactoring UI 层级原则：同一张卡里不要出现五种一样重的灰字
+ *   - Apple HIG 进度指示：确定性进度要有明确的"总目标"，所以进度条只表示"到下一档"
+ */
+
+/* 行 1：左「彩点 + 维度名」、右「Lv.X · 阶段名」 */
+:global(.v277-knowledge-overview) .cardHead {
+  height: 18px !important;
+  display: flex !important;
+  flex-shrink: 0 !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  gap: 4px !important;
+}
+:global(.v277-knowledge-overview) .cardDim {
+  display: flex !important;
+  align-items: center !important;
+  gap: 4px !important;
+  color: #4b5563 !important;
+  font-size: 10.5px !important;
+  font-weight: 600 !important;
+  letter-spacing: 0.01em !important;
+  white-space: nowrap !important;
+}
+:global(.v277-knowledge-overview) .cardDim > i {
+  width: 6px !important;
+  height: 6px !important;
+  flex-shrink: 0 !important;
+  border-radius: 50% !important;
+  background: var(--dim, #6d7680) !important;
+}
+/* 等级是"练到哪一档"，比维度轻一档：不抢彩点，但比灰字重 */
+:global(.v277-knowledge-overview) .cardLevel {
+  color: #8b939b !important;
+  font-size: 8.6px !important;
+  font-weight: 600 !important;
+  letter-spacing: 0.01em !important;
+  white-space: nowrap !important;
+}
+/* 行 2：能力图。图是卡上最好看的东西，所以给足高度；描边用纯黑 10% 的细线，
+   不用带色调的灰——带色调的描边会把底下的卡片颜色吸上来，看着像脏边。 */
+:global(.v277-knowledge-overview) .cards > button > :global(.v277-ability-visual) {
+  height: 48px !important;
+  min-height: 48px !important;
+  margin-top: 5px !important;
+  border-radius: 8px !important;
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.1) !important;
+  /* 公共 CSS 把卡面设成了示例图库（reference-knowledge.png 切块）。给用户用不能这样：
+     没设置封面就是**中性占位**，并把卡自己的图标放出来（公共 CSS 原本把 svg 藏了）。 */
+  background-image: linear-gradient(160deg, #eef3fb 0%, #e6ecf7 60%, #dfe7f4 100%) !important;
+  background-size: cover !important;
+  background-position: center !important;
+  display: grid !important;
+  place-items: center !important;
+}
+
+:global(.v277-knowledge-overview) .cards > button > :global(.v277-ability-visual) > svg {
+  display: block !important;
+  color: #7d8899 !important;
+  opacity: 0.9 !important;
+}
+/* 行 3：能力名 —— 卡上唯一的大字 */
+:global(.v277-knowledge-overview) .cards > button > b {
+  flex-shrink: 0 !important;
+  margin-top: 6px !important;
+  font-size: 15px !important;
+  line-height: 19px !important;
+  letter-spacing: -0.01em !important;
+}
+/* 行 4：能力分（左，等宽数字）＋ 证据数（右）。中间那根竖线去掉：
+   下面已经有进度条了，再画分隔线就是多余的一道横线。 */
+:global(.v277-knowledge-overview) .cards footer {
+  height: 22px !important;
+  display: flex !important;
+  align-items: flex-end !important;
+  justify-content: space-between !important;
+  gap: 6px !important;
+  margin-top: 4px !important;
+  padding-top: 0 !important;
+  border-top: 0 !important;
+}
+:global(.v277-knowledge-overview) .cards footer::after {
+  display: none !important;
+}
+:global(.v277-knowledge-overview) .cards footer strong {
+  display: flex !important;
+  align-items: baseline !important;
+  font-size: 20px !important;
+  line-height: 20px !important;
+  font-variant-numeric: tabular-nums;
+}
+:global(.v277-knowledge-overview) .cards footer strong em {
+  display: inline !important;
+  margin: 0 0 0 3px !important;
+  color: #8b939b !important;
+  font-size: 8px !important;
+  line-height: 8px !important;
+}
+:global(.v277-knowledge-overview) .cards footer > span {
+  max-width: none !important;
+  /* 两个数字的基线要对上：底边齐平即可（两个字号的下沿空隙都是 1.9px，实测） */
+  align-self: flex-end !important;
+  margin-bottom: 0 !important;
+  overflow: hidden;
+  color: #8b939b !important;
+  font-size: 8.6px !important;
+  line-height: 11px !important;
+  text-overflow: ellipsis;
+  white-space: nowrap !important;
+}
+/* 行 5：「到下一档还差几件」——整卡最低调的一条底，也是最该让人想动一下的一条。
+   进度条用这一维的颜色，和左上角的彩点是同一个意思。整条淡底，和上面三行分开。 */
+:global(.v277-knowledge-overview) .cardGap {
+  height: 20px !important;
+  display: flex !important;
+  flex-shrink: 0 !important;
+  align-items: center !important;
+  gap: 4px !important;
+  margin-top: 5px !important;
+  padding: 0 6px !important;
+  overflow: hidden !important;
+  border-radius: 8px !important;
+  background: rgba(15, 23, 42, 0.045) !important;
+  color: #3f4650 !important;
+  font-size: 8.4px !important;
+  font-weight: 500 !important;
+  line-height: 20px !important;
+  white-space: nowrap !important;
+}
+/* 文案是 flex 里的匿名文本，截断要包一层容器才生效（否则会顶出卡片被硬裁） */
+:global(.v277-knowledge-overview) .cardGapText {
+  min-width: 0 !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  white-space: nowrap !important;
+}
+.heroCard {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 16px;
+  border: 1px solid #e6e9ec;
+  border-radius: 20px;
+  background: #fff;
+  box-shadow: 0 8px 22px rgba(59, 72, 82, 0.05);
+}
+.heroCard > b {
+  display: flex;
+  align-items: baseline;
+  color: #0d0f11;
+  font-size: 34px;
+  line-height: 36px;
+  font-variant-numeric: tabular-nums;
+}
+.heroCard > b > small {
+  margin-left: 2px;
+  color: #8b939b;
+  font-size: 13px;
+  font-weight: 500;
+}
+.heroCard > p {
+  margin: 2px 0 0;
+  color: #4b5563;
+  font-size: 12.5px;
+}
+.heroCard > span {
+  margin-top: 6px;
+  color: #8b939b;
+  font-size: 11px;
+}
+.heroDot {
+  position: absolute;
+  top: 18px;
+  right: 16px;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+/* 维度与卡的行 */
+.dimList {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.cardScore {
+  color: #171a1d !important;
+  font-size: 15px !important;
+  font-variant-numeric: tabular-nums;
+}
+.filterRow {
+  display: flex;
+  gap: 8px;
+  margin: 14px 0 10px;
+}
+.filterRow button {
+  height: 30px;
+  padding: 0 13px;
+  border: 1px solid #e3e8ed;
+  border-radius: 999px;
+  background: #fff;
+  color: #5b646c;
+  font-size: 12.5px;
+}
+/* 综合能力的数字压在雷达中心：给一块白底，压住底下的网格线才读得清 */
+:global(.v277-page) .radarCenter {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  display: flex;
+  align-items: baseline;
+  justify-content: center;
+  width: 74px;
+  height: 74px;
+  padding-top: 22px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow:
+    0 0 0 1px rgba(15, 23, 42, 0.05),
+    0 6px 16px rgba(61, 74, 85, 0.07);
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+}
+:global(.v277-page) .radarCenter > b {
+  color: #0d0f11;
+  font-size: 27px;
+  line-height: 27px;
+  font-variant-numeric: tabular-nums;
+}
+:global(.v277-page) .radarCenter > span {
+  margin-left: 2px;
+  color: #8b939b;
+  font-size: 10.5px;
+}
+:global(.v277-page) .chartLegend {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  margin: 4px 0 0;
+  color: #8b939b;
+  font-size: 10.5px;
+}
+:global(.v277-page) .chartLegend > i {
+  width: 14px;
+  height: 2px;
+  margin-left: 8px;
+  border-radius: 1px;
+}
+:global(.v277-page) .legendNow {
+  background: #525a61;
+}
+/* 五维对比条：一行一维，粗条＝本期，灰竖标＝上期 */
+:global(.v277-page) .dimList {
+  display: flex;
+  flex-direction: column;
+  gap: 11px;
+}
+:global(.v277-page) .dimName {
+  color: #3f4650;
+  font-size: 12px;
+}
+:global(.v277-page) .dimTrack {
+  position: relative;
+  display: block;
+  height: 10px;
+  border-radius: 5px;
+  background: #eef1f3;
+}
+:global(.v277-page) .dimFill {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  border-radius: 5px;
+}
+/* 上期那根灰竖标要压在本期条上、略微出头，看上去才像"刻度"而不是缺口 */
+:global(.v277-page) .dimPrev {
+  position: absolute;
+  top: -3px;
+  bottom: -3px;
+  width: 2px;
+  margin-left: -1px;
+  border-radius: 1px;
+  background: #5f686f;
+  box-shadow: 0 0 0 1.5px #fff;
+}
+:global(.v277-page) .dimUnknown {
+  position: absolute;
+  inset: 0;
+  border-radius: 5px;
+  background: repeating-linear-gradient(
+    45deg,
+    #e3e7ea 0 4px,
+    #f1f3f5 4px 8px
+  );
+}
+:global(.v277-page) .dimValue {
+  display: inline-flex;
+  flex-direction: row;
+  align-items: baseline;
+  gap: 3px;
+  color: #171a1d;
+  font-size: 12.5px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+:global(.v277-page) .dimValue > em {
+  font-size: 10.5px;
+  font-style: normal;
+  font-weight: 600;
+}
+:global(.v277-page) .dimUp {
+  color: #0f9d63;
+}
+:global(.v277-page) .dimDown {
+  color: #d1584c;
+}
+:global(.v277-page) .dimFlat {
+  color: #9aa2a9;
+}
+:global(.v277-page) .dimArrow {
+  color: #c7cdd3;
+}
+:global(.v277-page) .legendPrev {
+  background: repeating-linear-gradient(
+    90deg,
+    #b6bdc4 0 4px,
+    transparent 4px 7px
+  );
+}
+:global(.v277-page) .chartHint {
+  margin: 6px 0 0;
+  color: #8b939b;
+  font-size: 10.5px;
+}
+/* "分是谁撑起来的"：一张卡一行 —— 上一行是卡名 + 维度标签 + 条数，下面一条是占比 */
+:global(.v277-page) .contribList {
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+}
+:global(.v277-page) .contribRow {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto 13px;
+  grid-template-areas:
+    "head meta arrow"
+    "bar bar bar";
+  align-items: center;
+  gap: 7px 8px;
+  padding: 10px 11px;
+  border: 0;
+  border-radius: 13px;
+  background: #f8f9fa;
+  text-align: left;
+}
+:global(.v277-page) .contribHead {
+  display: flex;
+  grid-area: head;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+:global(.v277-page) .contribHead > b {
+  overflow: hidden;
+  color: #171a1d;
+  font-size: 13px;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+/* 维度标签用那一维的颜色，和雷达 / 对比条对得上 */
+:global(.v277-page) .contribHead > i {
+  flex: none;
+  padding: 1px 6px;
+  border-radius: 999px;
+  font-size: 10px;
+  font-style: normal;
+  font-weight: 600;
+  white-space: nowrap;
+}
+:global(.v277-page) .contribMeta {
+  grid-area: meta;
+  color: #5b646c;
+  font-size: 11.5px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+:global(.v277-page) .contribBar {
+  display: block;
+  grid-area: bar;
+  height: 8px;
+  overflow: hidden;
+  border-radius: 4px;
+  background: #e4e8ec;
+}
+:global(.v277-page) .contribBar > i {
+  display: block;
+  height: 100%;
+  border-radius: 4px;
+}
+:global(.v277-page) .contribEmptyNote {
+  margin: 0;
+  color: #8b939b;
+  font-size: 11.5px;
+}
+:global(.v277-page) .contribArrow {
+  grid-area: arrow;
+  color: #c7cdd3;
+}
+/* 空态引导卡：和真卡同尺寸同圆角，整张可点 —— 它是"卡轨里的第一张卡" */
+.cardsHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  /* 负边距只在这一处用（页头与标题行之间收紧）；筛选条不能再负，否则两行压在一起 */
+  margin: -50px 0 6px;
+}
+.cardsHead > h2 {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+  color: #171a1d;
+  font-size: 16px;
+  font-weight: 700;
+}
+.cardsHead > h2 > svg {
+  color: #2f6fed;
+}
+/* 洞察空块 = 洞察卡本身的高度（实测 184）；标题行在外面已经有了，不能再算一遍。
+   删掉那两行小字之后，里面只剩"圆图标 + 标题 + 一颗按钮"：高度不动（换到有数据时
+   不跳），把空出来的地方匀进间距，避免中间一大块空、内容挤在上下两头。 */
+.emptyBlockTall {
+  height: 184px;
+  gap: 14px;
+  padding: 20px 18px;
+}
+/* 空态下把洞察那两张卡收起来（换成上面的测试入口） */
+:global(.v277-page.v277-library-page).isEmpty :global(.v278-insight-stack) {
+  display: none !important;
+}
+/* 今天的新成果的空态：和真成果那一排等高（实测 67px），切空态时下面不跳 */
+.emptyEvidence {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  /* 和"今天的新成果"那一排真实尺寸一致（实测 67） */
+  height: 67px;
+  margin-top: 8px;
+  padding: 0 16px;
+  border: 1.5px dashed #d7dee6;
+  border-radius: 18px;
+  background: #fbfcfd;
+  color: #8b939b;
+  font-size: 12.5px;
+}
+.emptyEvidence > svg {
+  flex: none;
+  color: #b6bfc8;
+}
+/* 空态下，两个货架里"真卡"的那条轨道整体收起——能力那边已经被占位块替换，
+   剩下会被收掉的就是知识货架那一条。 */
+.isEmpty :global(.v277-ability-cards) {
+  display: none;
+}
+/* 待验证卡：还没跑出成果的能力卡。不是另一类东西，只是能力卡的一个状态 */
+/* 知识库标题右侧：＋导入 和 查看全部 并排 */
+/* 知识库标题右侧那组：必须用高权重，否则会被公共的 .v277-section-title button 撑大换行 */
+:global(.v277-page.v277-library-page .v277-section-title) .inlineActions {
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+}
+:global(.v277-page.v277-library-page .v277-section-title) .inlinePlus {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  width: 28px !important;
+  height: 28px !important;
+  padding: 0 !important;
+  border: 0 !important;
+  border-radius: 50% !important;
+  /* 和上面两个圆钮统一：白底 + 浅描边 */
+  background: #fff !important;
+  color: #3f4650 !important;
+  box-shadow:
+    0 0 0 1px rgba(15, 23, 42, 0.07),
+    0 4px 10px rgba(61, 74, 85, 0.07);
+}
+/* "查看全部"要保持原来的样子（现在它被包在 span 里，公共选择器够不到它） */
+:global(.v277-page.v277-library-page .v277-section-title) .inlineActions > button:last-child {
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 2px !important;
+  width: auto !important;
+  height: auto !important;
+  padding: 0 !important;
+  border: 0 !important;
+  background: none !important;
+  color: #2f6fed !important;
+  font-size: 12.5px !important;
+  font-weight: 500 !important;
+  line-height: 1 !important;
+}
+/* 底部那条"还差 N 项成果"：收 2px，把上面两行标题多占的高度让回来。
+   注意 .cardGap 是 CSS Module 的类名，必须挂在 :global(...) 外面当模块类写，
+   写成 :global(... .cardGap) 是匹配不到的（类名被编译成 _cardGap_xxx）。 */
+:global(.v277-page.v277-library-page .v277-ability-cards) .cardGap {
+  height: 18px !important;
+  margin-top: 2px !important;
+  line-height: 18px !important;
+}
+.filterRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 8px;
+}
+.filterRow > :global(.v277-ability-filters) {
+  flex: 1;
+  min-width: 0;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.filterRow > :global(.v277-ability-filters)::-webkit-scrollbar {
+  display: none;
+}
+/* 这一页是"一屏放下、不滚动"的设计（滚轮用来切换洞察卡）。
+   所以正确做法是压缩上面的工具行，而不是打开滚动、也不是压扁下面。 */
+
+.toolRound {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: 10px;
+}
+:global(.v277-page.v277-library-page) .toolRound > button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  border: 0;
+  border-radius: 50%;
+  /* 白底 + 一圈浅描边：灰底放在浅灰页面上看不出来（按反馈改） */
+  background: #fff !important;
+  color: #3f4650 !important;
+  box-shadow:
+    0 0 0 1px rgba(15, 23, 42, 0.07),
+    0 4px 10px rgba(61, 74, 85, 0.07);
+}
+.importList {
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+  margin-top: 14px;
+}
+.importRow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 13px;
+  border: 0;
+  border-radius: 16px;
+  background: #f7f9fc;
+  text-align: left;
+}
+.importRow > span {
+  min-width: 0;
+}
+.importRow b {
+  display: block;
+  font-size: 13.5px;
+  font-weight: 700;
+  color: #171a1d;
+}
+.importRow small {
+  display: block;
+  margin-top: 2px;
+  color: #8b939b;
+  font-size: 11.5px;
+}
+.importRow > svg {
+  margin-left: auto;
+  flex: none;
+  color: #c7cdd3;
+}
+.importFoot {
+  margin: 12px 0 0;
+  color: #8b939b;
+  font-size: 11.5px;
+  text-align: center;
+}
+/* 待确认：导进来的素材先躺在这儿，用户点头才上架 */
+.pendingList {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px solid #eef1f3;
+}
+.pendingList > h4 {
+  font-size: 12.5px;
+  font-weight: 700;
+  color: #6b7379;
+}
+.pendingRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  border-radius: 14px;
+  background: #f7f9fc;
+}
+.pendingRow > span {
+  min-width: 0;
+  margin-right: auto;
+}
+.pendingRow b {
+  display: block;
+  font-size: 13px;
+  font-weight: 700;
+  color: #171a1d;
+}
+.pendingRow small {
+  display: block;
+  margin-top: 2px;
+  color: #8b939b;
+  font-size: 11px;
+}
+.pendingRow > button {
+  flex: none;
+  height: 30px;
+  padding: 0 12px;
+  border: 0;
+  border-radius: 999px;
+  background: #1c2126;
+  color: #fff;
+  font-size: 12px;
+  font-weight: 600;
+}
+.pendingRow > button.pendingDrop {
+  background: #eef1f3;
+  color: #6b7379;
+}
+/* ── 一屏放下：标题行与筛选胶囊之间不留空 ─────────────────────
+   公共样式和文件里更早的 .filterRow 规则会把这几个边距覆盖回去，
+   所以放在文件最后 + 高权重，确保生效。 */
+:global(.v277-page.v277-library-page) .cardsHead {
+  margin: -50px 0 0 !important;
+}
+:global(.v277-page.v277-library-page) .filterRow {
+  margin: -12px 0 6px !important;
+}
+
+
+/* 雷达上那句"起点来自测试 / 哪几维已经动过"的说明。
+   口径（用户定过）：起点就是这条曲线的一部分，不另画"不算分"的虚线。
+   （右边原来挂过一个「做完事会变，久了也会回落」的角标 —— 用户说多余，连样式一起删了。） */
+.radarNote {
+  display: flex;
+  align-items: center;
+  margin: 2px 0 6px;
+  font-size: 11px;
+  color: #7b848a;
+}
+
+
+/* ── 能力卡初始化（三步选框）───────────────────────────────────────
+   外壳共用项目的底部弹层（`.v279-setting-sheet`，见组件里的 RootSheet），
+   这里只覆盖"高度自适应 + 内容自己滚"，不然会被那套的固定高度截断。 */
+:global(.v279-setting-sheet).onboardSheet {
+  height: auto;
+  max-height: 86%;
+  /* 底部导航是浮在上面的（离底 27px、高 54px）：留出这段高度，
+     免得最后一行按钮被它压住。 */
+  padding-bottom: 88px;
+  display: flex;
+  flex-direction: column;
+}
+
+.onboardHead {
+  position: relative;
+  padding: 16px 18px 10px;
+  border-bottom: 1px solid #f0f2f5;
+}
+
+.onboardHead h2 {
+  margin: 6px 0 0;
+  font-size: 17px;
+  line-height: 1.35;
+  color: #171a1d;
+}
+
+.onboardStepTag {
+  font-size: 11px;
+  color: #7b848e;
+}
+
+.onboardClose {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  width: 30px;
+  height: 30px;
+  display: grid;
+  place-items: center;
+  border: 0;
+  border-radius: 50%;
+  background: #f4f6f8;
+  color: #4b545e;
+}
+
+.onboardBody {
+  padding: 14px 18px 18px;
+  overflow-y: auto;
+}
+
+.onboardNote {
+  margin: 0 0 12px;
+  color: #6b7480;
+  font-size: 12.5px;
+  line-height: 1.6;
+}
+
+.onboardError {
+  margin: 0 0 10px;
+  padding: 8px 10px;
+  border-radius: 10px;
+  background: #fff6e6;
+  color: #8a6100;
+  font-size: 12.5px;
+}
+
+.onboardGroup {
+  margin-bottom: 14px;
+}
+
+.onboardGroup h3 {
+  margin: 0 0 8px;
+  font-size: 13px;
+  color: #3d4650;
+}
+
+.onboardCards {
+  display: grid;
+  gap: 8px;
+}
+
+.onboardCard {
+  position: relative;
+  display: grid;
+  gap: 4px;
+  padding: 10px 34px 10px 12px;
+  border: 1px solid #e6e9ee;
+  border-radius: 12px;
+  background: #fff;
+  text-align: left;
+}
+
+.onboardCard b {
+  font-size: 13.5px;
+  color: #171a1d;
+}
+
+.onboardCard small {
+  color: #6b7480;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.onboardCard:disabled {
+  opacity: 0.45;
+}
+
+.onboardPreview {
+  display: grid;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.onboardPreviewCard {
+  display: grid;
+  gap: 4px;
+  padding: 12px 14px;
+  border: 1px solid #e6e9ee;
+  border-radius: 14px;
+  background: #fbfcfd;
+  text-align: left;
+}
+
+.onboardPreviewCard b {
+  font-size: 14px;
+  color: #171a1d;
+}
+
+.onboardPreviewCard p {
+  margin: 0;
+  color: #4b545e;
+  font-size: 12.5px;
+  line-height: 1.55;
+}
+
+.onboardPreviewCard small {
+  color: #7b848e;
+  font-size: 11.5px;
+}
+
+.onboardPreviewSystem {
+  font-size: 11px;
+  color: #4c6ef5;
+}
+
+/* 预览页：先把"你刚才选了什么"复述一遍，再让人决定要不要看全文 / 再细一点 */
+.onboardTrail {
+  margin: 0 0 12px;
+  padding: 10px 12px;
+  border-radius: 14px;
+  background: #f4f7fb;
+  color: #3c4653;
+  font-size: 12.5px;
+  line-height: 1.7;
+}
+
+.onboardFooter {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-top: 6px;
+}
+
+.onboardGhost {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 9px 14px;
+  border: 1px solid #e6e9ee;
+  border-radius: 999px;
+  background: #fff;
+  color: #3d4650;
+  font-size: 12.5px;
+}
+
+/* ⚠️ 必须带 `.onboardSheet` 前缀：`app/v27-7.css` 里有一条
+   `.v277-device :is(button,input,textarea){color:inherit}`，它的优先级是 (0,1,1)，
+   比单个类 `.onboardPrimary` 的 (0,1,0) 高 —— 黑底按钮上的白字会被改成继承色（黑底黑字，看不清）。
+   加一层前缀抬到 (0,2,0)，白字才真的白。禁用态同理，见下一条。 */
+.onboardSheet .onboardPrimary {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 18px;
+  border: 0;
+  border-radius: 999px;
+  background: #1c2126;
+  color: #fff;
+  font-size: 13px;
+}
+
+/* 不可用时也要看得清字。两个坑都踩过：
+   ① 原来靠 opacity:0.5 —— 黑底主按钮一禁用就变成一块脏灰；
+   ② 改成明确配色后还是被压透明：`.v277-device button:disabled{opacity:.44}` 的优先级是 (0,2,1)，
+      比 `.onboardPrimary:disabled` 的 (0,2,0) 高，最终渲染成"近白的底 + 浅灰的字"，照样读不出来。
+   所以这里用 `.onboardSheet` 前缀把优先级抬到 (0,3,0)，再自己给一套禁用配色。 */
+.onboardSheet .onboardPrimary:disabled {
+  opacity: 1;
+  background: #eef1f2;
+  color: #6f7981;
+  cursor: default;
+}
+
+.onboardSpin {
+  animation: onboardSpin 1s linear infinite;
+}
+
+@keyframes onboardSpin {
+  to {
+    transform: rotate(360deg);
+  }
+}

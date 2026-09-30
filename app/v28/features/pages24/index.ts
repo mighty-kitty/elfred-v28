@@ -27,15 +27,15 @@ export { SettingsPage } from "./screens/settings-page";
 export { ProfileEditPage } from "./screens/profile-edit-page";
 
 // ── 组件 ─────────────────────────────────────────────────────────────
-export { CapabilitySheet } from "./parts/capability-sheet";
-export { UnderstandingSheet } from "./parts/understanding-sheet";
+// 只有 HonorGallery 是模块外要用的（第四页的「勋章」页签也挂在 legacy-ui 那侧）；
+// CapabilitySheet / UnderstandingSheet / LibraryHeader 由本模块的屏自己引用，
+// 不进公共面 —— 公共面越小，别人越不容易依赖到我们的内部结构。
 export { HonorGallery } from "./parts/honor-gallery";
-export { LibraryHeader } from "./parts/library-header";
 
 // ── 接缝要用到的接口 / 数据层 ────────────────────────────────────────
-export { loadPage2, setPage2User, setPage2Runtime, fetchRelationships, usePage2Live } from "./api/page2-api";
+// 模块外真正用到的就这几项（`core/page2-identity.tsx`、`core/app-shell.tsx`、
+// `legacy/legacy-ui.tsx` 三处）。其余接口留在各自文件里，模块内直接 import。
+export { setPage2Runtime, fetchRelationships } from "./api/page2-api";
 export type { LiveRelationship } from "./api/page2-api";
-export { setCardLevel } from "./api/page2-store";
-export { draftTask } from "./api/task-draft";
 export { launchWithSkill } from "./api/skill-launch";
 export { hasLiveAlignment, libraryHeader } from "./data/knowledge-data";

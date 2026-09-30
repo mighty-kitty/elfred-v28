@@ -86,18 +86,18 @@ export function MemoryPage({
           </div>
         </section>
 
-        {/* 空态：圆图标 + 标题 + 一行说明 + 黑色胶囊按钮，和「还没有能力卡片/洞察」同款同尺寸 */}
+        {/* 空态：圆图标 + 标题 + 黑色胶囊按钮，和「还没有能力卡片/洞察」同款同尺寸。
+            说明小字（"说过确认过的事会记在这里"）和底部那行"偏好自动学习…"按反馈删了，
+            空态只留一句话标题和一颗按钮。 */}
         {isEmpty && (
           <section className={knowledgeStyles.emptyBlock}>
             <i className={knowledgeStyles.emptyBlockIcon}>
               <Bookmark size={26} />
             </i>
             <b>还没有记忆</b>
-            <p>在聊天和任务里说过、确认过的事，它会记在这里</p>
             <button type="button" onClick={() => go({ name: "chat", id: "elfred" })}>
               去聊两句
             </button>
-            <em className={knowledgeStyles.emptyNote}>偏好自动学习，敏感理解由你确认，随时可以改</em>
           </section>
         )}
 

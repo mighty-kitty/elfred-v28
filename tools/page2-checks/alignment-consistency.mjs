@@ -120,9 +120,31 @@ const j = async (p, opt = {}) => {
   // 这两句是 2026-09-30 按反馈删掉的（标题下的小字 + 去看记忆库的出口），别再长回来
   expect(!/由已确认的记忆与反馈持续更新/.test(knowledgeSheet), '标题下那行小字已经删掉');
   expect(!/看它记住了什么/.test(knowledgeSheet), '「看它记住了什么」这个出口已经删掉');
+  // 等级卡里那句「每个动作都要你点一下」也按反馈删掉了（展开的六档梯子里每档还留着说明）
+  expect(!/每个动作都要你点一下/.test(knowledgeSheet), '等级卡里那行小字已经删掉');
   // 中间那块只说"离下一档还差多少"（百分数），不再重复写「10% → 40%」，也不再挂那句小字
   expect(/距离 Lv\.\d 还差\s*\d+%/.test(knowledgeSheet), '中间那块一句话说完「距离 Lv.N 还差 X%」', knowledgeSheet.split('\n').map((line) => line.trim()).filter((line) => /还差/.test(line)).join(' | '));
   expect(!/件你验收过的成果/.test(knowledgeSheet), '「再有 N 件…」那行小字已经删掉');
+  // 数字和条子必须是同一件事：那条进度条上"从你在这儿到下一档门槛"那一段的宽度，
+  // 要等于文案里那个百分比（以前这条按本档区间归一，显示 25%、文案写 30%，对不上）
+  const barCheck = await page.evaluate(() => {
+    const sheet = document.querySelector('[aria-label="理解度详情"]');
+    if (!sheet) return null;
+    const band = [...sheet.querySelectorAll('i')].find((el) => {
+      const style = el.getAttribute('style') || '';
+      return /left:\s*[\d.]+%/.test(style) && /width:\s*[\d.]+%/.test(style);
+    });
+    if (!band) return null;
+    const track = band.parentElement.getBoundingClientRect();
+    const mine = band.getBoundingClientRect();
+    const text = (document.querySelector('[aria-label="理解度详情"]')?.innerText || '').match(/还差\s*(\d+)%/);
+    return { ratio: Math.round((mine.width / track.width) * 1000) / 10, text: text ? Number(text[1]) : null };
+  });
+  expect(
+    Boolean(barCheck) && barCheck.text !== null && Math.abs(barCheck.ratio - barCheck.text) <= 2,
+    '进度条上"还差"那一段的宽度 === 文案里的百分比',
+    barCheck ? `条子 ${barCheck.ratio}% / 文案 ${barCheck.text}%` : '没找到那一段',
+  );
   // 另一栏（荣誉勋章）也得真画出来：两边共用 /page2/badges 和同一个 HonorGallery
   // 注意：`getByRole(name)` 默认是"包含"匹配 —— 页头那颗胶囊的 aria-label 里也有"荣誉勋章"，
   // 直接被点到就是点到弹层外面（会被遮罩拦下）。所以这里必须在弹层里找、而且用 exact。
@@ -154,6 +176,11 @@ const j = async (p, opt = {}) => {
   const memoryHeaderPercent = percentOf(memoryHeader);
   const memorySheet = await openSheet();
   const memorySheetPercent = percentOf(memorySheet);
+  // 记忆库空态按反馈收成"图标 + 一句话 + 一颗按钮"：这两行小字别再长回来
+  const memoryEmpty = await page.evaluate(() => document.body.innerText);
+  expect(!/在聊天和任务里说过/.test(memoryEmpty), '记忆库空态里那句"说过确认过的事会记在这里"已经删掉');
+  expect(!/偏好自动学习/.test(memoryEmpty), '记忆库空态里那句"偏好自动学习…"已经删掉');
+  await page.screenshot({ path: path.join(OUT, 'memory-empty.png'), fullPage: true });
   console.log('\n记忆库：');
   console.log(`  页头：${memoryHeader}`);
   expect(memoryHeaderPercent === knowledgeHeaderPercent, '记忆库页头 === 能力库页头', `${knowledgeHeaderPercent}% / ${memoryHeaderPercent}%`);

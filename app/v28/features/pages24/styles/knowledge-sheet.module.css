@@ -188,21 +188,18 @@
   transform: rotate(-28deg);
 }
 .stageName {
-  font-size: 20px;
+  /* 下面那行小字删掉之后，这一行独占了左边的位置，字号跟着调大一点
+     （右边那颗球是 46px，跟上它才不会显得空） */
+  font-size: 23px;
   font-weight: 800;
   line-height: 1.2;
   color: #171a1d;
 }
 .stageName em {
-  margin-left: 7px;
-  font-size: 13px;
+  margin-left: 8px;
+  font-size: 15px;
   font-style: normal;
   color: #6b7379;
-}
-.stageSub {
-  margin-top: 3px;
-  color: #8b939b;
-  font-size: 11.5px;
 }
 .stagePct {
   margin-left: auto;
@@ -248,16 +245,23 @@
   box-shadow: 0 1px 3px rgba(20, 28, 36, 0.28);
   transform: translateY(-50%);
 }
-/* 目标点：压在轨道最右端，表示"下一档的门槛"——眼睛有个要追的点 */
+/* 目标点：站在"下一档门槛在那条 0–100 刻度上的位置"（位置由行内样式给），眼睛有个要追的点 */
 .barGoal {
   position: absolute;
   top: 50%;
-  right: 1px;
   width: 6px;
   height: 6px;
   border-radius: 50%;
   background: #c3cddb;
-  transform: translateY(-50%);
+  transform: translate(-50%, -50%);
+}
+/* 「你在这儿」到「下一档门槛」之间那一段：宽度 = 文案里的"还差 X%"，让数字和条子对得上 */
+.barGap {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  border-radius: 999px;
+  background: rgba(47, 111, 237, 0.16);
 }
 @media (prefers-reduced-motion: reduce) {
   .barFill {

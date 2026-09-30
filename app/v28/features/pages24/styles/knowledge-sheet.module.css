@@ -333,10 +333,13 @@
   display: flex;
   align-items: center;
   gap: 10px;
+  width: 100%;
   margin-top: 9px;
   padding: 7px 12px;
+  border: 0;
   border-radius: 14px;
   background: #f7f9fc;
+  text-align: left;
 }
 .pathRow > b {
   flex: none;
@@ -369,6 +372,10 @@
   font-size: 10.5px;
   font-weight: 600;
 }
+.pathArrow {
+  flex: none;
+  color: #b3bcc4;
+}
 /* 铺开六档时用两列格子，比一行一档省一半高度，一屏就放得下 */
 .pathGrid {
   display: grid;
@@ -397,18 +404,6 @@
   color: #8b939b;
   font-size: 10.5px;
   line-height: 1.45;
-}
-.pathLink {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  margin-top: 12px;
-  padding: 0;
-  border: 0;
-  background: none;
-  color: #2f6fed;
-  font-size: 13px;
-  font-weight: 600;
 }
 .honorTop {
   display: flex;

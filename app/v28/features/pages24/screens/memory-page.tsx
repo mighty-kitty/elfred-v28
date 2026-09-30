@@ -221,7 +221,6 @@ export function MemoryPage({
       {alignmentOpen && (
         <UnderstandingSheet
           state={state}
-          go={go}
           onClose={() => setAlignmentOpen(false)}
         />
       )}

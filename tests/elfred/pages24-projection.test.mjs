@@ -87,6 +87,26 @@ test('理解度：页头那个百分比由成果/记忆/问卷算出来，不是
   assert.equal(data.alignment.confirmedMemories, 1);
 });
 
+// 弹层底部那三格和页头胶囊是**同一次投影**给出来的。以前"记忆可信度"是投影里写死的 0，
+// 界面上就一直是"0%"——一个算过的 0 和一个"没有基数"的 0 是两件事，这里钉住区别。
+test('记忆可信度：只数"已确认且真的情境验证过"的那部分，没有基数时是 null（界面写"—"）', () => {
+  const memory = (id, data) => entity(id, 'memory', { group: '偏好', scope: 'owner', ...data });
+  const explicit = memory('m1', { content: '喜欢先给结论', status: 'validated', alignment: 'explicit' });
+  const verified = memory('m2', { content: '周一上午不开会', status: 'validated', alignment: 'scenario_verified' });
+  const stable = memory('m3', { content: '汇报先给风险', status: 'learned', risk: 'low', alignment: 'stable_over_time' });
+  const pending = memory('m4', { content: '可能在准备换工作', status: 'pending_confirmation', alignment: 'explicit' });
+
+  assert.equal(
+    projectSnapshot(snapshotWith()).memory.credibility,
+    null,
+    '一条都没确认时没有基数，写 null 让界面说"—"，不是拿 0% 冒充算过的结果',
+  );
+
+  const data = projectSnapshot(snapshotWith({ memories: [explicit, verified, stable, pending] }));
+  assert.equal(data.memory.totalCount, 3, '待确认那条不算已确认');
+  assert.equal(data.memory.credibility, 67, '3 条已确认里 2 条到了情境验证 = 67%');
+});
+
 test('说明书按 SKILL.md 拆开：能做到什么 / 步骤 / 交付 / 原文都在', () => {
   const skill = entity('s1', 'skill', { title: '会议纪要整理', kind: 'Skill', system: 'execute', instructions: SKILL_MARKDOWN });
   const live = projectSnapshot(snapshotWith({ skills: [skill] })).skills[0];
@@ -105,4 +125,7 @@ test('空账号：三块都是空数组/空值，界面据此走空态（不是�
   assert.deepEqual(data.documents, []);
   assert.equal(data.alignment.alignment, 10, '没见过你 = 一成的起点');
   assert.equal(data.alignment.level, 1);
+  // 空态也要能说清"到下一档还差多少"：这两个字段由 `understandingScore` 试算，界面不再自己估。
+  assert.equal(typeof data.alignment.nextEvidence, 'number', '"还差几件成果"必须由公式给，不能是拍脑袋的');
+  assert.equal(data.alignment.nextGate, 40, 'Lv.1 的下一档门槛');
 });

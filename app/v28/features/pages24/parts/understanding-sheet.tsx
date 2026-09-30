@@ -14,16 +14,14 @@ import {
   X,
 } from "lucide-react";
 import type { V277State } from "../../../../v27-7-state";
-import type { Screen } from "../../../core/screen";
 import { RootPortal } from "../../../legacy/legacy-ui";
 import { buildMemoryView } from "../data/memory-data";
 import { HonorGallery } from "./honor-gallery";
-import { getPage2State } from "../api/page2-api";
 import {
   ALIGNMENT_GATE,
   ALIGNMENT_STAGE,
   ALIGNMENT_UNLOCK,
-  libraryHeader,
+  alignmentView,
   readAlignmentStage,
 } from "../data/knowledge-data";
 import styles from "../styles/knowledge.module.css";
@@ -31,14 +29,9 @@ import sheetStyles from "../styles/knowledge-sheet.module.css";
 
 export function UnderstandingSheet({
   state,
-  go,
-  empty = false,
   onClose,
 }: {
   state: V277State;
-  go: (screen: Screen) => void;
-  /** 空态（新用户）：理解度只有初始值、档位是 Lv.1，不是老用户那套 */
-  empty?: boolean;
   onClose: () => void;
 }) {
   const [tab, setTab] = useState<"level" | "honors">("level");
@@ -62,15 +55,17 @@ export function UnderstandingSheet({
     frame = requestAnimationFrame(step);
     return () => cancelAnimationFrame(frame);
   }, []);
-  const level = empty ? 1 : Math.min(libraryHeader.level, ALIGNMENT_STAGE.length - 1);
-  const percent = empty ? 0 : libraryHeader.alignment;
+  // 这一块**不再有自己的"空态口径"**：页头那个胶囊、第四页那颗胶囊、设置页那一行
+  // 和这里读的是同一个 `alignmentView()`。以前这里有 `empty ? 0 : …`，于是新用户
+  // 在同一屏看到"页头 10%、弹层 0%"（用户截图里那个）。
+  const alignment = alignmentView();
+  const live = alignment.live;
+  const level = alignment.level;
+  const percent = alignment.percent;
   const nextLevel = Math.min(level + 1, ALIGNMENT_STAGE.length - 1);
   const gateFrom = ALIGNMENT_GATE[level] ?? 0;
   const gateTo = ALIGNMENT_GATE[nextLevel] ?? 100;
-  const toNext = Math.max(0, gateTo - percent);
-  // "还差几件成果"由理解度那个公式试算（core/agent-alignment.mjs 的 nextEvidence），
-  // 不是按"平均两点一条"估的 —— 那句话以前是拍脑袋写的。
-  const nextEvidence = getPage2State().data.alignment?.nextEvidence ?? null;
+  const toNext = live ? Math.max(0, gateTo - percent) : 0;
   const progress = Math.min(
     100,
     Math.max(0, Math.round(((percent - gateFrom) / Math.max(1, gateTo - gateFrom)) * 100)),
@@ -96,10 +91,7 @@ export function UnderstandingSheet({
       >
         <i className={styles.sheetHandle} />
         <header className={styles.sheetHead}>
-          <span>
-        <h2 className={styles.sheetTitle}>理解与成长</h2>
-            <p className={styles.sheetNote}>由已确认的记忆与反馈持续更新</p>
-          </span>
+          <h2 className={styles.sheetTitle}>理解与成长</h2>
           <button
             type="button"
             className={styles.sheetClose}
@@ -140,7 +132,7 @@ export function UnderstandingSheet({
                   <p className={sheetStyles.stageSub}>{ALIGNMENT_UNLOCK[level]}</p>
                 </div>
                 <span className={sheetStyles.stagePct}>
-                  <b>{shownPercent}%</b>
+                  <b>{live ? `${shownPercent}%` : "—"}</b>
                   <small>当前理解度</small>
                 </span>
               </div>
@@ -155,39 +147,41 @@ export function UnderstandingSheet({
             </section>
             <section className={sheetStyles.next}>
               <header className={sheetStyles.nextHead}>
-                <span>到「{readAlignmentStage(nextLevel)}」还差多少</span>
-                <b>
-                  {percent}% → {gateTo}%
-                </b>
+                {/* 一句话说完：离下一档差多少（百分数）。上面那行已经有大号当前值，
+                    这里不再重复写「10% →」；也不再拆成左右两截。 */}
+                <span>
+                  {live ? (
+                    <>
+                      距离 Lv.{nextLevel} 还差 <b>{toNext}%</b>
+                    </>
+                  ) : (
+                    <>距离 Lv.{nextLevel} 还差多少</>
+                  )}
+                </span>
               </header>
               <em className={sheetStyles.bar}>
                 <i
                   className={sheetStyles.barFill}
-                  style={{ width: `${progress * eased}%` }}
+                  style={{ width: `${(live ? progress : 0) * eased}%` }}
                 >
                   <i className={sheetStyles.barKnob} />
                 </i>
                 <i className={sheetStyles.barGoal} />
               </em>
-              <p className={sheetStyles.nextNote}>
-                {toNext > 0
-                  ? nextEvidence
-                    ? `再涨 ${toNext} 个点（约 ${nextEvidence} 件本人验收的成果），就到「${readAlignmentStage(nextLevel)}」`
-                    : `再涨 ${toNext} 个点，就到「${readAlignmentStage(nextLevel)}」`
-                  : `已经够到「${readAlignmentStage(nextLevel)}」了`}
-              </p>
             </section>
             <section className={styles.statRow}>
               <span className={sheetStyles.stat}>
-                <b>{empty ? 0 : memory.totalCount}</b>
+                <b>{memory.totalCount}</b>
                 <small>已确认的记忆</small>
               </span>
               <span className={sheetStyles.stat}>
-                <b>{empty ? 0 : memory.daysTracked}</b>
+                <b>{memory.daysTracked}</b>
                 <small>天持续更新</small>
               </span>
               <span className={sheetStyles.stat}>
-                <b>{empty ? 0 : memory.credibility}%</b>
+                {/* 记忆可信度 = 已确认的记忆里档位到"场景已验证/跨时间稳定"的占比。
+                    一条都没确认时没有基数 → 写"—"（0% 会被读成"它确认过但都不可信"，是另一件事）。 */}
+                <b>{memory.credibility === null ? "—" : `${memory.credibility}%`}</b>
                 <small>记忆可信度</small>
               </span>
             </section>
@@ -219,24 +213,22 @@ export function UnderstandingSheet({
                   })}
                 </div>
               ) : (
-                <div className={sheetStyles.pathRow}>
+                // 这一行原来是个点不动的 div（写着「下一阶段」却点不了）；
+                // 现在它跟右上角「查看全部」是同一件事：点开就是六档整条路径。
+                <button
+                  type="button"
+                  className={sheetStyles.pathRow}
+                  aria-label="查看完整的成长路径"
+                  onClick={() => setPathOpen(true)}
+                >
                   <b>Lv.{nextLevel}</b>
                   <span className={sheetStyles.pathInfo}>
                     <strong>{ALIGNMENT_STAGE[nextLevel]}</strong>
-                    <small>{ALIGNMENT_UNLOCK[nextLevel]}</small>
                   </span>
                   <em className={sheetStyles.pathTag}>下一阶段</em>
-                </div>
+                  <ChevronRight size={15} className={sheetStyles.pathArrow} />
+                </button>
               )}
-              {/* 出口：去看它到底记住了什么，而不是干看着一条线 */}
-              <button
-                type="button"
-                className={sheetStyles.pathLink}
-                onClick={() => go({ name: "memory" })}
-              >
-                看它记住了什么
-                <ChevronRight size={16} />
-              </button>
             </section>
           </div>
         ) : (

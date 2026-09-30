@@ -1,8 +1,6 @@
 "use client";
 
 import type { Screen } from "../../../core/screen";
-import {useRuntime} from '../../../core/runtime-context';
-import {memoryOverview} from '../../../core/agent-alignment.mjs';
 import { libraryHeader } from "../data/knowledge-data";
 import styles from "../styles/knowledge.module.css";
 
@@ -23,9 +21,6 @@ export function LibraryHeader({
   onContext: () => void;
   alignment?: number;
 }) {
-  const runtime=useRuntime();
-  const memories=runtime?.snapshot?.objects.memory||[];
-  const label=memoryOverview(memories).label;
   return (
     <header className="v277-library-head">
       <nav aria-label="能力与记忆切换">
@@ -47,7 +42,7 @@ export function LibraryHeader({
       <button
         type="button"
         className="v277-context-chip"
-        aria-label={runtime?`${label}，查看理解依据`:`理解度 ${alignment}%，查看理解依据`}
+        aria-label={`理解度 ${alignment}%，点开查看等级与荣誉勋章`}
         onClick={onContext}
       >
         {/* 原来这里带 .v277-sprite-home —— 那是从 reference-home.png 雪碧图里
@@ -56,14 +51,14 @@ export function LibraryHeader({
             的 .headerAvatar 规则），并且只显示"理解度"三个字，不摆人。 */}
         <i className={`v277-context-avatar ${styles.headerAvatar}`} />
         <span>
-          <b>{runtime?label:"理解度"}</b>
-          {!runtime&&<small>
+          <b>理解度</b>
+          <small>
             {/* 进度条的宽度直接由理解度决定，不写死 */}
             <em style={{ width: `${alignment}%` }} />
             <i />
-          </small>}
+          </small>
         </span>
-        {!runtime&&<strong>{alignment}%</strong>}
+        <strong>{alignment}%</strong>
       </button>
     </header>
   );

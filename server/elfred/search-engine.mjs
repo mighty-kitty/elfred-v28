@@ -5,9 +5,13 @@ export const SEARCH_TYPES=['attachment','document','knowledge','task','message',
 const retired=['rejected','superseded','expired','deleted','needs_review','withdrawn','archived'];
 const synonyms=[['人数上限','名额','满员','人数限制'],['报名','提交申请','申请参加'],['截止','截至','最后期限'],['方案','设计','说明']];
 export function parseIntent(query,input={}){
+ const followups=input.followups||[];
+ if(!Array.isArray(followups)||followups.length>6||followups.some(value=>typeof value!=='string'||value.length>120))fail('INVALID_INPUT','追问最多六条，每条不超过 120 字');
+ const required=[],preferred=[],more=[];
+ for(const raw of followups){const value=raw.trim();if(!value)continue;const strict=value.match(/^(?:只看|仅看|限定|必须包含)\s*[：: ]?\s*(.+)$/),soft=value.match(/^(?:更偏|优先看|优先)\s*[：: ]?\s*(.+)$/);if(strict)required.push(strict[1].trim());else if(soft)preferred.push(soft[1].trim());else more.push(value);}
  const segmenter=new Intl.Segmenter('zh',{granularity:'word'});
  const stop=new Set(['找','找到','查','查找','搜索','检索','包含','包括','的','了','在','发','发的','我','帮我','请','要','有','这个','那个','不要','旧版','最新','上周','本周','今天','昨天','最近','帮','一下','看看','给','给我','发送','分享']);
- const terms=[...segmenter.segment((input.content_query??query).toLowerCase())].filter(s=>s.isWordLike&&!stop.has(s.segment)).map(s=>s.segment);
+ const terms=[...segmenter.segment(((input.content_query??query)+' '+more.join(' ')).toLowerCase())].filter(s=>s.isWordLike&&!stop.has(s.segment)).map(s=>s.segment);
  const conditions=(input.conditions||[]);
  if(!Array.isArray(conditions)||conditions.length>12||conditions.some(c=>typeof c!=='string'||c.length>200))fail('INVALID_INPUT','最多 12 条条件，每条 200 字');
  const excluded=(input.exclude||[]);if(!Array.isArray(excluded)||excluded.some(v=>typeof v!=='string'||v.length>200))fail('INVALID_INPUT','排除词不正确');
@@ -18,7 +22,7 @@ export function parseIntent(query,input={}){
  if(/[^\s，,。]{1,20}(?:发的|发送的|分享的)/.test(query)&&!input.author)uncertainty.push('请在搜索条件中选择发送者，避免同名或转发来源混淆');
  if(/最近/.test(query))input={...input,recency:true};
  const requires=conditions.length?conditions:(/人数上限|满员|名额限制/.test(query)?['人数限制有明确证据']:['是否符合本次查询的完整含义']);
- return {original:query,recency:input.recency===true,terms:[...new Set(terms)],conditions:requires,exclude:excluded,latest:input.latest??/不要旧版|最新/.test(query),space:input.space||null,author:input.author||null,after:input.after||null,before:input.before||null,time_semantics:'消息按发送时间，其他对象按创建时间',uncertainties:uncertainty};
+ return {original:query,followups,required,preferred,recency:input.recency===true,terms:[...new Set(terms)],conditions:requires,exclude:excluded,latest:input.latest??/不要旧版|最新/.test(query),space:input.space||null,author:input.author||null,after:input.after||null,before:input.before||null,time_semantics:'消息按发送时间，其他对象按创建时间',uncertainties:uncertainty};
 }
 export function bodyFor(store,user,o){
  if(o.type==='profile'&&o.owner!==user)return [o.data.published?.name,o.data.published?.bio].filter(Boolean).join('\n');
@@ -61,10 +65,10 @@ export function localSearch(store,user,input){
  const expanded=[...new Set(terms.flatMap(t=>[t,...synonyms.filter(group=>group.some(v=>v.includes(t)||t.includes(v))).flat()]))];
  const scoped=scopeFor(store,user,intent);
  const eligible=all.filter(scoped),matches=new Map();
- for(const o of eligible){const body=bodyFor(store,user,o),lower=body.toLowerCase();if(intent.exclude.some(t=>lower.includes(t.toLowerCase())))continue;const exact=terms.filter(t=>lower.includes(t)).length,related=expanded.filter(t=>lower.includes(t)).length;if(terms.length&&!exact&&!related)continue;const title=String(o.data.title||o.data.name||'').toLowerCase(),phrase=query.toLowerCase().replace(/[\s\p{P}\p{S}]/gu,'');const titleMatch=terms.filter(t=>title.includes(t)).length,phraseMatch=phrase&&title.replace(/[\s\p{P}\p{S}]/gu,'').includes(phrase);matches.set(o.id,{object:o,body,score:exact*3+related+titleMatch*4+(exact===terms.length&&terms.length?8:0)+(phraseMatch?12:0)+(['document','knowledge','attachment','release','resource'].includes(o.type)?2:0)+(phrase&&title.replace(/[\s\p{P}\p{S}]/gu,'')===phrase?20:0),channels:[...(exact?['keyword']:[]),...(related>exact?['term_expansion']:[])]});}
+ for(const o of eligible){const body=bodyFor(store,user,o),lower=body.toLowerCase();if(intent.exclude.some(t=>lower.includes(t.toLowerCase()))||intent.required.some(t=>!lower.includes(t.toLowerCase())))continue;const exact=terms.filter(t=>lower.includes(t)).length,related=expanded.filter(t=>lower.includes(t)).length;if(terms.length&&!exact&&!related)continue;const title=String(o.data.title||o.data.name||'').toLowerCase(),phrase=query.toLowerCase().replace(/[\s\p{P}\p{S}]/gu,'');const titleMatch=terms.filter(t=>title.includes(t)).length,phraseMatch=phrase&&title.replace(/[\s\p{P}\p{S}]/gu,'').includes(phrase);matches.set(o.id,{object:o,body,score:exact*3+related+titleMatch*4+intent.preferred.filter(t=>lower.includes(t.toLowerCase())).length*6+(exact===terms.length&&terms.length?8:0)+(phraseMatch?12:0)+(['document','knowledge','attachment','release','resource'].includes(o.type)?2:0)+(phrase&&title.replace(/[\s\p{P}\p{S}]/gu,'')===phrase?20:0),channels:[...(exact?['keyword']:[]),...(related>exact?['term_expansion']:[])]});}
  // Traverse only stored, readable relationships; message filters stay on the originating message.
  for(const m of [...matches.values()]){const d=m.object.data;const ids=[d.artifact_id,d.task_id,d.object_id,...(d.attachments||[]).map(r=>r.id),...(d.source_refs||[]).map(r=>r.id)].filter(Boolean);
-  for(const ref of ids){const target=store.get(ref);if(!target||!types.includes(target.type)||!store.canRead(user,target)||!usable(target)||input.excluded_ids?.includes(target.id))continue;const body=bodyFor(store,user,target);if(intent.exclude.some(t=>body.toLowerCase().includes(t.toLowerCase())))continue;const existing=matches.get(ref);if(existing){existing.channels.push('relation');existing.origin_id=m.object.id;}else matches.set(ref,{object:target,body,score:m.score-0.5,channels:['relation'],origin_id:m.object.id});}
+  for(const ref of ids){const target=store.get(ref);if(!target||!types.includes(target.type)||!store.canRead(user,target)||!usable(target)||input.excluded_ids?.includes(target.id))continue;const body=bodyFor(store,user,target);if(intent.exclude.some(t=>body.toLowerCase().includes(t.toLowerCase()))||intent.required.some(t=>!body.toLowerCase().includes(t.toLowerCase())))continue;const existing=matches.get(ref);if(existing){existing.channels.push('relation');existing.origin_id=m.object.id;}else matches.set(ref,{object:target,body,score:m.score-0.5,channels:['relation'],origin_id:m.object.id});}
  }
  const hits=[...matches.values()].filter(m=>types.includes(m.object.type)).map(m=>{
   const o=m.object,lines=m.body.split('\n'),start=Math.min(lines.length-1,o.type==='attachment'?2:o.data.title||o.data.name||o.type==='profile'?1:0),matched=lines.findIndex((l,i)=>i>=start&&expanded.some(t=>l.toLowerCase().includes(t))),line=matched<0?Math.max(0,start):matched;

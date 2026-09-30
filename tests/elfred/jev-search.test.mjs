@@ -54,3 +54,17 @@ test('natural relative dates and sender names require explicit resolution; plain
  assert.equal(localSearch(store,user.id,{query:'方案'}).hits[0].condition_status,'unknown');
  command('document.create',{title:'导出.md',content:'本软件不支持导出PDF'});assert.equal(localSearch(store,user.id,{query:'导出',conditions:['支持导出PDF']}).hits[0].condition_status,'unknown');
 });
+test('追问保留原问题并分别处理限定和偏好',t=>{
+ const {store,user,command}=setup(t,new ModelProvider({}));
+ const a=command('document.create',{title:'首页方案深圳.md',content:'首页设计方案，深圳团队完成。'});
+ const b=command('document.create',{title:'首页方案北京.md',content:'首页设计方案，北京团队完成。'});
+ const base=localSearch(store,user.id,{query:'首页方案'});
+ assert.ok(base.hits.some(hit=>hit.id===a.id)&&base.hits.some(hit=>hit.id===b.id));
+ const narrowed=localSearch(store,user.id,{query:'首页方案',followups:['只看深圳']});
+ assert.deepEqual(narrowed.intent.followups,['只看深圳']);
+ assert.ok(narrowed.hits.some(hit=>hit.id===a.id));
+ assert.ok(!narrowed.hits.some(hit=>hit.id===b.id));
+ const preferred=localSearch(store,user.id,{query:'首页方案',followups:['更偏深圳']});
+ assert.equal(preferred.hits[0].id,a.id);
+ assert.throws(()=>localSearch(store,user.id,{query:'首页方案',followups:['a'.repeat(121)]}),{code:'INVALID_INPUT'});
+});

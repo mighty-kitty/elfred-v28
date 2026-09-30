@@ -42,7 +42,8 @@ export function onboardingChoiceCommand(store,user,action,input){
   const goal=string(input.goal,'近期目标',1000);
   const previous=data.choice_goal_proposal_task_ref&&store.get(data.choice_goal_proposal_task_ref);
   if(previous&&['queued','running'].includes(previous.data.status))return {id:session.id,version:session.version,task_id:previous.id};
-  const created=taskCommand(store,user,'task.create',{goal:`把用户的近期目标整理为一张可编辑目标卡，并给出三个不同的可执行起点。只根据用户原话，不补造事实；无法确定的结果或完成标准写空字符串。只输出 JSON，不要 Markdown：{"goal":"","result":"","criteria":"","days":14,"first_tasks":[{"label":"","goal":"","system":"explore","minutes":10,"needs":"","deliverable":""}]}。first_tasks 必须恰好三个；system 从 explore、advise、create、connect、execute 中选；每个起点都要说明具体目标、预计分钟、需要用户提供什么、交付什么。days 只能是 7、14 或 30。不执行外部操作。用户原话：${goal}`,system:'advise',mode:'compose',review_mode:'single',source_refs:[]});
+  const details=data.choice_goal?.goal===goal?`希望完成：${data.choice_goal.result}。完成标准：${data.choice_goal.criteria}。计划 ${data.choice_goal.days} 天。`:'';
+  const created=taskCommand(store,user,'task.create',{goal:`把用户的近期目标整理为一张可编辑目标卡，并给出三个不同的可执行起点。只根据用户原话，不补造事实；无法确定的结果或完成标准写空字符串。只输出 JSON，不要 Markdown：{"goal":"","result":"","criteria":"","days":14,"first_tasks":[{"label":"","goal":"","system":"explore","minutes":10,"needs":"","deliverable":""}]}。first_tasks 必须恰好三个；system 从 explore、advise、create、connect、execute 中选；每个起点都要说明具体目标、预计分钟、需要用户提供什么、交付什么。days 只能是 7、14 或 30。不执行外部操作。用户目标：${goal}。${details}`,system:'advise',mode:'compose',review_mode:'single',source_refs:[]});
   let task=store.get(created.id);task=store.update(task,{...task.data,title:'整理近期目标',internal_onboarding:true},user);
   taskCommand(store,user,'task.confirm',{id:task.id,version:task.version,confirm:true,model_consent:true});task=store.get(task.id);
   taskCommand(store,user,'run.start',{id:task.id,version:task.version});
@@ -52,7 +53,10 @@ export function onboardingChoiceCommand(store,user,action,input){
   if(!data.choice_profile)fail('INVALID_STATE','请先填写基础信息');
   const goal=string(input.goal,'近期目标',1000),result=string(input.result,'希望完成的结果',1000),criteria=string(input.criteria,'完成标准',1000),days=Number(input.days);
   if(!Number.isInteger(days)||days<7||days>30)fail('INVALID_INPUT','目标时间请选择 7—30 天');
-  return update({choice_goal:{goal,result,criteria,days},intent:goal,choice_phase:'team'});
+  const saved=update({choice_goal:{goal,result,criteria,days},intent:goal,choice_phase:'team'});
+  if(input.model_consent!==true)return saved;
+  try{return onboardingChoiceCommand(store,user,'onboarding.choice.goal.organize',{id:saved.id,version:saved.version,goal,confirm:true,model_consent:true});}
+  catch{return {...saved,proposal_unavailable:true};}
  }
  if(action==='onboarding.choice.team'){
   if(!data.choice_profile||!data.choice_goal)fail('INVALID_STATE','请先完成基础信息和近期目标');
@@ -104,7 +108,7 @@ export function onboardingChoiceCommand(store,user,action,input){
   if(input.confirm!==true)fail('CONFIRMATION_REQUIRED','请确认本次任务使用所示选择摘要');
   if(data.choice_task_ref)return {id:session.id,version:session.version,task_id:data.choice_task_ref};
   const option=String(input.task||'').startsWith('suggestion:')?proposedFirstTasks(store,user,data).find(o=>o.id===input.task):firstValueChoices.find(o=>o.id===input.task);if(!option)fail('INVALID_INPUT','请选择有效的首个事项');
-  const summary=alignmentSummary(answers).filter(item=>option.questions?.includes(item.question_id));
+  const summary=data.choice_goal?(data.choice_summary||[]):alignmentSummary(answers).filter(item=>option.questions?.includes(item.question_id));
   const content=summary.map(item=>`${item.question} ${item.label}${item.certainty==='uncertain'?'（尚未确定）':'（初始选择，非稳定事实）'}`).join('\n');
   const evidence=store.add('document',user,{title:'首个任务的初始化选择',content,provenance_refs:[{id:session.id,version:session.version}],purpose:`本人确认交给${option.system}的最小任务上下文`});
   const v2Goal=data.choice_goal?.goal;

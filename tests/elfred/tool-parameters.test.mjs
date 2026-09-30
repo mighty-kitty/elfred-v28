@@ -24,3 +24,22 @@ test('组合工具保留版本和步骤依赖，将本次输入交给指定系�
  const five=Array.from({length:5},(_,i)=>({id:'step-'+i,system:'explore',goal:'整理一项证据',depends:[]}));cmd('tool.save',{...input,...ref(tool),workflow:five});cmd('tool.activate',ref(tool));const draft=cmd('tool.use',{id:tool.id,version_id:store.get(tool.id).data.version_id,parameters:{主题:'五步组合'}});assert.equal(store.get(draft.task_id).data.stop.maxUnits,7000);assert.equal(store.get(draft.task_id).data.status,'draft');
  assert.throws(()=>cmd('tool.save',{...input,...ref(tool),workflow:[{id:'bad',system:'explore',goal:'依赖自己',depends:['bad']}]}),{code:'INVALID_WORKFLOW'});
 });
+test('工具权限卡按版本保存，外部服务不得在工具创建时直接开放',t=>{
+ const {store,cmd,ref,tool,input}=setup(t);
+ assert.throws(()=>cmd('tool.save',{...input,...ref(tool),permissions:{read_scope:'本次文件',tool_scope:'已授权工具',external_access:true,confirm_steps:'发布前确认'}}),{code:'EXTERNAL_ACCESS_UNAVAILABLE'});
+ cmd('tool.save',{...input,...ref(tool),permissions:{read_scope:'本次文件',tool_scope:'已授权工具',external_access:false,confirm_steps:'发布前确认'}});
+ const version=store.get(store.get(tool.id).data.version_id);
+ assert.equal(version.data.permissions.read_scope,'本次文件');
+ const use=cmd('tool.test',{id:tool.id,version_id:version.id,parameters:{主题:'首页'}});
+ assert.match(store.get(use.task_id).data.constraints,/发布前确认/);
+});
+test('Mini App 可从文字描述发起页面生成，内部任务不进入公开搜索',t=>{
+ const {store,cmd}=setup(t);
+ assert.throws(()=>cmd('tool.generate',{purpose:'整理采访',source:'采访记录',result:'摘要',confirm:true}),{code:'CONSENT_REQUIRED'});
+ const result=cmd('tool.generate',{purpose:'整理采访',source:'采访记录',result:'摘要',confirm:true,model_consent:true});
+ const task=store.get(result.task_id);
+ assert.equal(task.data.status,'queued');
+ assert.equal(task.data.internal_tool_generation,true);
+ assert.equal(task.data.internal_search,true);
+ assert.match(task.data.goal,/单文件 Mini App/);
+});

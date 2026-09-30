@@ -200,7 +200,7 @@ export function HomePage({
         <div className="v283-brief-stack">
           {kinds.map((kind, index) => {
             const offset = (index - briefIndex + kinds.length) % kinds.length;
-            const item = runtime?{...dailyBriefs[kind],title:kind==='morning'?'从今天的重点开始':kind==='noon'?'核对进展与待处理事项':'核对今日成果与理解',summary:todayTasks.length?`${pendingToday} 项待推进，${completedToday} 项今日已验收。${onboarding?.data.choice_confirmed_at?` 当前关注：${initialGoal.slice(0,24)}`:''}`:onboarding?.data.choice_confirmed_at?`当前关注：${initialGoal} · 从已选方向开始。`:"从今天的一件真实需求开始。",stats:"依据今日任务记录 · 安排由你确认"}:dailyBriefs[kind];
+            const item = runtime?{...dailyBriefs[kind],title:kind==='morning'?'从今天的重点开始':kind==='noon'?'核对进展与待处理事项':'核对今日成果与理解',summary:todayTasks.length?`${pendingToday} 项待推进，${completedToday} 项已验收`:onboarding?.data.choice_confirmed_at&&kind==='morning'?`当前关注：${initialGoal.slice(0,36)}`:kind==='morning'?'添加今天的重点':kind==='noon'?'暂无进展':'暂无成果',stats:todayTasks.length?'依据今日任务记录':''}:dailyBriefs[kind];
             const moduleLabel =
               kind === "morning"
                 ? briefPreferences.morningModule
@@ -223,7 +223,7 @@ export function HomePage({
                 <small>{moduleLabel}</small>
                 <h2>{displayTitle(item.title,'')}</h2>
                 <p>{importantEvent&&importantEvent.index===index?`${importantEvent.reason}：${displayTitle(importantEvent.title,'')}`:item.summary}</p>
-                <span>{item.stats}</span>
+                {item.stats&&<span>{item.stats}</span>}
                 <strong>
                   {item.cta}
                   <ChevronRight size={17} />

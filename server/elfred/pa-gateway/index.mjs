@@ -50,7 +50,7 @@ const goalClauses = (goal) => String(goal)
 export function needsGatewayPlan(task) {
   const data = task?.data || task;
   if (!data || data.mode !== 'compose') return false;
-  if (data.agent_chat || data.group_agent || data.internal_peer_comment || data.observation_id || data.media_operation) return false;
+  if (data.agent_chat || data.group_agent || data.internal_peer_comment || data.internal_tool_generation || data.observation_id || data.media_operation) return false;
   const goal = String(data.goal || '');
   if (!goal) return false;
   if ((data.collaboration_steps || []).length > 0) return true;

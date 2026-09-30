@@ -59,7 +59,7 @@ export function taskCommand(store,user,action,input) {
     if (task.data.mode==='compose' && input.model_consent!==true) fail('CONSENT_REQUIRED','使用模型需确认把目标和所选资料发送给配置的服务');
     sourceRefs(store,user,task.data.source_refs,task.data.search_semantic?128:20);
     if(task.data.mode==='compose'&&composePlan(task).length>12)fail('INVALID_PLAN','本次协作、主责和复核合计超过计划上限，请减少协作步骤');
-    const memoryRefs=task.data.mode==='compose'&&!task.data.project_id&&!task.data.access_space&&!task.data.group_agent&&!task.data.search_semantic&&!task.data.media_operation&&!task.data.public_research&&!task.data.internal_peer_comment?recallMemories(store,user,task.data.system,task.data.goal,{skillId:task.data.skill_id||null}).map(m=>({id:m.id,version:m.version})):[];
+    const memoryRefs=task.data.mode==='compose'&&!task.data.project_id&&!task.data.access_space&&!task.data.group_agent&&!task.data.search_semantic&&!task.data.media_operation&&!task.data.public_research&&!task.data.internal_peer_comment&&!task.data.internal_tool_generation?recallMemories(store,user,task.data.system,task.data.goal,{skillId:task.data.skill_id||null}).map(m=>({id:m.id,version:m.version})):[];
     const memoryChanged=JSON.stringify(task.data.memory_refs||[])!==JSON.stringify(memoryRefs);
     const updatedTask=store.update(task,{...task.data,memory_refs:memoryRefs,memory_dispatch:{holder:'person',target_system:task.data.system,purpose:task.data.goal,global_refs:memoryRefs.filter(ref=>store.get(ref.id).data.scope==='owner'),domain_refs:memoryRefs.filter(ref=>store.get(ref.id).data.scope!=='owner'),at:now()},execution_revision:(task.data.execution_revision||0)+(memoryChanged?1:0)},user);
     const approval=store.add('approval',user,{task_id:task.id,goal_hash:hash(JSON.stringify(updatedTask.data)),resource_version:updatedTask.version,scopes:[...(task.data.mode==='compose'?['read','model']:['read']),...(task.data.web_lookup?['read_public']:[])],status:'approved',expires:Date.now()+86400000,policy:POLICY_VERSION});
@@ -197,7 +197,7 @@ export class Runtime {
       publishGroupAgentReply(s,task,{...run,data:{...run.data,...extra}},status);
       publishAgentChatReply(s,task,{...run,data:{...run.data,...extra}},status);
       s.db.prepare("UPDATE jobs SET status='done',lease_until=0 WHERE id=? AND lease=?").run(job.id,job.lease);
-      if(!task.data.agent_chat&&!task.data.internal_peer_comment&&(!task.data.observation_id||!['completed','awaiting_review'].includes(status)))s.unique('notification',run.id+':finished',()=>s.add('notification',run.owner,{kind:'task_state',target_id:task.id,status:'unread',summary:`任务状态：${status}`}));
+      if(!task.data.agent_chat&&!task.data.internal_peer_comment&&!task.data.internal_tool_generation&&(!task.data.observation_id||!['completed','awaiting_review'].includes(status)))s.unique('notification',run.id+':finished',()=>s.add('notification',run.owner,{kind:'task_state',target_id:task.id,status:'unread',summary:`任务状态：${status}`}));
     });
   }
   async tick() {

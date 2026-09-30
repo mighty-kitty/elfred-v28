@@ -44,6 +44,24 @@ test('V2 goal organizer only runs with consent and stays inside onboarding',t=>{
  assert.equal(store.visible(a.id,'feed').length,0);
 });
 
+test('确认目标后自动生成三个起点，并给首个任务保留初始化上下文',t=>{
+ const {users:[a],cmd,session,ref,store}=setup(t);
+ cmd(a,'onboarding.choice.profile.start',ref(session(a)));
+ cmd(a,'onboarding.choice.profile',{...ref(session(a)),name:'小林',role:'产品',status:'创业中',interests:['AI 产品']});
+ const saved=cmd(a,'onboarding.choice.goal',{...ref(session(a)),goal:'完成 Demo',result:'可演示页面',criteria:'三人完成流程',days:14,model_consent:true});
+ assert.ok(saved.task_id);
+ const proposal=store.get(saved.task_id),run=store.get(proposal.data.run_id);
+ assert.match(proposal.data.goal,/三人完成流程/);
+ const choices=[{label:'找参考',goal:'找三个参考产品',system:'explore',minutes:15,needs:'产品方向',deliverable:'参考清单'},{label:'拆流程',goal:'拆一条核心流程',system:'execute',minutes:20,needs:'当前流程',deliverable:'执行清单'},{label:'写文案',goal:'写演示文案',system:'create',minutes:15,needs:'产品定位',deliverable:'文案'}];
+ store.update(run,{...run.data,receipts:[{phase:'work',provider:'test',output:JSON.stringify({first_tasks:choices})}]},a.id);
+ const focus=Object.fromEntries(['explore','advise','create','connect','execute'].map(system=>[system,`${system} 方向`]));
+ cmd(a,'onboarding.choice.team',{...ref(session(a)),focus,confirm:true});
+ const first=cmd(a,'onboarding.choice.first',{...ref(session(a)),task:'suggestion:0',confirm:true});
+ const evidence=store.get(store.get(first.task_id).data.source_refs[0].id);
+ assert.match(evidence.data.content,/完成 Demo/);
+ assert.match(evidence.data.content,/AI 产品/);
+});
+
 test('V2 first task uses one of three model suggestions bound to the confirmed goal',t=>{
  const {users:[a],cmd,session,ref,store}=setup(t);
  cmd(a,'onboarding.choice.profile.start',ref(session(a)));

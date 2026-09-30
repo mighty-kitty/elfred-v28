@@ -8,6 +8,7 @@ import {Runtime} from '../../server/elfred/runtime.mjs';
 import {authenticate} from '../../server/elfred/auth.mjs';
 import {localSearch,parseIntent} from '../../server/elfred/search-engine.mjs';
 import {searchJudgment} from '../../server/elfred/search-commands.mjs';
+import {semanticPreview} from '../../server/elfred/semantic-search.mjs';
 const context=[{ref:{id:'doc',version:1},title:'共创报名',content:'人数上限为五人。'}];
 const intent={original:'五人共创报名',conditions:['人数上限为五人']};
 function mockFetch(calls,{confidence=0.9,invalid=false,usage={input_tokens:300,output_tokens:50}}={}){
@@ -64,6 +65,9 @@ test('追问保留原问题并分别处理限定和偏好',t=>{
  assert.deepEqual(narrowed.intent.followups,['只看深圳']);
  assert.ok(narrowed.hits.some(hit=>hit.id===a.id));
  assert.ok(!narrowed.hits.some(hit=>hit.id===b.id));
+ const semantic=semanticPreview(store,user.id,{query:'首页方案',followups:['只看深圳']});
+ assert.ok(semantic.chunks.some(chunk=>chunk.id===a.id));
+ assert.ok(!semantic.chunks.some(chunk=>chunk.id===b.id));
  const preferred=localSearch(store,user.id,{query:'首页方案',followups:['更偏深圳']});
  assert.equal(preferred.hits[0].id,a.id);
  assert.throws(()=>localSearch(store,user.id,{query:'首页方案',followups:['a'.repeat(121)]}),{code:'INVALID_INPUT'});

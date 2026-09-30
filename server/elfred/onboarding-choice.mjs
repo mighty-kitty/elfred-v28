@@ -1,16 +1,73 @@
 import {fail,now} from './store.mjs';
-import {enumeration} from './policy.mjs';
+import {enumeration,string} from './policy.mjs';
 import {taskCommand} from './runtime.mjs';
 import {alignmentQuestions,alignmentSummary,choiceVersion,firstValueChoices,interestLabels} from '../../app/v28/core/onboarding-choice.mjs';
 import {provisionInitialDiscovery} from './auto-discovery.mjs';
 import {queueMemorySync} from './memory-hub.mjs';
 import {allocateMemory} from './memory-allocation.mjs';
 
+const systems=['explore','advise','create','connect','execute'];
+function proposedFirstTasks(store,user,data){
+ const task=data.choice_goal_proposal_task_ref&&store.get(data.choice_goal_proposal_task_ref);
+ if(!task||task.owner!==user||data.choice_goal_proposal_input!==data.choice_goal?.goal)return [];
+ const run=task.data.run_id&&store.get(task.data.run_id);
+ const receipt=[...(run?.data.receipts||[])].reverse().find(item=>['work','repair'].includes(item.phase)&&typeof item.output==='string');
+ if(!receipt)return [];
+ try{
+  const source=receipt.output.trim().replace(/^```(?:json)?\s*|\s*```$/g,'');
+  const body=JSON.parse(source.slice(source.indexOf('{'),source.lastIndexOf('}')+1));
+  if(!Array.isArray(body.first_tasks)||body.first_tasks.length!==3)return [];
+  const options=body.first_tasks.map((row,index)=>({id:`suggestion:${index}`,label:String(row.label||'').slice(0,80).trim(),goal:String(row.goal||'').slice(0,500).trim(),system:String(row.system||''),minutes:Number(row.minutes),needs:String(row.needs||'').slice(0,150),deliverable:String(row.deliverable||'').slice(0,150)}));
+  return options.every(row=>row.label&&row.goal&&systems.includes(row.system)&&Number.isFinite(row.minutes)&&row.minutes>=1&&row.minutes<=120&&row.deliverable)?options:[];
+ }catch{return []}
+}
+
 export function onboardingChoiceCommand(store,user,action,input){
  if(!action.startsWith('onboarding.choice.'))return null;
  const session=store.expect(store.owned(user,input.id,'onboarding'),input.version);
  const data=session.data,answers=data.choice_answers||{};
  const update=patch=>{const result=store.update(session,{...data,...patch},user);return {id:result.id,version:result.version}};
+ if(action==='onboarding.choice.profile.start')return update({choice_phase:'profile',choice_started_at:data.choice_started_at||now()});
+ if(action==='onboarding.choice.profile'){
+  const name=string(input.name,'称呼',60),role=string(input.role,'当前角色',60),status=string(input.status,'当前状态',60);
+  const interests=interestLabels(input.interests);
+  if(!interests.length||interests.length>8||interests.some(item=>item.length>30))fail('INVALID_INPUT','请选择 1—8 个感兴趣的领域');
+  const profile=store.visible(user,'profile')[0];
+  if(profile)store.update(profile,{...profile.data,name,role,tags:interests},user);
+  return update({choice_profile:{name,role,status,interests},choice_phase:'goal'});
+ }
+ if(action==='onboarding.choice.goal.organize'){
+  if(!data.choice_profile)fail('INVALID_STATE','请先填写基础信息');
+  if(input.confirm!==true||input.model_consent!==true)fail('CONSENT_REQUIRED','请确认将本次目标交给模型整理');
+  const goal=string(input.goal,'近期目标',1000);
+  const previous=data.choice_goal_proposal_task_ref&&store.get(data.choice_goal_proposal_task_ref);
+  if(previous&&['queued','running'].includes(previous.data.status))return {id:session.id,version:session.version,task_id:previous.id};
+  const created=taskCommand(store,user,'task.create',{goal:`把用户的近期目标整理为一张可编辑目标卡，并给出三个不同的可执行起点。只根据用户原话，不补造事实；无法确定的结果或完成标准写空字符串。只输出 JSON，不要 Markdown：{"goal":"","result":"","criteria":"","days":14,"first_tasks":[{"label":"","goal":"","system":"explore","minutes":10,"needs":"","deliverable":""}]}。first_tasks 必须恰好三个；system 从 explore、advise、create、connect、execute 中选；每个起点都要说明具体目标、预计分钟、需要用户提供什么、交付什么。days 只能是 7、14 或 30。不执行外部操作。用户原话：${goal}`,system:'advise',mode:'compose',review_mode:'single',source_refs:[]});
+  let task=store.get(created.id);task=store.update(task,{...task.data,title:'整理近期目标',internal_onboarding:true},user);
+  taskCommand(store,user,'task.confirm',{id:task.id,version:task.version,confirm:true,model_consent:true});task=store.get(task.id);
+  taskCommand(store,user,'run.start',{id:task.id,version:task.version});
+  return {...update({choice_goal_proposal_task_ref:task.id,choice_goal_proposal_input:goal}),task_id:task.id};
+ }
+ if(action==='onboarding.choice.goal'){
+  if(!data.choice_profile)fail('INVALID_STATE','请先填写基础信息');
+  const goal=string(input.goal,'近期目标',1000),result=string(input.result,'希望完成的结果',1000),criteria=string(input.criteria,'完成标准',1000),days=Number(input.days);
+  if(!Number.isInteger(days)||days<7||days>30)fail('INVALID_INPUT','目标时间请选择 7—30 天');
+  return update({choice_goal:{goal,result,criteria,days},intent:goal,choice_phase:'team'});
+ }
+ if(action==='onboarding.choice.team'){
+  if(!data.choice_profile||!data.choice_goal)fail('INVALID_STATE','请先完成基础信息和近期目标');
+  if(input.confirm!==true)fail('CONFIRMATION_REQUIRED','请确认五个 Agent 的初始方向');
+  const focus={};
+  for(const system of systems)focus[system]=string(input.focus?.[system],`${system}的初始方向`,200);
+  const settings=store.visible(user,'settings')[0];
+  if(input.auto_peer_comments===true&&input.model_consent!==true)fail('CONSENT_REQUIRED','请确认其他 Agent 自动评论会调用模型');
+  if(settings)store.update(settings,{...settings.data,agents:Object.fromEntries(systems.map(system=>[system,{...settings.data.agents?.[system],focus:focus[system],enabled:settings.data.agents?.[system]?.enabled!==false}])),feed_peer_comments:{enabled:input.auto_peer_comments===true,daily_limit:3,consented_at:input.auto_peer_comments===true?now():settings.data.feed_peer_comments?.consented_at||null}},user);
+  const selected=(question_id,agent,question,label)=>({question_id,agent,question,label,option:'specified',certainty:'selected',at:now()});
+  const summary=[selected('need','owner','未来 7—30 天的目标',data.choice_goal.goal),selected('interests','explore','感兴趣的领域',data.choice_profile.interests.join('、')),...systems.map(system=>selected(`focus_${system}`,system,`${system} Agent 的当前方向`,focus[system]))];
+  materializeInitialMemories(store,user,summary);
+  const discovery=provisionInitialDiscovery(store,user,summary,{start:input.auto_discovery===true});
+  return update({choice_summary:summary,choice_confirmed_at:now(),choice_phase:'handoff',choice_auto_discovery:input.auto_discovery===true,choice_auto_peer_comments:input.auto_peer_comments===true,choice_discovery_ref:discovery?.id||null,choice_agent_focus:focus,initial_context:Object.fromEntries(['owner',...systems].map(agent=>[agent,{scope:agent,purpose:'本人确认的初始化方向，仅在相关任务中使用',items:summary.filter(item=>item.agent===agent),alignment:'insufficient'}]))});
+ }
  if(action==='onboarding.choice.start')return update({choice_version:choiceVersion,choice_mode:enumeration(input.mode||data.choice_mode||'sequential',['sequential','group'],'引导方式'),choice_started_at:data.choice_started_at||now(),choice_phase:data.choice_phase==='handoff'?'handoff':'questions',choice_step:data.choice_step||0});
  if(action==='onboarding.choice.mode')return update({choice_mode:enumeration(input.mode,['sequential','group'],'引导方式')});
  if(action==='onboarding.choice.answer'){
@@ -46,19 +103,27 @@ export function onboardingChoiceCommand(store,user,action,input){
   if(!data.choice_confirmed_at)fail('CONFIRMATION_REQUIRED','请先核对初始理解卡');
   if(input.confirm!==true)fail('CONFIRMATION_REQUIRED','请确认本次任务使用所示选择摘要');
   if(data.choice_task_ref)return {id:session.id,version:session.version,task_id:data.choice_task_ref};
-  const option=firstValueChoices.find(o=>o.id===input.task);if(!option)fail('INVALID_INPUT','请选择首个事项');
-  const summary=alignmentSummary(answers).filter(item=>option.questions.includes(item.question_id));
+  const option=String(input.task||'').startsWith('suggestion:')?proposedFirstTasks(store,user,data).find(o=>o.id===input.task):firstValueChoices.find(o=>o.id===input.task);if(!option)fail('INVALID_INPUT','请选择有效的首个事项');
+  const summary=alignmentSummary(answers).filter(item=>option.questions?.includes(item.question_id));
   const content=summary.map(item=>`${item.question} ${item.label}${item.certainty==='uncertain'?'（尚未确定）':'（初始选择，非稳定事实）'}`).join('\n');
   const evidence=store.add('document',user,{title:'首个任务的初始化选择',content,provenance_refs:[{id:session.id,version:session.version}],purpose:`本人确认交给${option.system}的最小任务上下文`});
-  const task=taskCommand(store,user,'task.create',{goal:option.goal,constraints:'仅依据已授权的选择资料；用户尚未给出具体领域、个人经历或日程，不得虚构。可提供清晰标注的候选示例，资料不足时列出待确认项。只产出建议或草稿；不联系他人、不发布、不改日程。',system:option.system,mode:'compose',source_refs:[{id:evidence.id,version:evidence.version}]});
+  const v2Goal=data.choice_goal?.goal;
+  const firstGoal=v2Goal?`${option.goal} 用户的近期目标是：${v2Goal}。希望完成：${data.choice_goal.result}。验收标准：${data.choice_goal.criteria}。计划在 ${data.choice_goal.days} 天内推进。${option.needs?`如需用户补充：${option.needs}。`:''}${option.deliverable?`预期交付：${option.deliverable}。`:''}`:option.goal;
+  const task=taskCommand(store,user,'task.create',{goal:firstGoal,constraints:'仅依据已授权的选择资料；资料不足时列出待确认项。只产出建议或草稿；不联系他人、不发布、不改日程。',system:option.system,mode:'compose',source_refs:[{id:evidence.id,version:evidence.version}]});
   const createdTask=store.get(task.id);
   store.update(createdTask,{...createdTask.data,title:option.label},user);
-  const inbox=store.unique('inbox',`${user}:${task.id}`,()=>store.add('inbox',user,{object_id:task.id,task_id:task.id,title:option.label,summary:'初始化的首个待处理事项，等待确认执行',status:'pending',source_refs:[{id:task.id}]}));
+  if(input.start===true){
+   if(input.model_consent!==true)fail('CONSENT_REQUIRED','请确认首个任务使用模型处理目标和所选资料');
+   const current=store.get(task.id),confirmed=taskCommand(store,user,'task.confirm',{id:current.id,version:current.version,confirm:true,model_consent:true});
+   const ready=store.get(confirmed.id);taskCommand(store,user,'run.start',{id:ready.id,version:ready.version});
+  }
+  const inbox=store.unique('inbox',`${user}:${task.id}`,()=>store.add('inbox',user,{object_id:task.id,task_id:task.id,title:option.label,summary:input.start===true?'首个任务已排队执行':'初始化的首个待处理事项，等待确认执行',status:'pending',source_refs:[{id:task.id}]}));
   const result=update({choice_task_ref:task.id,choice_task_answers:answers,first_value_ref:data.first_value_ref||task.id,inbox_ref:inbox.id,choice_task_label:option.label,intent:option.label,status:data.status==='completed'?'completed':'first_value_pending'});
   return {...result,task_id:task.id};
  }
  if(action==='onboarding.choice.home'){
   if(!data.choice_confirmed_at)fail('CONFIRMATION_REQUIRED','请先核对初始理解卡，或选择稍后继续');
+  if(data.choice_goal&&!data.choice_task_ref)fail('FIRST_TASK_REQUIRED','请先选择并开始第一件任务');
   return update({status:'completed',completed_at:data.completed_at||now(),choice_phase:'handoff',skipped:[...new Set([...(data.skipped||[]),...(data.choice_task_ref?[]:['first_task_deferred'])])]});
  }
  fail('UNKNOWN_COMMAND','不支持的初始化操作');

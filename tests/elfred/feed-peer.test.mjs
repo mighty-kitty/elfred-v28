@@ -5,7 +5,7 @@ import {Service} from '../../server/elfred/service.mjs';
 import {Runtime} from '../../server/elfred/runtime.mjs';
 import {authenticate} from '../../server/elfred/auth.mjs';
 import {search} from '../../server/elfred/knowledge.mjs';
-import {tickFeedPeerComments} from '../../server/elfred/feed-peer.mjs';
+import {tickFeedPeerComments,peerCommentLimit} from '../../server/elfred/feed-peer.mjs';
 
 test('本人开启后其他 Agent 按真实事件自动评论，计费有上限且不会生成第二条主帖',async t=>{
  const store=new Store(':memory:'),calls=[];t.after(()=>store.close());const provider={status:()=>({configured:true}),generate:async request=>{calls.push(request);return {output:'先核对活动截止日期与报名规则，再决定是否安排时间。',usage:{total_tokens:12}}}};
@@ -33,7 +33,7 @@ test('自主评论失败后保留动态并在退避期结束重试，不被旧�
  tickFeedPeerComments(store,provider);
  assert.equal(store.list('task').filter(task=>task.data.feed_peer_for===feed.id).length,2);
 });
-test('两名 Agent 在同一真实动态下先评论再回复，受到每日调用上限约束',async t=>{
+test('单条真实动态只请求一条增量评论，避免所有帖子都成为 Agent 对话',async t=>{
  const store=new Store(':memory:'),calls=[];t.after(()=>store.close());
  const provider={status:()=>({configured:true}),generate:async request=>{calls.push(request);return {output:calls.length===1?'### 审查范围\n请先确认报名时间。':'目标：完成评论任务\n同意，时间确认后再安排下一步。',usage:{total_tokens:12}}}};
  const service=new Service(store,provider),runtime=new Runtime(store,provider),user=authenticate(store,'feed-peer-dialogue','feed-peer-password',true,'本人').user;service.initialize(user);
@@ -41,7 +41,13 @@ test('两名 Agent 在同一真实动态下先评论再回复，受到每日调�
  service.command(user.id,id(),'feed.peer_comments.policy',{id:settings.id,version:settings.version,enabled:true,daily_limit:2,confirm:true,model_consent:true});
  for(let i=0;i<5;i++)await runtime.tick();
  const comments=store.get(feed.id).data.comments;
- assert.equal(comments.length,2);assert.equal(calls.length,2);
- assert.equal(comments[0].system,'advise');assert.equal(comments[0].content,'请先确认报名时间。');assert.equal(comments[1].system,'explore');assert.equal(comments[1].content,'同意，时间确认后再安排下一步。');assert.equal(comments[1].reply_to,comments[0].id);
+ assert.equal(comments.length,1);assert.equal(calls.length,1);
+ assert.equal(comments[0].system,'advise');assert.equal(comments[0].content,'请先确认报名时间。');
  assert.equal(store.list('feed').length,1);
+});
+
+test('有 20 条候选时按增量价值分配约 70/25/5 的评论预算',()=>{
+ const feeds=Array.from({length:20},(_,index)=>({id:`feed-${index}`,owner:'owner',created:`2026-09-${String(index+1).padStart(2,'0')}T00:00:00Z`,data:{status:'active',purpose:'discovery',summary:'来自公开来源的新变化与可能的后续行动',title:index===0?'风险与机会':'近期变化',external_url:index===0?'https://example.com':undefined,comments:[]}}));
+ const counts=feeds.reduce((acc,feed)=>(acc[peerCommentLimit(feed,feeds)]++,acc),[0,0,0]);
+ assert.deepEqual(counts,[14,5,1]);
 });

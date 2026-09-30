@@ -23,7 +23,8 @@ import {RootPortal} from '../../legacy/legacy-ui';
 import {InboxSave} from './inbox-save';
 import {useRuntime} from "../../core/runtime-context";
 import {briefIndex as indexForTimezone,dailyTasks,localDay} from '../../core/local-day.mjs';
-import {agentAlignment} from '../../core/agent-alignment.mjs';
+import {agentGrowth} from '../../core/agent-growth.mjs';
+import './home-v2.css';
 import {
   AgentMomentCard,
   BriefSettingsSheet,
@@ -58,6 +59,10 @@ export function HomePage({
   const firstTaskLabel=String(onboarding?.data.choice_task_label||firstTask?.data.title||'首个事项');
   const initialUnderstanding=(onboarding?.data.choice_summary||onboarding?.data.understanding||[]) as {certainty:string}[];
   const [dragging,setDragging]=useState(false),[toolsOpen,setToolsOpen]=useState(false);
+  const [agentMenu,setAgentMenu]=useState<string|null>(null);
+  const [agentUnread,setAgentUnread]=useState<Record<string,number>>({});
+  const holdTimer=useRef<ReturnType<typeof setTimeout>|null>(null);
+  const holdOpened=useRef(false);
   const [playerCollapsed, setPlayerCollapsed] = useState(false);
   const [localPreferences, setBriefPreferences] = useState(readBriefPreferences);
   const connected=Boolean(runtime);
@@ -71,6 +76,16 @@ export function HomePage({
   const pendingToday=todayTasks.filter(task=>task.data.status!=='completed').length;
   const completedToday=todayTasks.filter(task=>task.data.status==='completed').length;
   const moments=runtime?[]:agentMoments;
+  useEffect(()=>{
+    if(!runtime?.snapshot)return;
+    const counts:Record<string,number>={};
+    for(const agent of agentList){
+      const system=agent.id==='advisor'?'advise':agent.id;
+      let seen='';try{seen=localStorage.getItem(`elfred-agent-seen:${runtime.snapshot.user.id}:${system}`)||''}catch{}
+      counts[system]=runtime.snapshot.objects.feed.filter(item=>item.data.system===system&&(!seen||item.created>seen)).length;
+    }
+    setAgentUnread(counts);
+  },[runtime?.snapshot]);
   const [briefIndex, setBriefIndex] = useState(() =>
     getCurrentBriefIndex(readBriefPreferences()),
   );
@@ -146,7 +161,7 @@ export function HomePage({
           onClick={() => go({ name: "search" })}
         >
           <Search size={24} strokeWidth={1.8} />
-          <span>搜索人、内容、任务、机会…</span>
+          <span>找人、机会、内容或工具…</span>
           <ChevronRight size={17} />
         </button>
       </div>
@@ -232,20 +247,31 @@ export function HomePage({
       <ModuleStatus types={['memory']}><section className="v277-agents-strip v277-reference-agents">
         {agentList.map(({ id, name }, index) => {
           const Icon = agentIcons[index];
+          const system=id==='advisor'?'advise':id;
+          const tasks=runtime?.snapshot?.objects.task.filter(task=>task.data.system===system&&!task.data.internal_search)||[];
+          const status=tasks.some(task=>['awaiting_review','awaiting_acceptance'].includes(String(task.data.status)))?'等待确认':tasks.some(task=>['queued','running'].includes(String(task.data.status)))?'执行中':runtime?.snapshot?.objects.observation?.some(item=>item.data.system===system&&item.data.status==='active')?'关注中':'空闲';
+          const descriptions=['探索世界','看清自己','形成表达','连接关系','推动事情'];
+          const openAgent=()=>{if(holdOpened.current){holdOpened.current=false;return;}try{localStorage.setItem(`elfred-agent-seen:${runtime?.snapshot?.user.id}:${system}`,new Date().toISOString())}catch{}setAgentUnread(current=>({...current,[system]:0}));go({name:'agent',id})};
           return (
             <button
               type="button"
               key={id}
-              onClick={event => go({ name: runtime&&event.target instanceof Element&&event.target.closest("small")?"agent-level":"agent", id })}
+              onClick={openAgent}
+              onPointerDown={()=>{holdOpened.current=false;holdTimer.current=setTimeout(()=>{holdOpened.current=true;setAgentMenu(id)},550)}}
+              onPointerUp={()=>{if(holdTimer.current)clearTimeout(holdTimer.current)}}
+              onPointerLeave={()=>{if(holdTimer.current)clearTimeout(holdTimer.current)}}
+              onContextMenu={event=>{event.preventDefault();holdOpened.current=true;setAgentMenu(id)}}
             >
-              <Icon size={23} strokeWidth={1.8} />
+              <span className="elfred-home-agent-icon"><Icon size={23} strokeWidth={1.8} />{Boolean(agentUnread[system])&&<i>{agentUnread[system]}</i>}</span>
               <b>{name}</b>
-              <small title={runtime?agentAlignment(runtime.snapshot?.objects.memory||[],id==='advisor'?'advise':id).label:undefined}>{runtime?agentAlignment(runtime.snapshot?.objects.memory||[],id==='advisor'?'advise':id).levelLabel:'尚未对齐'}</small>
+              <small>{runtime?`L${agentGrowth(runtime.snapshot,system).level} · ${status}`:'L1 · 空闲'}</small>
+              <em>{descriptions[index]}</em>
             </button>
           );
         })}
+        {agentMenu&&<div className="elfred-home-agent-menu" role="dialog" aria-label="Agent 快捷操作"><button type="button" aria-label="关闭快捷操作" onClick={()=>setAgentMenu(null)}>×</button><b>{agentList.find(item=>item.id===agentMenu)?.name} Agent</b><button type="button" onClick={()=>{go({name:'agent',id:agentMenu as typeof agentList[number]['id']});setAgentMenu(null)}}>交给它一件事</button><button type="button" onClick={()=>{go({name:'agent-settings',id:agentMenu as typeof agentList[number]['id']});setAgentMenu(null)}}>调整关注与权限</button><button type="button" onClick={()=>{go({name:'agent-level',id:agentMenu as typeof agentList[number]['id']});setAgentMenu(null)}}>查看成长等级</button></div>}
       </section></ModuleStatus>
-      {runtime&&<ModuleStatus types={['feed','interaction']}><PrivateFeed go={go} onDrag={setDragging}/></ModuleStatus>}
+      {runtime&&<ModuleStatus types={['feed','interaction']}><PrivateFeed go={go} onDrag={setDragging} preview/></ModuleStatus>}
       {!runtime&&<section className="v277-feed v277-reference-feed">
         <div className="v277-reference-section-head">
           <h2>Agent 朋友圈</h2>

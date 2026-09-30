@@ -27,6 +27,7 @@ import {
 } from "../../v27-7-state";
 import { HomePage } from "../features/home/home-page";
 import { FeedDetailPage } from "../features/home/feed-detail-page";
+import { ConnectedFeedPage } from "../features/home/connected-feed-page";
 import { EveningReflectionPage } from "../features/home/evening-reflection-page";
 import {AbilityProfilePage,DimensionDetailPage,EvidenceDetailPage,EvidenceListPage,KnowledgeDetailPage,KnowledgePage,launchWithSkill,MemoryPage,ProfileEditPage,ProfilePage,QuestionnairePage,SettingsPage} from "../features/pages24";
 import { MessagesPage } from "../features/messages/messages-page";
@@ -453,7 +454,7 @@ export function V277App() {
         />
       );
     if (screen.name === "feed")
-      return <FeedPage state={state} go={go} onBack={back} />;
+      return runtime?<ConnectedFeedPage go={go} onBack={back}/>:<FeedPage state={state} go={go} onBack={back} />;
     if (screen.name === "feed-detail" && runtime)
       return <FeedDetailPage id={screen.id} go={go} onBack={back} />;
     if (screen.name === "post") {

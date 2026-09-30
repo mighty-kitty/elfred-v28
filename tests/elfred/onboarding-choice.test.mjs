@@ -10,6 +10,57 @@ import {discoveryInterests} from '../../server/elfred/discovery-policy.mjs';
 function setup(t){const store=new Store(':memory:'),service=new Service(store,new ModelProvider({}));t.after(()=>store.close());const users=['alice','bob'].map(h=>authenticate(store,h,'local-test-password',true,h).user);users.forEach(u=>service.initialize(u));const cmd=(u,a,input)=>service.command(u.id,id(),a,input),session=u=>service.list(u.id,'onboarding')[0],ref=o=>({id:o.id,version:store.get(o.id).version});return {store,service,users,cmd,session,ref};}
 function chooseAll(env,user,mode='sequential'){const {cmd,session,ref}=env;cmd(user,'onboarding.choice.start',{...ref(session(user)),mode});for(const q of alignmentQuestions)cmd(user,'onboarding.choice.answer',{...ref(session(user)),question_id:q.id,option:q.options[0].id,...(q.id==='interests'?{detail:'AI 产品、摄影'}:{})});}
 
+test('V2 onboarding saves a real goal, five focus areas and starts the first task once',t=>{
+ const {users:[a],cmd,session,ref,store}=setup(t);
+ cmd(a,'onboarding.choice.profile.start',ref(session(a)));
+ cmd(a,'onboarding.choice.profile',{...ref(session(a)),name:'小林',role:'产品',status:'创业中',interests:['AI 产品','设计']});
+ cmd(a,'onboarding.choice.goal',{...ref(session(a)),goal:'完成产品 Demo',result:'能给用户体验的页面',criteria:'三位用户完成核心流程',days:14});
+ const focus=Object.fromEntries(['explore','advise','create','connect','execute'].map(system=>[system,`${system} 的当前重点`]));
+ cmd(a,'onboarding.choice.team',{...ref(session(a)),focus,auto_discovery:true,confirm:true});
+ assert.equal(session(a).data.choice_phase,'handoff');
+ assert.equal(store.visible(a.id,'profile')[0].data.name,'小林');
+ assert.equal(store.visible(a.id,'settings')[0].data.agents.create.focus,focus.create);
+ assert.equal(store.visible(a.id,'observation').length,1);
+ assert.throws(()=>cmd(a,'onboarding.choice.home',ref(session(a))),{code:'FIRST_TASK_REQUIRED'});
+ const result=cmd(a,'onboarding.choice.first',{...ref(session(a)),task:'outline',confirm:true,start:true,model_consent:true});
+ assert.equal(store.get(result.task_id).data.status,'queued');
+ assert.match(store.get(result.task_id).data.goal,/完成产品 Demo/);
+ assert.equal(cmd(a,'onboarding.choice.first',{...ref(session(a)),task:'compare',confirm:true,start:true,model_consent:true}).task_id,result.task_id);
+ cmd(a,'onboarding.choice.home',ref(session(a)));
+ assert.equal(session(a).data.status,'completed');
+});
+
+test('V2 goal organizer only runs with consent and stays inside onboarding',t=>{
+ const {users:[a],cmd,session,ref,store}=setup(t);
+ cmd(a,'onboarding.choice.profile.start',ref(session(a)));
+ cmd(a,'onboarding.choice.profile',{...ref(session(a)),name:'小林',role:'产品',status:'创业中',interests:['AI 产品']});
+ assert.throws(()=>cmd(a,'onboarding.choice.goal.organize',{...ref(session(a)),goal:'完成 Demo',confirm:true}),{code:'CONSENT_REQUIRED'});
+ const organized=cmd(a,'onboarding.choice.goal.organize',{...ref(session(a)),goal:'完成 Demo',confirm:true,model_consent:true});
+ const task=store.get(organized.task_id);
+ assert.equal(task.data.status,'queued');
+ assert.equal(task.data.internal_onboarding,true);
+ assert.match(task.data.goal,/完成 Demo/);
+ assert.equal(cmd(a,'onboarding.choice.goal.organize',{...ref(session(a)),goal:'完成 Demo',confirm:true,model_consent:true}).task_id,task.id);
+ assert.equal(store.visible(a.id,'feed').length,0);
+});
+
+test('V2 first task uses one of three model suggestions bound to the confirmed goal',t=>{
+ const {users:[a],cmd,session,ref,store}=setup(t);
+ cmd(a,'onboarding.choice.profile.start',ref(session(a)));
+ cmd(a,'onboarding.choice.profile',{...ref(session(a)),name:'小林',role:'产品',status:'创业中',interests:['AI 产品']});
+ const proposal=cmd(a,'onboarding.choice.goal.organize',{...ref(session(a)),goal:'完成 Demo',confirm:true,model_consent:true});
+ const task=store.get(proposal.task_id),run=store.get(task.data.run_id);
+ const choices=[{label:'找三个参考产品',goal:'检索三个公开产品并列出来源',system:'explore',minutes:15,needs:'明确产品方向',deliverable:'参考清单'},{label:'拆一条核心流程',goal:'拆分一条最小可演示流程',system:'execute',minutes:20,needs:'当前流程',deliverable:'可执行清单'},{label:'写 Demo 文案',goal:'为核心流程写演示文案',system:'create',minutes:15,needs:'产品定位',deliverable:'一页文案'}];
+ store.update(run,{...run.data,receipts:[{phase:'work',provider:'test',output:JSON.stringify({goal:'完成 Demo',result:'可演示页面',criteria:'三人完成流程',days:14,first_tasks:choices})}]},a.id);
+ cmd(a,'onboarding.choice.goal',{...ref(session(a)),goal:'完成 Demo',result:'可演示页面',criteria:'三人完成流程',days:14});
+ const focus=Object.fromEntries(['explore','advise','create','connect','execute'].map(system=>[system,`${system} 方向`]));
+ cmd(a,'onboarding.choice.team',{...ref(session(a)),focus,confirm:true});
+ assert.throws(()=>cmd(a,'onboarding.choice.first',{...ref(session(a)),task:'suggestion:9',confirm:true}),{code:'INVALID_INPUT'});
+ const selected=cmd(a,'onboarding.choice.first',{...ref(session(a)),task:'suggestion:1',confirm:true});
+ assert.equal(store.get(selected.task_id).data.system,'execute');
+ assert.match(store.get(selected.task_id).data.goal,/可执行清单/);
+});
+
 test('初始化自主评论须明确同意，每日上限只用于私人朋友圈',t=>{
  const env=setup(t),{users:[a],cmd,session,ref,service}=env;chooseAll(env,a);
  assert.throws(()=>cmd(a,'onboarding.choice.confirm',{...ref(session(a)),confirm:true,auto_peer_comments:true}),{code:'CONSENT_REQUIRED'});

@@ -42,6 +42,11 @@
   background: #e9edf1;
 }
 
+.agentChips{display:flex;gap:7px;overflow-x:auto;margin:0 -18px 12px;padding:0 18px 4px;scrollbar-width:none;overscroll-behavior-inline:contain}
+.agentChips::-webkit-scrollbar{display:none}
+.agentChips button{flex:none;min-height:32px;padding:5px 12px;border:1px solid #e3e7e9;border-radius:18px;background:#fff;color:#59636b;font-size:12px;white-space:nowrap}
+.agentChips button[aria-pressed="true"]{border-color:#171d23;background:#171d23;color:#fff}
+
 .filters {
   display: flex;
   align-items: center;
@@ -301,6 +306,47 @@
   color: #526b7e;
   font-size: 12px;
   text-decoration: none;
+}
+
+.preview {
+  min-height: 0;
+  padding-bottom: 24px;
+}
+
+.viewAll {
+  border: 0;
+  background: transparent;
+  color: #536473;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.relevance {
+  display: -webkit-box;
+  overflow: hidden;
+  margin: 7px 0 0;
+  color: #697784;
+  font-size: 12px;
+  line-height: 1.5;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+
+.feedback {
+  display: flex;
+  gap: 8px;
+  margin-top: 9px;
+}
+
+.feedback button {
+  min-height: 30px;
+  padding: 4px 12px;
+  border: 1px solid #e1e6ea;
+  border-radius: 18px;
+  background: #fff;
+  color: #4d5d68;
+  font-size: 12px;
 }
 
 .peerComments {

@@ -7,7 +7,7 @@ import {createContext,useContext,useCallback,useEffect,useRef,useState,type Reac
 import {createInitialV277State,type V277State,type V277TaskStatus,type V277AgentId} from '../../v27-7-state';
 import {type Snapshot,type Entity,type Result,text,statuses} from '../features/live/types';
 
-type RuntimeContextValue={snapshot:Snapshot|null;syncStatus:'current'|'stale';lastSynced:string|null;loading:boolean;error:string;refresh:()=>Promise<void>;request:<T>(path:string,body?:unknown,options?:{signal?:AbortSignal})=>Promise<T>;command:(action:string,input:Record<string,unknown>)=>Promise<Result>;login:(handle:string,password:string,register:boolean,emailCode?:string)=>Promise<void>;logout:()=>Promise<void>;clearError:()=>void;report:(message:string)=>void};
+type RuntimeContextValue={snapshot:Snapshot|null;syncStatus:'current'|'stale';lastSynced:string|null;loading:boolean;error:string;refresh:()=>Promise<void>;request:<T>(path:string,body?:unknown,options?:{signal?:AbortSignal})=>Promise<T>;command:(action:string,input:Record<string,unknown>)=>Promise<Result>;login:(handle:string,password:string,register:boolean,emailCode?:string)=>Promise<void>;loginWithCode:(handle:string,code:string)=>Promise<void>;logout:()=>Promise<void>;clearError:()=>void;report:(message:string)=>void};
 const Context=createContext<RuntimeContextValue|null>(null);
 export const useRuntime=()=>useContext(Context);
 export function RuntimeProvider({children}:{children:ReactNode}) {
@@ -35,8 +35,9 @@ export function RuntimeProvider({children}:{children:ReactNode}) {
     try {const result=await request<Result>('/commands',{action,input},key);pending.current.delete(fingerprint);try{await refresh();setError('')}catch{setError('操作已保存，页面同步失败；请刷新查看最新状态。')}return result;}catch(err){setError(err instanceof Error?displayError(err.message):'操作失败');throw err}
   },[request,refresh]);
   const login=async(handle:string,password:string,register:boolean,emailCode?:string)=>{handle=handle.trim();const generation=++identity.current;pending.current.clear();try{const result=await request<{csrf:string}>(register?'/auth/register':'/auth/login',{handle,password,name:handle.split('@')[0].slice(0,60),...(emailCode?{email_code:emailCode}:{})});if(generation!==identity.current)return;csrf.current=result.csrf;await refresh();setError('');}catch(err){if(generation===identity.current)setError(err instanceof Error?displayError(err.message):'登录失败');throw err}};
+  const loginWithCode=async(handle:string,code:string)=>{const generation=++identity.current;pending.current.clear();try{const result=await request<{csrf:string}>('/auth/code/verify',{handle:handle.trim(),code});if(generation!==identity.current)return;csrf.current=result.csrf;await refresh();setError('');}catch(err){if(generation===identity.current)setError(err instanceof Error?displayError(err.message):'验证失败');throw err}};
   const logout=async()=>{const generation=++identity.current;await request('/auth/logout',{});if(generation!==identity.current)return;identity.current++;csrf.current='';pending.current.clear();setSnapshot(null)};
-  return <Context.Provider value={{snapshot,syncStatus,lastSynced,loading,error,refresh,request,command,login,logout,clearError:()=>setError(''),report:message=>setError(displayError(message))}}>{children}</Context.Provider>;
+  return <Context.Provider value={{snapshot,syncStatus,lastSynced,loading,error,refresh,request,command,login,loginWithCode,logout,clearError:()=>setError(''),report:message=>setError(displayError(message))}}>{children}</Context.Provider>;
 }
 export function projectState(snapshot:Snapshot|null,previous?:V277State):V277State {
   const empty=createInitialV277State();

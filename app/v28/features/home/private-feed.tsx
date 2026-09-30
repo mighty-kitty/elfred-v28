@@ -41,7 +41,7 @@ function readableComment(content:string){
   return sentence.slice(0,120)+(sentence.length>120?'…':'');
 }
 
-export function PrivateFeed({ go, onDrag }: { go: (screen: Screen) => void; onDrag: (value: boolean) => void }) {
+export function PrivateFeed({ go, onDrag, preview = false }: { go: (screen: Screen) => void; onDrag: (value: boolean) => void; preview?: boolean }) {
   const runtime = useRuntime()!;
   const snapshot = runtime.snapshot!;
   const publishPreferences = snapshot.objects.settings[0]?.data.agent_publish as Record<string, { format?: string; format_version?: number }> | undefined;
@@ -51,10 +51,14 @@ export function PrivateFeed({ go, onDrag }: { go: (screen: Screen) => void; onDr
   const [system, setSystem] = usePageState("feed:system", "");
   const [topic, setTopic] = usePageState("feed:topic", "");
   const [showHidden, setShowHidden] = usePageState("feed:hidden", false);
+  const [period,setPeriod]=usePageState<'all'|'today'|'week'|'month'>('feed:period','all');
+  const [taskOnly,setTaskOnly]=usePageState('feed:taskOnly',false);
+  const [savedOnly,setSavedOnly]=usePageState('feed:savedOnly',false);
   const [filtersOpen, setFiltersOpen] = usePageState("feed:filters", false);
   const [menuId, setMenuId] = useState<string | null>(null);
   const [detailsId, setDetailsId] = useState<string | null>(null);
   const [pageSize,setPageSize]=usePageState("feed:pageSize", 30);
+  const loadMore=useRef<HTMLButtonElement>(null);
   const [mergeInto, setMergeInto] = useState("");
   const today = localDay();
   const index = useMemo(() => indexPrivateFeed(snapshot, today), [snapshot, today]);
@@ -62,24 +66,29 @@ export function PrivateFeed({ go, onDrag }: { go: (screen: Screen) => void; onDr
   const managedTopic = topic || topicOptions[0] || "";
   const initialDiscovery=snapshot.objects.observation?.find(item=>item.data.auto_suggested===true);
 
+  const savedFeedIds=new Set(snapshot.objects.inbox.filter(item=>item.data.status!=='dismissed').map(item=>item.data.object_id));
+  const cutoff=period==='today'?Date.now()-86400000:period==='week'?Date.now()-7*86400000:period==='month'?Date.now()-30*86400000:0;
   const items = useMemo(() => index[order].filter(item =>
     (showHidden || !active(item.id, "hide")) &&
     (!system || item.data.system === system) &&
-    (!topic || index.topics.get(item.id) === topic),
-  ), [index, order, showHidden, system, topic, active]);
-  const filterKey = JSON.stringify([order,system,topic,showHidden]);
+    (!topic || index.topics.get(item.id) === topic) &&
+    (!taskOnly || Boolean(item.data.task_id)) &&
+    (!savedOnly || savedFeedIds.has(item.id)) &&
+    (!cutoff || Date.parse(String(item.data.published_at||item.created))>=cutoff),
+  ), [index, order, showHidden, system, topic, taskOnly, savedOnly, cutoff, snapshot.objects.inbox]);
+  const filterKey = JSON.stringify([order,system,topic,showHidden,period,taskOnly,savedOnly]);
   const previousFilter = useRef(filterKey);
   useEffect(()=>{if(previousFilter.current!==filterKey){previousFilter.current=filterKey;setPageSize(30)}},[filterKey,setPageSize]);
+  useEffect(()=>{if(preview||items.length<=pageSize||!loadMore.current||typeof IntersectionObserver==='undefined')return;const observer=new IntersectionObserver(entries=>{if(entries[0]?.isIntersecting)setPageSize(count=>count+30)},{rootMargin:'300px'});observer.observe(loadMore.current);return ()=>observer.disconnect()},[preview,items.length,pageSize,setPageSize]);
 
-  return <section className={styles.feed} aria-label="Agent 朋友圈">
+  return <section className={`${styles.feed} ${preview?styles.preview:''}`} aria-label="Agent 朋友圈">
     <header className={styles.sectionHeader}>
       <h2>Agent 朋友圈</h2>
-      <button type="button" className={styles.filterButton} aria-label="筛选朋友圈" aria-expanded={filtersOpen} onClick={() => setFiltersOpen(!filtersOpen)}>
-        <SlidersHorizontal size={20} />
-      </button>
+      {preview?<button type="button" className={styles.viewAll} onClick={()=>go({name:'feed'})}>查看全部 ›</button>:<button type="button" className={styles.filterButton} aria-label="筛选朋友圈" aria-expanded={filtersOpen} onClick={() => setFiltersOpen(!filtersOpen)}><SlidersHorizontal size={20} /></button>}
     </header>
-    {items.length>0&&!peerComments?.enabled&&<div className={styles.peerPrompt}><span>让其他 Agent 补充真实发现</span><Action run={()=>runtime.command('feed.peer_comments.policy',{...entityRef(snapshot.objects.settings[0]),enabled:true,daily_limit:3,confirm:true,model_consent:true})}>开启互评</Action></div>}
-    {filtersOpen && <div className={styles.filters}>
+    {!preview&&<nav className={styles.agentChips} aria-label="按 Agent 筛选动态">{[{id:'',name:'全部'},...snapshot.systems].map(agent=><button type="button" key={agent.id||'all'} aria-pressed={system===agent.id} onClick={()=>setSystem(agent.id)}>{agent.name}</button>)}</nav>}
+    {!preview&&items.length>0&&!peerComments?.enabled&&<div className={styles.peerPrompt}><span>让其他 Agent 补充真实发现</span><Action run={()=>runtime.command('feed.peer_comments.policy',{...entityRef(snapshot.objects.settings[0]),enabled:true,daily_limit:3,confirm:true,model_consent:true})}>开启互评</Action></div>}
+    {!preview&&filtersOpen && <div className={styles.filters}>
       <Action run={()=>runtime.command('feed.peer_comments.policy',{...entityRef(snapshot.objects.settings[0]),enabled:!peerComments?.enabled,daily_limit:3,confirm:true,model_consent:true})}>{peerComments?.enabled?'暂停 Agent 自主评论':'开启 Agent 自主评论'}</Action><small>启用后，其他 Agent 可基于已验收成果或真实来源，自动补充私人评论；每天最多 3 次模型调用，每次最多 1000 本地额度。</small>
       <div className={styles.sort} role="group" aria-label="朋友圈排序">
         <button type="button" aria-pressed={order === "recommended"} onClick={() => setOrder("recommended")}>推荐</button>
@@ -93,15 +102,18 @@ export function PrivateFeed({ go, onDrag }: { go: (screen: Screen) => void; onDr
         <option value="">全部话题</option>
         {topicOptions.map(value => <option key={value}>{value}</option>)}
       </select>
+      <select aria-label="筛选时间" value={period} onChange={event=>setPeriod(event.target.value as typeof period)}><option value="all">全部时间</option><option value="today">最近一天</option><option value="week">最近一周</option><option value="month">最近一月</option></select>
+      <label><input type="checkbox" checked={taskOnly} onChange={event=>setTaskOnly(event.target.checked)}/>关联任务</label>
+      <label><input type="checkbox" checked={savedOnly} onChange={event=>setSavedOnly(event.target.checked)}/>已收藏</label>
       <label><input type="checkbox" checked={showHidden} onChange={event => setShowHidden(event.target.checked)} />含已隐藏</label>
       <details className={styles.topicManager}><summary>管理话题</summary>{managedTopic&&<><p>{managedTopic} · {topicSettings[managedTopic]?.mode==='follow'?'已关注':topicSettings[managedTopic]?.mode==='mute'?'已静音':'普通'}</p><Action run={()=>runtime.command('feed.topic.set',{topic:managedTopic,mode:topicSettings[managedTopic]?.mode==='follow'?'normal':'follow'})}>关注 / 取消关注</Action><Action run={()=>runtime.command('feed.topic.set',{topic:managedTopic,mode:topicSettings[managedTopic]?.mode==='mute'?'normal':'mute'})}>静音 / 恢复推荐</Action><label>合并到 <select value={mergeInto} onChange={event=>setMergeInto(event.target.value)}><option value="">选择话题</option>{topicOptions.filter(value=>value!==managedTopic).map(value=><option key={value}>{value}</option>)}</select></label><Action disabled={!mergeInto} run={async()=>{await runtime.command('feed.topic.merge',{topic:managedTopic,into:mergeInto});setTopic(mergeInto);setMergeInto('')}}>合并</Action><Action run={async()=>{await runtime.command('feed.topic.remove',{topic:managedTopic});setTopic('')}}>从筛选中移除</Action><small>移除话题不会删除原动态；静音只降低推荐排序，仍可在“最新”中查看。</small></>}</details>
       <Observations go={go}/>
     </div>}
-    {initialDiscovery && ['draft','paused','blocked'].includes(text(initialDiscovery,'status')) && items.length>0 &&
+    {!preview&&initialDiscovery && ['draft','paused','blocked'].includes(text(initialDiscovery,'status')) && items.length>0 &&
       <div className={styles.discoveryPrompt}><span>按初始选择发现公开资讯</span><Action run={()=>runtime.command('observation.start',{...entityRef(initialDiscovery),confirm:true})}>开始发现</Action></div>}
     <div className={styles.list}>
-      {!items.length && <div className={styles.empty}>{system||topic||showHidden?<><p>{system?`${snapshot.systems.find(item=>item.id===system)?.name||'这个 Agent'}有真实发现或已验收成果时，会在这里发动态。`:'当前筛选下没有动态。'}</p><button type="button" onClick={()=>{setSystem('');setTopic('');setShowHidden(false)}}>重置筛选</button></>:initialDiscovery?<><b>关注方向已就绪</b><p>{initialDiscovery.data.status==='active'?'正在寻找相关公开资讯，找到后会出现在这里。':'还没有新动态，可在筛选中调整关注方向。'}</p>{['draft','paused','blocked'].includes(text(initialDiscovery,'status'))&&<Action run={()=>runtime.command('observation.start',{...entityRef(initialDiscovery),confirm:true})}>开始发现</Action>}</>:<p>这里还没有动态。Agent 的真实发现或你验收的成果，会出现在这里。</p>}</div>}
-      {items.slice(0,pageSize).map(item => {
+      {!items.length && <div className={styles.empty}>{system||topic||showHidden||taskOnly||savedOnly||period!=='all'?<><p>{system?`${snapshot.systems.find(item=>item.id===system)?.name||'这个 Agent'}有真实发现或已验收成果时，会在这里发动态。`:'当前筛选下没有动态。'}</p><button type="button" onClick={()=>{setSystem('');setTopic('');setShowHidden(false);setPeriod('all');setTaskOnly(false);setSavedOnly(false)}}>重置筛选</button></>:initialDiscovery?<><b>关注方向已就绪</b><p>{initialDiscovery.data.status==='active'?'正在寻找相关公开资讯，找到后会出现在这里。':'还没有新动态，可在筛选中调整关注方向。'}</p>{['draft','paused','blocked'].includes(text(initialDiscovery,'status'))&&<Action run={()=>runtime.command('observation.start',{...entityRef(initialDiscovery),confirm:true})}>开始发现</Action>}</>:<p>这里还没有动态。Agent 的真实发现或你验收的成果，会出现在这里。</p>}</div>}
+      {items.slice(0,preview?3:pageSize).map(item => {
         const agentId = (item.data.system === "advise" ? "advisor" : item.data.system) as V277AgentId;
         const agent = agentList.find(candidate => candidate.id === agentId);
         const Icon = agent?.icon;
@@ -129,15 +141,17 @@ export function PrivateFeed({ go, onDrag }: { go: (screen: Screen) => void; onDr
                 {item.data.synthetic===true&&<small role="status">隔离验收数据 · 不是真实 Agent 发现</small>}
                 {excerpt && <span className={styles.excerpt}>{excerpt}</span>}
               </button>
+              <p className={styles.relevance}>与你有关：{text(item,'topic')||text(item,'source_name')||'你关注的方向'}{item.data.task_id?' · 来自当前任务':''}</p>
               {media.length>0&&<div className={styles.media}>{media.map(file=>file.mime.startsWith('image/')?<img key={file.id} src={`/api/elfred/attachments/${file.id}`} alt="动态附图" className={styles.thumbnail}/>:<video key={file.id} controls preload="none" src={`/api/elfred/attachments/${file.id}`} className={styles.thumbnail}/>)}</div>}
               {Boolean(item.data.external_url)&&<a className={styles.sourceLink} href={text(item,"external_url")} target="_blank" rel="noreferrer">查看原始来源 · {text(item,"source_name")||'公开网页'}</a>}
+              <div className={styles.feedback} aria-label="这条动态对你有用吗"><Action run={()=>runtime.command('feed.interact',{id:item.id,kind:'like'})}>{active(item.id,'like')?'已感兴趣':'有兴趣'}</Action><Action run={()=>runtime.command('feed.interact',{id:item.id,kind:'less'})}>{active(item.id,'less')?'已减少':'没感觉'}</Action></div>
               <footer className={styles.postFooter}>
                 <time dateTime={item.created}>{new Date(item.created).toLocaleString("zh-CN", { month: "numeric", day: "numeric", hour: "2-digit", minute: "2-digit" })}</time>
                 <button type="button" className={styles.moreButton} aria-label={`${text(item, "title")}的更多操作`} aria-expanded={menuId === item.id} onClick={() => setMenuId(menuId === item.id ? null : item.id)}>
                   <MoreHorizontal size={24} />
                 </button>
               </footer>
-              {commentPreview.length>0&&<div className={styles.peerComments}>{commentPreview.map(comment=><p key={comment.id}><b>{comment.name}：</b>{readableComment(comment.content)}</p>)}</div>}
+              {commentPreview.length>0&&<div className={styles.peerComments}>{commentPreview.slice(preview?-1:0).map(comment=><p key={comment.id}><b>{comment.name}：</b>{readableComment(comment.content)}</p>)}</div>}
             </div>
           </div>
           {menuId === item.id && <div className={styles.menu}>
@@ -150,7 +164,7 @@ export function PrivateFeed({ go, onDrag }: { go: (screen: Screen) => void; onDr
           {detailsId === item.id && <div className={styles.details}><FeedDetails item={item} go={go} /></div>}
         </article>;
       })}
-      {items.length>pageSize&&<button type="button" className={styles.loadMore} onClick={()=>setPageSize(count=>count+30)}>加载更多 · 已显示 {pageSize} / {items.length}</button>}
+      {!preview&&items.length>pageSize&&<button ref={loadMore} type="button" className={styles.loadMore} onClick={()=>setPageSize(count=>count+30)}>加载更多 · 已显示 {pageSize} / {items.length}</button>}
     </div>
   </section>;
 }

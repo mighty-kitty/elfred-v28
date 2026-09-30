@@ -50,7 +50,7 @@ export function communityCommand(store,user,action,input) {
     return {id:store.update(project,{...project.data,recruiting},user).id};
   }
   if(action==='project.create') {
-    const project=store.add('project',user,{title:string(input.title,'项目名',200),goal:string(input.goal,'项目目标',3000),criteria:string(input.criteria,'验收标准',2000),task:string(input.task,'开放任务',2000),basis:input.basis?string(input.basis,'已有基础',3000):'',public_scope:input.public_scope?enumeration(input.public_scope,['brief'],'公开范围'):'',reviewer_id:input.reviewer_id===user?user:null,fee_terms:input.fee_terms?string(input.fee_terms,'费用说明',1000):'',deadline_mode:input.deadline_mode?enumeration(input.deadline_mode,['none','date'],'截止设置'):'',deadline:input.deadline_mode==='date'?string(input.deadline,'截止日期',40):null,participation:enumeration(input.participation||'open',['open','application'],'参与方式'),status:'active',recruiting:false,revision:0,content:'',release_id:null},{visibility:'members'});
+    const project=store.add('project',user,{title:string(input.title,'项目名',200),goal:string(input.goal,'项目目标',3000),criteria:string(input.criteria,'验收标准',2000),task:string(input.task,'开放任务',2000),basis:input.basis?string(input.basis,'已有基础',3000):'',public_scope:input.public_scope?enumeration(input.public_scope,['brief'],'公开范围'):'',reviewer_id:input.reviewer_id===user?user:null,fee_terms:input.fee_terms?string(input.fee_terms,'费用说明',1000):'',time_commitment:input.time_commitment?string(input.time_commitment,'预计投入',100):'未约定',deadline_mode:input.deadline_mode?enumeration(input.deadline_mode,['none','date'],'截止设置'):'',deadline:input.deadline_mode==='date'?string(input.deadline,'截止日期',40):null,participation:enumeration(input.participation||'open',['open','application'],'参与方式'),status:'active',recruiting:false,revision:0,content:'',release_id:null},{visibility:'members'});
     store.join(project.id,user,'owner');return {id:project.id};
   }
   if(action==='project.brief.update') {
@@ -83,7 +83,7 @@ export function communityCommand(store,user,action,input) {
     }
     const existing=store.list('post').find(item=>item.data.project_id===project.id);
     const recruiting=existing?project.data.recruiting:true;
-    const data={kind:'cocreation',author_type:'human',published_by:user,slots:publicSlots(store,project.id),title:project.data.title,author_name:store.user(user).name,content:project.data.goal,basis:project.data.basis,public_scope:project.data.public_scope,reviewer_name:store.user(project.owner).name,fee_terms:project.data.fee_terms,deadline_mode:project.data.deadline_mode,deadline:project.data.deadline,criteria:project.data.criteria,task:project.data.task,project_id:project.id,status:recruiting?'recruiting':'closed',participation:project.data.participation};
+    const data={kind:'cocreation',author_type:'human',published_by:user,slots:publicSlots(store,project.id),title:project.data.title,author_name:store.user(user).name,content:project.data.goal,basis:project.data.basis,public_scope:project.data.public_scope,reviewer_name:store.user(project.owner).name,fee_terms:project.data.fee_terms,time_commitment:project.data.time_commitment,deadline_mode:project.data.deadline_mode,deadline:project.data.deadline,criteria:project.data.criteria,task:project.data.task,project_id:project.id,status:recruiting?'recruiting':'closed',participation:project.data.participation};
     if(!existing)store.update(project,{...project.data,recruiting:true},user);
     return {id:existing?store.update(existing,data,user).id:store.add('post',user,data,{visibility:'public'}).id};
   }

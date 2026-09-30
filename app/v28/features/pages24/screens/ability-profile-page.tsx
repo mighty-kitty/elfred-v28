@@ -34,6 +34,9 @@ export function AbilityProfilePage({
   const delta =
     composite !== null && previous !== null ? composite - previous : null;
   const trend = abilityInsight.trend;
+  // "上期"只有服务端真的给了才有（`core/dimensions.mjs` 的 previous / previousComposite）。
+  // 一股脑写上"灰竖标＝上期"，用户会去找一根永远不出现的灰竖标 —— 有才画图例。
+  const hasPrevious = abilityInsight.axes.some((axis) => axis.previous !== null);
   // "分是谁撑起来的"只看卡：每张卡带了多少条成果，条数多的排前面。
   const carriers = [...abilityCardSamples].sort((a, b) => b.evidence - a.evidence);
   const carried = carriers.reduce((sum, card) => sum + card.evidence, 0);
@@ -80,16 +83,18 @@ export function AbilityProfilePage({
               {composite === null ? null : <span>/100</span>}
             </div>
           </div>
-          <p className={libraryStyles.chartLegend}>
-            <i className={libraryStyles.legendNow} /> 本期
-            <i className={libraryStyles.legendPrev} /> 上期
-          </p>
+          {hasPrevious ? (
+            <p className={libraryStyles.chartLegend}>
+              <i className={libraryStyles.legendNow} /> 本期
+              <i className={libraryStyles.legendPrev} /> 上期
+            </p>
+          ) : null}
         </section>
 
         <section className={styles.block}>
           <h3>
             五个维度
-            <small>粗条＝本期，灰竖标＝上期</small>
+            <small>{hasPrevious ? "粗条＝本期，灰竖标＝上期" : "条的长度＝这一维现在的水平"}</small>
           </h3>
           <div className={libraryStyles.dimList}>
             {abilityInsight.axes.map((axis) => {

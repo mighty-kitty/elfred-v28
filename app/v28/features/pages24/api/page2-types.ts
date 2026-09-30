@@ -104,7 +104,8 @@ export type LiveMemory = {
   coveredGroups: number;
   groupCount: number;
   daysTracked: number;
-  credibility: number;
+  /** 已确认的记忆里档位到"场景已验证 / 跨时间稳定"的占比；一条都没确认时是 null（界面写"—"） */
+  credibility: number | null;
   /** 四类记忆的实际条目（社交那一类装的是"人"，在 relationships 里） */
   groups: Record<
     string,

@@ -38,7 +38,8 @@ export type MemoryPageView = {
   headline: string;
   totalCount: number;
   daysTracked: number;
-  credibility: number;
+  /** 已确认的记忆里档位到"场景已验证 / 跨时间稳定"的占比；没有基数时是 null（界面写"—"） */
+  credibility: number | null;
   identity: {
     headline: string;
     describe: string;
@@ -62,7 +63,9 @@ const IDENTITY = {
 const UNDERSTANDING = {
   headline: "Elfred 对你的当前理解",
   daysTracked: 0,
-  credibility: 0,
+  // 演示兜底：没有后端时也不知道可信度，写 null 让界面显示"—"，
+  // 而不是拿一个 0% 冒充"算过的结果"。
+  credibility: null as number | null,
 };
 
 // 真数据一到就换上（页头理解度、当前身份、关系链都跟着后端走）；

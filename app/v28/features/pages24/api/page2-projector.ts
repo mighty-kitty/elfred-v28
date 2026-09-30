@@ -98,6 +98,13 @@ function projectSnapshot(snapshot: Snapshot): Page2Data {
       source: (item.data.source_refs as unknown[] | undefined)?.length ? "有来源" : "本人记录", status: field(item,"status")==="learned"?"自动记录":field(item, "status") === "validated" ? "已确认" : field(item,"status")==="needs_review"?"需重评":field(item,"status")==="deferred"?"已搁置":"待确认" });
   }
   const confirmed = memories.filter(item => memoryAdmitted(item)).length;
+  // 记忆可信度 = **已确认的记忆里，档位已经走到"场景已验证 / 跨时间稳定"的占比**。
+  // 这个档位是服务端自己维护在记忆对象上的（server/elfred/memory-validity.mjs 按证据改写
+  // `alignment`），这里只是数一遍，不另起一套算法。
+  // 没有一条已确认的记忆时是 null —— 界面写"—"，因为"没有基数"不等于"可信度 0%"。
+  const admittedMemories = memories.filter(item => memoryAdmitted(item));
+  const verifiedMemories = admittedMemories.filter(item => ["scenario_verified", "stable_over_time"].includes(field(item, "alignment"))).length;
+  const credibility = admittedMemories.length ? Math.round((verifiedMemories / admittedMemories.length) * 100) : null;
   // 外部验证 = 成果挂到了可核对的来源上（任务带导入的材料或链接），不是"做过就算"
   const externalChecks = outcomes.filter(item => ((tasks.get(field(item, "task_id"))?.data.source_refs as unknown[] | undefined)?.length ?? 0) > 0).length;
   const friends = list(snapshot, "friend").filter(item => item.data.status === "accepted");
@@ -127,7 +134,7 @@ function projectSnapshot(snapshot: Snapshot): Page2Data {
       uncertainty: alignmentScore.uncertainty, parts: alignmentScore.parts,
     },
     memory: { headline: "Elfred 对你的当前理解", totalCount: confirmed, coveredGroups: Object.values(groups).filter(rows=>rows.length).length,
-      groupCount: 4, daysTracked: new Set(memories.filter(m=>memoryAdmitted(m)&&memoryActive(m)).map(m=>m.updated.slice(0,10))).size, credibility: 0, groups,
+      groupCount: 4, daysTracked: new Set(memories.filter(m=>memoryAdmitted(m)&&memoryActive(m)).map(m=>m.updated.slice(0,10))).size, credibility, groups,
       identity: { headline: "当前身份", describe: groups["基础"].filter(row=>row.status==="已确认").slice(0,3).map(row=>row.value).join("；") || "还没有确认的身份信息", photoLabel: "", rule: "用于机会推荐，可随时纠正" },
       relationships: friends.map(item => ({ id: item.id, name: field(item, "name") || field(item, "handle"), role: "好友", photo: "", chatId: field(item, "conversation_id") })),
       relationshipStats: { longTerm: friends.length, pending: 0 } },

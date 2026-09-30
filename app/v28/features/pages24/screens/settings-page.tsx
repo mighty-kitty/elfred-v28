@@ -34,8 +34,7 @@ import {
   type LiveProfile,
 } from "../api/page2-api";
 import {
-  hasLiveAlignment,
-  libraryHeader,
+  alignmentView,
 } from "../data/knowledge-data";
 import {useRuntime} from '../../../core/runtime-context';
 import {memoryOverview} from '../../../core/agent-alignment.mjs';
@@ -102,7 +101,11 @@ export function SettingsPage({
   // 那是"记忆领域覆盖"（N/5 个领域有记录），和页头那个百分比根本不是一回事，
   // 同一个设置页里两条口径并列，用户会以为是两套数。领域覆盖挪到下面"记忆与理解"那一行去说。
   const memoryCoverage = memoryOverview(memoryRuntime?.snapshot?.objects.memory || []).label;
-  const alignmentValue = hasLiveAlignment ? `${libraryHeader.alignment}% · Lv.${libraryHeader.level}` : "还没有数据";
+  // 这一行和页头那个胶囊、理解度弹层读的是同一份数（`alignmentView()`）。
+  const alignment = alignmentView();
+  const alignmentValue = alignment.live
+    ? `${alignment.percent}% · Lv.${alignment.level}`
+    : "还没有数据";
 
   return (
     <main className="v277-page v279-settings-page">
@@ -229,8 +232,6 @@ export function SettingsPage({
       {understandingOpen && (
         <UnderstandingSheet
           state={state}
-          go={go}
-          empty={!hasLiveAlignment}
           onClose={() => setUnderstandingOpen(false)}
         />
       )}

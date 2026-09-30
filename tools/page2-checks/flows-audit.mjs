@@ -82,6 +82,13 @@ const expect = (ok, label, detail = '') => {
   const consoleErrors = [];
   page.on('console', (message) => { if (message.type() === 'error') consoleErrors.push(message.text().slice(0, 160)); });
   page.on('pageerror', (error) => consoleErrors.push(String(error).slice(0, 160)));
+  // 把"哪条请求挂了"也记下来：`ERR_NETWORK_CHANGED` 这种是机器网络（代理/网卡）抖，
+  // 不是产品报错；只看 message 文本分不出来，得看失败的 URL 是不是我们自己的。
+  page.on('requestfailed', (request) => {
+    const failure = request.failure()?.errorText ?? '';
+    if (/ERR_ABORTED/.test(failure)) return;
+    consoleErrors.push(`请求失败 ${request.url().slice(0, 120)} — ${failure}`);
+  });
 
   // ── ① 记忆库 ────────────────────────────────────────────────────────
   console.log('① 记忆库');

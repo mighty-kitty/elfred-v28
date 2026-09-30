@@ -477,9 +477,12 @@
 }
 .sheetHead {
   display: flex;
-  align-items: flex-start;
+  /* 标题下面那行小字删掉之后，标题跟右边那颗关闭钮改成竖直居中对齐（原来靠 flex-start，
+     因为上面还有第二行；现在只剩一行，再靠上就会显得吊在半空） */
+  align-items: center;
   justify-content: space-between;
   gap: 10px;
+  padding-top: 2px;
 }
 .sheetTitle {
   font-size: 19px;

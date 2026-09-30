@@ -1,7 +1,17 @@
 import {fail,now} from './store.mjs';
-import {string,bounded} from './policy.mjs';
+import {string,bounded,enumeration} from './policy.mjs';
+import {FEED_DENSITY} from './feed-density.mjs';
 import {taskCommand} from './runtime.mjs';
 export function feedCommand(store,user,action,input){
+ if(action==='feed.density.set'){
+  const settings=store.expect(store.owned(user,input.id,'settings'),input.version);
+  const modes=Object.keys(FEED_DENSITY),system=input.system?enumeration(input.system,['explore','advise','create','connect','execute'],'Agent'):null;
+  const mode=enumeration(input.mode,system?[...modes,'inherit']:modes,'信息密度');
+  const current=settings.data.feed_density||{global:'standard',agents:{}};
+  const agents={...current.agents};
+  if(system){if(mode==='inherit')delete agents[system];else agents[system]=mode;}
+  return {id:store.update(settings,{...settings.data,feed_density:{global:system?current.global||'standard':mode,agents}},user).id};
+ }
  if(action==='feed.peer_comments.policy'){
   const settings=store.expect(store.owned(user,input.id,'settings'),input.version);
   if(input.confirm!==true||input.enabled===true&&input.model_consent!==true)fail('CONSENT_REQUIRED','请确认私人朋友圈自动评论的模型使用和每日上限');

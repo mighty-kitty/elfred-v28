@@ -4,6 +4,7 @@ import {externalToolCommand} from './external-tools.mjs';
 import {taskCommand} from './runtime.mjs';
 import {readRss,validatedFeedUrl} from './rss.mjs';
 import {discoveryRelevance} from './discovery-policy.mjs';
+import {feedDensity} from './feed-density.mjs';
 
 const activeRuns=['queued','running','pause_requested','cancel_requested'];
 const success=['completed','awaiting_acceptance','awaiting_review'];
@@ -120,14 +121,19 @@ export async function tickRssObservations(store,reader=readRss,at=Date.now()){
   store.transaction(()=>{
    const watch=store.get(candidate.id);
    if(!watch||watch.data.status!=='active'||watch.version!==candidate.version||(!watch.data.auto_managed&&watch.data.expires<=Date.now()))return;
+   const settings=store.visible(watch.owner,'settings')[0],density=feedDensity(settings,watch.data.system);
    const seen=new Set(watch.data.seen_items||[]),seenUrls=new Set(watch.data.seen_urls||[]),fresh=items.filter(item=>!seenUrls.has(hash(item.url))&&(watch.data.auto_suggested||!seen.has(item.id)));
+   const candidates=watch.data.auto_suggested?fresh.slice(0,density.candidates):fresh;
    const interests=watch.data.interests||[];
-   const matches=(watch.data.auto_suggested?(interests.length?fresh.filter(item=>discoveryRelevance(item,interests)>0).sort((a,b)=>discoveryRelevance(b,interests)-discoveryRelevance(a,interests)):fresh):fresh.filter(item=>watch.data.keywords.some(word=>(item.title+' '+item.summary).toLocaleLowerCase().includes(word.toLocaleLowerCase())))).slice(0,watch.data.auto_suggested&&!watch.data.baseline?3:5);
+   const localDay=value=>new Intl.DateTimeFormat('sv-SE',{timeZone:settings?.data.timezone||'Asia/Shanghai',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date(value));
+   const today=localDay(at),postedToday=watch.data.auto_suggested?store.visible(watch.owner,'feed').filter(item=>item.data.purpose==='discovery'&&localDay(item.created)===today).length:0;
+   const limit=watch.data.auto_suggested?Math.min(watch.data.baseline?density.perCheck:3,Math.max(0,density.dailyMax-postedToday)):5;
+   const matches=(watch.data.auto_suggested?(interests.length?candidates.filter(item=>discoveryRelevance(item,interests)>0).sort((a,b)=>discoveryRelevance(b,interests)-discoveryRelevance(a,interests)):candidates):candidates.filter(item=>watch.data.keywords.some(word=>(item.title+' '+item.summary).toLocaleLowerCase().includes(word.toLocaleLowerCase())))).slice(0,limit);
    if((watch.data.baseline||watch.data.auto_suggested)&&store.visible(watch.owner,'settings')[0]?.data.agents?.[watch.data.system]?.enabled!==false){
     for(const item of [...matches].reverse())store.unique('feed',`${watch.owner}:rss:${hash(item.url)}`,()=>store.add('feed',watch.owner,{title:item.title,summary:item.summary||'查看原始来源并核对内容。',system:watch.data.system,topic:watch.data.auto_suggested?'初始化方向':watch.data.goal.slice(0,100),status:'active',purpose:'discovery',event_key:`rss:${watch.id}:${hash(item.id)}`,task_id:null,source_subscription_id:watch.id,external_url:item.url,published_at:item.published_at,source_name:new URL(item.discovered_from||watch.data.source_url).hostname,source_refs:[],reason:watch.data.auto_suggested?'Agent 根据初始化偏好选择公开资讯查询，取得真实 RSS 条目；相关性仍需核对':'来自你授权的 RSS 来源，标题或摘要命中关注词',personal_value:watch.data.goal,uncertainty:'订阅标题和摘要仅是线索，事实与行动条件仍需核对原文',comments:[],attachments:[]}));
    }
    const checks=watch.data.checks+1;
-   store.update(watch,{...watch.data,checks,baseline:true,seen_items:[...new Set([...fresh.map(item=>item.id),...seen])].slice(0,300),seen_urls:[...new Set([...fresh.map(item=>hash(item.url)),...seenUrls])].slice(0,300),last_checked_at:now(),last_new_sources:matches.length,next_at:at+watch.data.interval_hours*3600000,status:watch.data.auto_managed||checks<watch.data.max_checks?'active':'completed',failures:0,last_error:null},watch.owner);
+   store.update(watch,{...watch.data,checks,baseline:true,seen_items:[...new Set([...candidates.map(item=>item.id),...seen])].slice(0,300),seen_urls:[...new Set([...candidates.map(item=>hash(item.url)),...seenUrls])].slice(0,300),last_candidate_count:candidates.length,last_checked_at:now(),last_new_sources:matches.length,next_at:at+(watch.data.auto_suggested?density.intervalHours:watch.data.interval_hours)*3600000,status:watch.data.auto_managed||checks<watch.data.max_checks?'active':'completed',failures:0,last_error:null},watch.owner);
   });
  }
 }

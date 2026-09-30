@@ -47,6 +47,7 @@ export function PrivateFeed({ go, onDrag, preview = false }: { go: (screen: Scre
   const publishPreferences = snapshot.objects.settings[0]?.data.agent_publish as Record<string, { format?: string; format_version?: number }> | undefined;
   const topicSettings = (snapshot.objects.settings[0]?.data.feed_topics || {}) as Record<string, {mode?: string; alias?: string; removed?: boolean}>;
   const peerComments = snapshot.objects.settings[0]?.data.feed_peer_comments as {enabled?:boolean;daily_limit?:number}|undefined;
+  const density=(snapshot.objects.settings[0]?.data.feed_density||{}) as {global?:string;agents?:Record<string,string>};
   const [order, setOrder] = usePageState<"recommended" | "latest">("feed:order", "recommended");
   const [system, setSystem] = usePageState("feed:system", "");
   const [topic, setTopic] = usePageState("feed:topic", "");
@@ -90,6 +91,7 @@ export function PrivateFeed({ go, onDrag, preview = false }: { go: (screen: Scre
     {!preview&&items.length>0&&!peerComments?.enabled&&<div className={styles.peerPrompt}><span>让其他 Agent 补充真实发现</span><Action run={()=>runtime.command('feed.peer_comments.policy',{...entityRef(snapshot.objects.settings[0]),enabled:true,daily_limit:3,confirm:true,model_consent:true})}>开启互评</Action></div>}
     {!preview&&filtersOpen && <div className={styles.filters}>
       <Action run={()=>runtime.command('feed.peer_comments.policy',{...entityRef(snapshot.objects.settings[0]),enabled:!peerComments?.enabled,daily_limit:3,confirm:true,model_consent:true})}>{peerComments?.enabled?'暂停 Agent 自主评论':'开启 Agent 自主评论'}</Action><small>仅私人可见 · 每日最多 3 次，每次 1000 额度</small>
+      <label>信息密度 <select aria-label={system?'当前 Agent 的信息密度':'整体信息密度'} value={system?density.agents?.[system]||'inherit':density.global||'standard'} onChange={event=>void runtime.command('feed.density.set',{...entityRef(snapshot.objects.settings[0]),...(system?{system}:{}),mode:event.target.value}).catch(()=>{})}><option value="quiet">安静</option><option value="standard">标准</option><option value="rich">丰富</option>{system&&<option value="inherit">跟随整体</option>}</select></label><small>按真实资讯供给展示，不补造内容</small>
       <div className={styles.sort} role="group" aria-label="朋友圈排序">
         <button type="button" aria-pressed={order === "recommended"} onClick={() => setOrder("recommended")}>推荐</button>
         <button type="button" aria-pressed={order === "latest"} onClick={() => setOrder("latest")}>最新</button>

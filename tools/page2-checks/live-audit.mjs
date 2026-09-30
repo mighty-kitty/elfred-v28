@@ -184,6 +184,10 @@ const expect = (ok, label, detail = '') => {
     console.log(levelSheet.split('\n').filter((line) => line.trim()).slice(0, 14).map((line) => `  ${line}`).join('\n'));
     expect(/Lv\.\d/.test(levelSheet) && /当前理解度/.test(levelSheet), '理解度面板有档位与百分比');
     expect(/还差多少/.test(levelSheet), '理解度面板说清"到下一档还差多少"');
+    // 页头和弹层必须是同一个数：弹层自己再算一遍（`empty ? 0 : …`）时，新用户会在同一屏
+    // 看到"页头 10%、弹层 0%"。空态那条路由 alignment-consistency.mjs 专门盯。
+    const sheetPercent = Number((levelSheet.match(/(\d+)%/) || [])[1] ?? -1);
+    expect(sheetPercent === percent, '页头理解度 === 弹层「当前理解度」', `页头 ${percent}% / 弹层 ${sheetPercent}%`);
     await page.screenshot({ path: path.join(OUT, 'understanding.png'), fullPage: true });
     await page.getByRole('button', { name: '关闭', exact: true }).click().catch(() => {});
     await sleep(500);

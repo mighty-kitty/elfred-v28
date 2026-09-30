@@ -1,7 +1,7 @@
 "use client";
 
 import type { Screen } from "../../../core/screen";
-import { libraryHeader } from "../data/knowledge-data";
+import { alignmentView, readAlignmentPercent } from "../data/knowledge-data";
 import styles from "../styles/knowledge.module.css";
 
 // 这一页两个面共用的页头：**能力 ／ 记忆**。
@@ -14,13 +14,16 @@ export function LibraryHeader({
   active,
   go,
   onContext,
-  alignment = libraryHeader.alignment,
 }: {
   active: "knowledge" | "memory";
   go: (screen: Screen) => void;
   onContext: () => void;
-  alignment?: number;
 }) {
+  // 口径只有一份（`alignmentView()`）：这里、理解度弹层、第四页胶囊、设置页那一行读的是同一个数。
+  // 以前这里有个 `alignment` 入参，谁想覆盖谁就能覆盖 —— 空态那次就是在能力库那边硬写了 0。
+  const alignment = alignmentView();
+  const percent = alignment.live ? alignment.percent : 0;
+  const shown = readAlignmentPercent(alignment);
   return (
     <header className="v277-library-head">
       <nav aria-label="能力与记忆切换">
@@ -42,7 +45,7 @@ export function LibraryHeader({
       <button
         type="button"
         className="v277-context-chip"
-        aria-label={`理解度 ${alignment}%，点开查看等级与荣誉勋章`}
+        aria-label={`理解度 ${shown}，点开查看等级与荣誉勋章`}
         onClick={onContext}
       >
         {/* 原来这里带 .v277-sprite-home —— 那是从 reference-home.png 雪碧图里
@@ -54,11 +57,11 @@ export function LibraryHeader({
           <b>理解度</b>
           <small>
             {/* 进度条的宽度直接由理解度决定，不写死 */}
-            <em style={{ width: `${alignment}%` }} />
+            <em style={{ width: `${percent}%` }} />
             <i />
           </small>
         </span>
-        <strong>{alignment}%</strong>
+        <strong>{shown}</strong>
       </button>
     </header>
   );

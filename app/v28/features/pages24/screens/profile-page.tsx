@@ -19,9 +19,8 @@ import type { V277State } from "../../../../v27-7-state";
 import type { Screen } from "../../../core/screen";
 import { ProfileShareSheet } from "../../../legacy/legacy-ui";
 import {
-  hasLiveAlignment,
+  alignmentView,
   abilityCardSamples,
-  libraryHeader,
   readAlignmentStage,
   readStage,
 } from "../data/knowledge-data";
@@ -94,9 +93,10 @@ export function ProfilePage({
   // 用户明确关掉才不显示 —— 不然新账号第一眼是光头名字，和设计稿不一样。
   const rawShowLevel = memoryRuntime?.snapshot?.objects.profile?.[0]?.data.showLevel;
   const showLevel = hasRuntime ? (rawShowLevel === undefined ? true : rawShowLevel === true) : profile.showLevel;
-  // 名字旁边那颗胶囊：**理解度那条线**（初见 → 可托付）。后端没给数就是第一档，
-  // 不拿演示兜底值当用户真等级（新用户不是 Lv.4）。
-  const trustLevel = Math.min(hasLiveAlignment ? libraryHeader.level : 1, 6);
+  // 名字旁边那颗胶囊：**理解度那条线**（初见 → 可托付）。和页头胶囊、理解度弹层
+  // 读的是同一个 `alignmentView()`；后端没给数时它就是第一档（Lv.1），
+  // 不会拿演示兜底值当用户真等级（新用户不是 Lv.4）。
+  const trustLevel = alignmentView().level;
   useEffect(() => {
     let alive = true;
     void Promise.all([fetchProfile(), hasRuntime ? Promise.resolve(null) : fetchFeed()])
@@ -386,8 +386,6 @@ export function ProfilePage({
       {understandingOpen && (
         <UnderstandingSheet
           state={state}
-          go={go}
-          empty={!hasLiveAlignment}
           onClose={() => setUnderstandingOpen(false)}
         />
       )}

@@ -165,8 +165,6 @@ export function KnowledgePage({
   const evidenceEmpty = todayEvidence.length === 0;
   const insightEmpty =
     abilityInsight.axes.every((axis) => axis.value === null) && abilityInsight.composite === null;
-  // 全新用户（三块都空）才用"整页空态"的口径（页头 0%、理解度弹层也按空态显示）
-  const emptyMode = urlEmpty || (cardsEmpty && evidenceEmpty && insightEmpty);
   const [selectedCapability, setSelectedCapability] = useState<SheetCard | null>(
     null,
   );
@@ -699,11 +697,9 @@ export function KnowledgePage({
           </div>
         </section>
       </div>
-        {alignmentOpen && (
+      {alignmentOpen && (
         <UnderstandingSheet
           state={state}
-          go={go}
-          empty={emptyMode}
           onClose={() => setAlignmentOpen(false)}
         />
       )}

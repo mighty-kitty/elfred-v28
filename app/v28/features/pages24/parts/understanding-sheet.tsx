@@ -63,17 +63,14 @@ export function UnderstandingSheet({
   const level = alignment.level;
   const percent = alignment.percent;
   const nextLevel = Math.min(level + 1, ALIGNMENT_STAGE.length - 1);
-  const gateFrom = ALIGNMENT_GATE[level] ?? 0;
   const gateTo = ALIGNMENT_GATE[nextLevel] ?? 100;
   const toNext = live ? Math.max(0, gateTo - percent) : 0;
-  const progress = Math.min(
-    100,
-    Math.max(0, Math.round(((percent - gateFrom) / Math.max(1, gateTo - gateFrom)) * 100)),
-  );
   const memory = buildMemoryView(state.memories);
   // 缓动后的进度（0–1）：两条进度条的长度和那个大数字都用它
   const eased = 1 - (1 - clock) ** 3;
   const shownPercent = Math.round(percent * eased);
+  /** 缓动后的"当前理解度"在 0–100 上的位置：两条进度条的填充都用它 */
+  const filled = (live ? percent : 0) * eased;
 
   return (
     <RootPortal>
@@ -129,7 +126,6 @@ export function UnderstandingSheet({
                     Lv.{level}
                     <em>{readAlignmentStage(level)}</em>
                   </h3>
-                  <p className={sheetStyles.stageSub}>{ALIGNMENT_UNLOCK[level]}</p>
                 </div>
                 <span className={sheetStyles.stagePct}>
                   <b>{live ? `${shownPercent}%` : "—"}</b>
@@ -139,7 +135,7 @@ export function UnderstandingSheet({
               <em className={sheetStyles.bar}>
                 <i
                   className={sheetStyles.barFill}
-                  style={{ width: `${percent * eased}%` }}
+                  style={{ width: `${filled}%` }}
                 >
                   <i className={sheetStyles.barKnob} />
                 </i>
@@ -160,13 +156,24 @@ export function UnderstandingSheet({
                 </span>
               </header>
               <em className={sheetStyles.bar}>
+                {/* 这一条**和上面那条同一条刻度（0–100 的理解度）**：填充走到"你在这儿"，
+                    灰蓝那一段就是从这儿到下一档门槛的距离 —— 它的宽度正是文案里那个百分比，
+                    所以"还差 30%"和条子对得上（以前这条是按本档区间归一过的 25%，跟文案不是一回事）。 */}
                 <i
                   className={sheetStyles.barFill}
-                  style={{ width: `${(live ? progress : 0) * eased}%` }}
+                  style={{ width: `${filled}%` }}
                 >
                   <i className={sheetStyles.barKnob} />
                 </i>
-                <i className={sheetStyles.barGoal} />
+                {live ? (
+                  <>
+                    <i
+                      className={sheetStyles.barGap}
+                      style={{ left: `${filled}%`, width: `${Math.max(0, gateTo - filled)}%` }}
+                    />
+                    <i className={sheetStyles.barGoal} style={{ left: `${gateTo}%` }} />
+                  </>
+                ) : null}
               </em>
             </section>
             <section className={styles.statRow}>

@@ -23,7 +23,11 @@ export function unpackLearningReply(output){
   try{
     const parsed=JSON.parse(String(output).trim().replace(/^```(?:json)?\s*/,'').replace(/\s*```$/,''));
     if(typeof parsed.reply==='string'&&parsed.reply.trim()&&Array.isArray(parsed.memories))return {reply:parsed.reply,proposals:parsed.memories.slice(0,3),structured:true};
-  }catch{}
+  }catch(error){
+    // 原来这里是一个空 catch：解析失败无声无息，事后查不出记忆为什么没学进去。
+    // 行为不变（继续往下走），只是把原因留痕。
+    console.warn('[memory-learning] 学习回复不是合法 JSON，按非结构化处理：', String(error?.message||error).slice(0,200));
+  }
   if(/^\s*(?:```(?:json)?\s*)?\{/.test(output)&&/"(?:reply|memories)"\s*:/.test(output))fail('INVALID_CHAT_REPLY','回复结构不完整，请重试本轮；不会保存未经核对的理解',502);
   return {reply:output,proposals:[],structured:false};
 }

@@ -8,6 +8,7 @@ import { cardRating } from "../../../core/capability-score.mjs";
 import { parseSkillMarkdown, skillCardCopy } from "../../../core/skill-markdown.mjs";
 import { memoryAdmitted, memoryActive, memoryGroup, systemNames } from "../../../core/memory-policy.mjs";
 import { SYSTEM_DIMENSION, dimensionInsight, observationsFromOutcomes } from "../../../core/dimensions.mjs";
+import { localDay } from "../../../core/local-day.mjs";
 // 带上 .ts 后缀：Node 的类型剥壳加载器要求显式后缀，这样这个文件才能被单测直接 import
 import { entityTitle, markdownExcerpt } from "../../../core/display-labels.ts";
 import type { Entity, Snapshot } from "../../live/types";
@@ -84,8 +85,10 @@ function projectSnapshot(snapshot: Snapshot): Page2Data {
     const task = tasks.get(field(item, "task_id"));
     const artifact = knowledge.find(entry => entry.data.outcome_id === item.id);
     const title = entityTitle(task,"已验收成果");
+    // "今天"按用户自己设置的时区算（localDay），不用本机时区——跨时区/临近午夜才不会标错。
+    const zone = String(snapshot.objects.settings?.[0]?.data?.timezone || "Asia/Shanghai");
     return { id: item.id, title, note: markdownExcerpt(field(artifact, "content"),240), kind: "outcome", kindLabel: "已验收成果",
-      weightLabel: "本人验收", day: new Date(item.created).toDateString() === new Date().toDateString() ? "今天" : new Date(item.created).toLocaleDateString("zh-CN"),
+      weightLabel: "本人验收", day: localDay(item.created, zone) === localDay(new Date(), zone) ? "今天" : new Date(item.created).toLocaleDateString("zh-CN"),
       time: new Date(item.created).toLocaleTimeString("zh-CN", { hour: "2-digit", minute: "2-digit" }),
       source: { label: "真实任务", note: title, ref: { kind: "task", id: task?.id || "" } },
       summary: field(artifact, "content") || title, agent: agentName[field(task, "system")] || "执行", verified: true,

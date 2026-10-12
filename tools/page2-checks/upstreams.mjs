@@ -8,6 +8,7 @@
  *   node tools/page2-checks/upstreams.mjs dev              # 起齐上游，再启动应用（退出时代停上游）
  *   node tools/page2-checks/upstreams.mjs deps             # 装上游依赖（可重复执行）
  *   node tools/page2-checks/upstreams.mjs preflight        # 开工前体检：磁盘、node_modules、端口
+ *   node tools/page2-checks/upstreams.mjs ensure           # 缺哪个补哪个（幂等，跑完即走）
  *
  * 为什么单独做一个：应用侧的启动脚本只在 `npm run dev:local` 里拉 EMOS，
  * 另外三个上游没人拉，失败时还不给原因（见 docs/第二页第四页-上游启动说明.md）。
@@ -119,6 +120,41 @@ const tcp = (host, port) => {
 };
 const pidFile = (key) => path.join(RUN_DIR, `${key}.pid`);
 const logFile = (key) => path.join(RUN_DIR, `${key}.log`);
+const q = (s) => `'${String(s).replace(/'/g, "''")}'`;
+
+/**
+ * 真正脱离当前会话地起一个上游。
+ * 为什么不用 spawn(detached:true)：实测那样起的进程仍然挂在当前 shell 的进程树/作业对象下，
+ * 会话一结束（或上一次 exec 被回收）就跟着被杀——今天 EMOS/网关/Foundry 全被带走就是这原因。
+ * Windows 下改用 Start-Process 起，进程属于系统而不是我们的会话。
+ */
+function spawnDetached(s) {
+  if (process.platform === "win32") {
+    // 拼一长串 -Command 太容易踩引号坑，落成一个启动脚本再跑，稳定得多。
+    const launcher = path.join(RUN_DIR, `${s.key}.start.ps1`);
+    const envLines = Object.entries({ ...FILE_ENV, ...s.env() })
+      .filter(([, v]) => v !== undefined && v !== null)
+      .map(([k, v]) => `$env:${k}=${q(v)}`);
+    const args = s.cmd.slice(1).map(q).join(",");
+    writeFileSync(launcher, [
+      ...envLines,
+      `$p = Start-Process -FilePath ${q(s.cmd[0])} -ArgumentList @(${args}) -WorkingDirectory ${q(s.cwd)} ` +
+        `-WindowStyle Hidden -RedirectStandardOutput ${q(logFile(s.key))} -RedirectStandardError ${q(logFile(s.key))} -PassThru`,
+      "$p.Id",
+    ].join("\n"), "utf8");
+    const out = execFileSync("powershell", ["-NoProfile", "-ExecutionPolicy", "Bypass", "-File", launcher], { encoding: "utf8" });
+    const pid = Number(String(out).trim().split(/\s+/).pop());
+    if (!Number.isFinite(pid)) throw new Error(`Start-Process 没拿到 pid（脚本 ${launcher}）：${String(out).slice(0, 120)}`);
+    return pid;
+  }
+  const fd = openSync(logFile(s.key), "w");
+  const child = spawn(s.cmd[0], s.cmd.slice(1), {
+    cwd: s.cwd, windowsHide: true, detached: true, stdio: ["ignore", fd, fd],
+    env: { ...process.env, ...FILE_ENV, ...s.env() },
+  });
+  child.unref();
+  return child.pid;
+}
 const alive = (pid) => { try { process.kill(pid, 0); return true; } catch { return false; } };
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
@@ -220,18 +256,13 @@ async function start(key) {
     if (s.key === "foundry" && !(await SERVICES.find((x) => x.key === "freetodo").check())) {
       console.log(`${s.title}：提醒——FreeTodo 没起，它起草扫描会 500（已知硬依赖，继续起服务本身没问题）`);
     }
-    const out = await new Promise((resolve) => {
-      try {
-        const fd = openSync(logFile(s.key), "w");
-        const child = spawn(s.cmd[0], s.cmd.slice(1), {
-          cwd: s.cwd, windowsHide: true, detached: true, stdio: ["ignore", fd, fd],
-          env: { ...process.env, ...FILE_ENV, ...s.env() },
-        });
-        child.unref();
-        writeFileSync(pidFile(s.key), String(child.pid));
-        resolve(child.pid);
-      } catch (e) { resolve(0); console.log(`  启动命令失败：${String(e.message).slice(0, 100)}`); }
-    });
+    try {
+      const pid = spawnDetached(s);
+      writeFileSync(pidFile(s.key), String(pid));
+    } catch (e) {
+      console.log(`  启动命令失败：${String(e.message).slice(0, 160)}`);
+      continue;
+    }
     process.stdout.write(`${s.title}：启动中`);
     let ready = null;
     const deadline = Date.now() + 120000;   // 最多等 2 分钟（uv run 首次解析依赖会慢）
@@ -269,7 +300,22 @@ else if (action === "stop") stop(target);
 else if (action === "dev") await dev();
 else if (action === "deps") await deps();
 else if (action === "preflight") await preflight();
-else { console.log("用法：node tools/page2-checks/upstreams.mjs status | start [all|名字] | stop [all|名字] | dev | deps | preflight"); }
+else if (action === "ensure") await ensure();
+else { console.log("用法：node tools/page2-checks/upstreams.mjs status | start [all|名字] | stop [all|名字] | ensure | dev | deps | preflight"); }
+
+/**
+ * 缺哪个补哪个：只做"起来"这一件事，不做等待之外的别的事。
+ * 什么时候用：受限环境（比如自动化会话）里，命令返回时子进程可能被一起回收，
+ * 所以每次开工前跑一次 ensure 比依赖"上次起过"更可靠。
+ */
+async function ensure() {
+  const missing = [];
+  for (const s of SERVICES) if (!(await s.check())) missing.push(s.key);
+  if (!missing.length) { console.log("四个上游都在跑，不用动"); await appStatus(); return; }
+  console.log(`缺：${missing.join("、")} —— 现在补起来`);
+  await start("all");
+  await appStatus();
+}
 
 /**
  * 起齐上游 → 启动应用（调仓库自己的 dev 入口，不改它的脚本）→ 退出时把上游停掉。

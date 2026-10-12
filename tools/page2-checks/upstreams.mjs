@@ -80,7 +80,8 @@ const SERVICES = [
   {
     key: "foundry", title: "Skill Foundry", port: 8765, depends: ["freetodo"],
     cwd: path.join(ROOT, "services", "skill-foundry"),
-    cmd: ["uv", "run", "python", "-m", "adapter"],
+    // --frozen：别让 uv run 顺手改写仓库里的 uv.lock（实测会把锁文件搅成 890 行差异，污染 PR）
+    cmd: ["uv", "run", "--frozen", "python", "-m", "adapter"],
     // 上游上下文后端：freetodo 是完整路径。legacy 是它自己的回落实现，
     // 但实测（2026-10-12）passive 扫描（adapter/skill_foundry/passive.py）无条件调 FreeTodo 的
     // /api/todos，所以 legacy 也绕不过 FreeTodo——技能生成这条链必须要 FreeTodo 起着。

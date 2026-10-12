@@ -34,6 +34,10 @@ const env = (key, fallback) => process.env[key] ?? FILE_ENV[key] ?? fallback;
 
 const freetodoDir = env("ELFRED_FREETODO_DIR") ||
   "C:/Users/35057/Desktop/纪念-Elfred历史版本/elfred/FreeTodo-main/FreeTodo-main";
+// FreeTodo 的依赖装在数据目录下的独立环境里（torch / chromadb / sentence-transformers 这些不进全局），
+// 有就用它，没有才回落到全局 python。
+const freetodoVenvPython = path.join(DATA, "freetodo-venv", "Scripts", "python.exe");
+const freetodoPython = env("ELFRED_FREETODO_PYTHON") || (existsSync(freetodoVenvPython) ? freetodoVenvPython : env("ELFRED_PYTHON", "python"));
 const emosUrl = env("ELFRED_MEMORY_HUB_URL", "http://127.0.0.1:8200/");
 const emosPort = new URL(emosUrl).port || "8200";
 const emosToken = env("ELFRED_MEMORY_HUB_TOKEN", "");
@@ -43,7 +47,7 @@ const foundryUrl = env("ELFRED_SKILL_FOUNDRY_URL", "http://127.0.0.1:8765");
 const SERVICES = [
   {
     key: "freetodo", title: "FreeTodo", port: 8001, depends: [],
-    cwd: freetodoDir, cmd: [env("ELFRED_PYTHON", "python"), "-m", "lifetrace.server"],
+    cwd: freetodoDir, cmd: [freetodoPython, "-m", "lifetrace.server"],
     env: () => ({ PYTHONUTF8: "1" }),
     check: async () => tcp("127.0.0.1", 8001) ? "端口在" : null,
   },

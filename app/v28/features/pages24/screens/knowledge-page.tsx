@@ -123,8 +123,7 @@ export function KnowledgePage({
   const [storeVersion, setStoreVersion] = useState(0);
   const [insightIndex, setInsightIndex] = useState(0);
   const [alignmentOpen, setAlignmentOpen] = useState(false);
-  // 空态预览开关：网址后面加 ?empty=1 就切到"新用户第一次进来"的样子，
-  // 平时（演示用）还是满数据。接后端后这个开关只留在验收时用。
+  // 空态预览开关：网址后面加 ?empty=1 就切到"新用户第一次进来"的样子，验收时用。
   const [urlEmpty, setUrlEmpty] = useState(false);
   const [importOpen, setImportOpen] = useState(false);
   const [importHint, setImportHint] = useState<string | null>(null);
@@ -133,14 +132,15 @@ export function KnowledgePage({
   useEffect(() => {
     setUrlEmpty(new URLSearchParams(window.location.search).has("empty"));
   }, []);
-  // 空态是"真没数据的样子"，不是靠开关装出来的：
-  //   · 还没拿到数据（loading）就先按空态画 —— 免得先闪三张假卡再消失；
-  //   · 后端回来了但没有卡也没有成果 → 就是空态；主页那边一用起来，这里自然长出数据；
-  //   · 后端够不着（offline）→ 用演示数据，不是空态；
+  // 空态就是"真没数据的样子"，没有任何假数据兜底：
+  //   · 还没拿到数据（loading）就先按空态画；
+  //   · 后端回来了但没有卡也没有成果 → 空态；用起来之后这里自然长出数据；
+  //   · 后端够不着（offline）→ 也是空态，另外挂一条"没连上后端"的提示，绝不拿样例顶；
   //   · ?empty=1 保留为手动预览开关。
   const live = usePage2Live();
   const liveEmpty =
     live.status === "loading" ||
+    live.status === "offline" ||
     (live.status === "ready" &&
       (live.data.capabilities?.length ?? 0) === 0 &&
       // 有了真 skill（Skill Foundry 的产物）就不是空态——能力卡组显示的就是它们
@@ -258,10 +258,10 @@ export function KnowledgePage({
           <h2>
             <Layers3 size={19} />
             能力卡组
-            {/* 降级要显式：整页够不着、或者**部分接口没拿到**（真数据与演示数据混着），都必须说出来 */}
+            {/* 降级要显式：整页够不着、或者**部分接口没拿到**，都必须说出来（不再有假数据兜底） */}
             {live.status === "offline" ? (
               <span
-                title={`没连上后端 ${PAGE2_API}，下面这些是演示数据`}
+                title={`没连上后端 ${PAGE2_API}，这块暂时没有数据`}
                 style={{
                   marginLeft: 6,
                   padding: "1px 8px",
@@ -273,11 +273,11 @@ export function KnowledgePage({
                   fontWeight: 400,
                 }}
               >
-                演示数据
+                没连上后端
               </span>
             ) : live.status === "ready" && missingParts.length > 0 ? (
               <span
-                title={`这些接口这次没拿到：${missingParts.join(" / ")}（对应的地方在用兜底数据）`}
+                title={`这些接口这次没拿到：${missingParts.join(" / ")}（对应的地方暂时没有数据）`}
                 style={{
                   marginLeft: 6,
                   padding: "1px 8px",

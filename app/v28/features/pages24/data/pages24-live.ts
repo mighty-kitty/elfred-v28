@@ -4,7 +4,8 @@
 // 换成 props 传下去要动 6 个屏；所以这里保持"常量的身份不变，只换里面的内容"。
 // 代价是"谁在改这些常量"必须写清楚 —— 全模块只有这个文件改，别处只读。
 //
-// 铁律：接口够不着（offline）时**什么都不做**，页面继续用演示兜底；拿到真数据才替换。
+// 铁律：**没有任何假数据兜底**。接口够不着（offline）时页面就是空态 + 一条“没连上后端”的提示；
+// 拿到真数据才往里盖。
 import { Brain, Compass, FileText, Link2, Rocket, Sparkles } from "lucide-react";
 import { registerProjector } from "../api/page2-api";
 import type { AbilityCardSample, AbilityInsightView, AbilityType, DimensionProfile, EvidenceDetail, EvidenceKind, EvidenceItemView } from "./pages24-view-data";
@@ -16,7 +17,7 @@ import type { LiveCapability, LiveDocument, LiveEvidenceDetail, Page2Data } from
 
 /* ── 接后端：真数据到了就地替换 ────────────────────────────────
  * 上面这些常量的"身份"不变（同一个数组/对象），只换里面的内容——所以视图一行都不用动。
- * 接口够不着时什么都不做，页面继续用演示数据顶着（见 page2-api.ts）。
+ * 接口够不着时什么都不做 —— 页面显示空态，不再拿样例顶（样例已经从源码里删掉）。
  */
 
 const CARD_ICON: Record<string, typeof Compass> = {
@@ -82,7 +83,7 @@ function mapEvidence(record: LiveEvidenceDetail): EvidenceDetail {
 /** 真数据一到：五维、综合分、上一期、成长曲线、理解度、文档、待确认，全部换掉 */
 function applyLiveData(data: Page2Data) {
   // 能力卡组 = skill 的可视化。有真 skill 就显示真 skill（不管它跑没跑过）；
-  // 只有后端连不上时才退回下面那份演示样例。
+  // 这里给的是空骨架：后端连不上时页面按空态显示，不会退回任何样例。
   if (data.skills && data.skills.length > 0) {
     const byTitle = new Map((data.capabilities ?? []).map((card) => [card.title, card]));
     replaceAll(

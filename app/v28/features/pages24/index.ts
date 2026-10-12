@@ -6,7 +6,7 @@
 //
 // 目录约定：
 //   api/     跟后端的接口与本地状态（page2-api / page2-store / skill-launch / task-draft）
-//   data/    前端的数据层（真数据到了就地替换演示数据）
+//   data/    前端的数据层（真数据到了就地盖上去；没有真数据就是空态，不放样例）
 //   parts/   可复用组件（弹层、雷达图、勋章、页头）
 //   screens/ 页面级（第二页、第四页、以及它们的二级屏）
 //   styles/  CSS Modules

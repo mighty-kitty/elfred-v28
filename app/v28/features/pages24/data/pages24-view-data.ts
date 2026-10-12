@@ -2,7 +2,8 @@
 //
 // 分两类，别混：
 //   · 恒定的：颜色表、导入来源、五档/六档的档位名与门槛（后两者从 core 转发，权威只一份）
-//   · 演示兜底：样例卡、样例成果、样例维度画像 —— 登录用户进来时会被 `pages24-live.ts` 就地清空/替换，
+//   · 不再放任何样例卡 / 样例成果 / 样例维度画像：这几份数组一律是空的，
+//     有数据就从后端快照盖进来（`pages24-live.ts`），没有就显示空态。
 //     只有"后端够不着"时才拿来顶一下，绝不冒充用户自己的数据
 //
 // 真数据怎么替进来：见 `pages24-live.ts`（它 import 本文件，再就地改这些数组/对象的内容）。
@@ -49,44 +50,7 @@ export const DIMENSION_COLOR: Record<string, string> = {
   交付: "#b45309",
 };
 
-export const abilityCardSamples: AbilityCardSample[] = [
-  {
-    id: "opp",
-    type: "Skill",
-    dimension: "洞察",
-    title: "机会检索",
-    copy: "持续扫描与你相关的人和机会",
-    score: 68,
-    evidence: 2,
-    level: 1,
-    owner: "探索",
-    icon: Compass,
-  },
-  {
-    id: "content",
-    type: "Mini App",
-    dimension: "表达",
-    title: "内容提炼",
-    copy: "把收藏内容整理为可复用观点",
-    score: 74,
-    evidence: 4,
-    level: 2,
-    owner: "创作",
-    icon: FileText,
-  },
-  {
-    id: "connect",
-    type: "Agent",
-    dimension: "链接",
-    title: "主动连接",
-    copy: "筛选候选人并解释匹配理由",
-    score: 81,
-    evidence: 8,
-    level: 3,
-    owner: "连接",
-    icon: Link2,
-  },
-];
+export const abilityCardSamples: AbilityCardSample[] = [];
 
 /* ── 今天的新成果 ───────────────────────────────────────────── */
 
@@ -102,24 +66,7 @@ export type EvidenceItemView = {
   card: string;
 };
 
-export const todayEvidence: EvidenceItemView[] = [
-  {
-    id: "interview",
-    title: "用户访谈",
-    note: "机会检索 · 成果 +1",
-    delta: "+1",
-    kind: "outcome",
-    card: "机会检索",
-  },
-  {
-    id: "review",
-    title: "产品审阅",
-    note: "内容提炼 · 上下文 +2",
-    delta: "+2",
-    kind: "context",
-    card: "内容提炼",
-  },
-];
+export const todayEvidence: EvidenceItemView[] = [];
 
 /* ── 成果的原始记录（点开一条成果要看到的东西）──────────────── */
 
@@ -147,82 +94,7 @@ export type EvidenceDetail = {
   note?: string;
 };
 
-export const evidenceRecords: EvidenceDetail[] = [
-  {
-    id: "interview",
-    title: "完成一次用户访谈并确认结论",
-    day: "今天",
-    time: "16:40",
-    kind: "outcome",
-    kindLabel: "结果沉淀",
-    weightLabel: "计为 1 次外部验证",
-    source: {
-      label: "任务 · 验证新用户能否独立完成主任务",
-      note: "访谈 1 位用户，记录停顿位置",
-      ref: { kind: "task", id: "schedule-interview" },
-    },
-    summary:
-      "用户在「创建任务」这一步停了 40 秒，说明入口文案没说清「创建完会发生什么」。",
-    agent: "探索 Agent",
-    verified: true,
-    impacts: [
-      {
-        card: "机会检索",
-        score: { from: 65, to: 68 },
-        evidence: { from: 1, to: 2 },
-      },
-    ],
-  },
-  {
-    id: "review",
-    title: "审阅产品方案并留下取舍意见",
-    day: "今天",
-    time: "14:05",
-    kind: "context",
-    kindLabel: "上下文更新",
-    weightLabel: "计为 1 次已确认结果",
-    source: {
-      label: "对话 · 与参谋 Agent 的方案讨论",
-      note: "8 轮往返，收敛到一版方案",
-      ref: { kind: "chat", id: "elfred" },
-    },
-    summary: "把首页三张卡从「信息展示」改成「今天做什么」，并删掉两处解释性文案。",
-    agent: "参谋 Agent",
-    verified: true,
-    impacts: [
-      {
-        card: "内容提炼",
-        evidence: { from: 2, to: 4 },
-        upgraded: "Lv.1 发现 → Lv.2 有证据",
-      },
-    ],
-    note: "只更新了上下文，没有外部结果，所以不动能力分",
-  },
-  {
-    id: "weekly-scan",
-    title: "扫出一批可合作的人并解释匹配理由",
-    day: "昨天",
-    time: "20:12",
-    kind: "outcome",
-    kindLabel: "结果沉淀",
-    weightLabel: "计为 1 次外部验证",
-    source: {
-      label: "任务 · 找到 3 位可聊的人",
-      note: "从 18 位候选人收敛到 3 位",
-      ref: { kind: "task", id: "schedule-client" },
-    },
-    summary: "给出 3 位候选人与匹配理由，其中 1 位已回复。",
-    agent: "连接 Agent",
-    verified: true,
-    impacts: [
-      {
-        card: "主动连接",
-        score: { from: 79, to: 81 },
-        evidence: { from: 7, to: 8 },
-      },
-    ],
-  },
-];
+export const evidenceRecords: EvidenceDetail[] = [];
 
 /* ── 五个维度（维度详情用）──────────────────────────────────── */
 
@@ -235,48 +107,7 @@ export type DimensionProfile = {
   nextAction: string;
 };
 
-export const dimensionProfiles: DimensionProfile[] = [
-  {
-    name: "判断",
-    agent: "参谋",
-    score: 91,
-    summary: "能围绕目标比较方案并给出取舍",
-    capLevel: 5,
-    nextAction: "把一个正在犹豫的决定交给参谋 Agent 做风险预演",
-  },
-  {
-    name: "洞察",
-    agent: "探索",
-    score: 88,
-    summary: "能从访谈中识别稳定的用户卡点",
-    capLevel: 4,
-    nextAction: "再完成 1 次访谈，机会检索就能升到 Lv.2",
-  },
-  {
-    name: "交付",
-    agent: "执行",
-    score: 76,
-    summary: "任务完成后会继续更新能力评分",
-    capLevel: 5,
-    nextAction: "挑一个任务让执行 Agent 端到端做完，你只验收结果",
-  },
-  {
-    name: "表达",
-    agent: "创作",
-    score: 84,
-    summary: "已形成简洁、结果导向的表达偏好",
-    capLevel: 5,
-    nextAction: "把收藏的 3 篇内容交给内容提炼，产出 1 个专题",
-  },
-  {
-    name: "链接",
-    agent: "连接",
-    score: 87,
-    summary: "能筛出值得认识的人并说清匹配理由",
-    capLevel: 4,
-    nextAction: "让连接 Agent 备一份搭话稿，先聊 1 位候选人",
-  },
-];
+export const dimensionProfiles: DimensionProfile[] = [];
 
 export function readDimension(name: string) {
   return dimensionProfiles.find((profile) => profile.name === name) ?? null;
@@ -338,31 +169,23 @@ export type AbilityInsightView = {
   } | null;
 };
 
+// 一份"没有数据"的骨架：五维名字在，数值一律 null —— 界面按"还没数 / 还差 N 条"显示。
+// 真数值只从后端快照来（`pages24-live.ts` 往这份骨架上盖）。
 export const abilityInsight: AbilityInsightView = {
-  axes: [
-    { label: "判断", value: 91, previous: 88 },
-    { label: "洞察", value: 88, previous: 82 },
-    { label: "交付", value: 76, previous: 79 },
-    { label: "表达", value: 84, previous: 83 },
-    { label: "链接", value: 87, previous: 87 },
-  ],
-  composite: 82,
-  previousComposite: 78,
-  outcomeCount: 5,
-  externalChecks: 3,
-  trend: {
-    label: "成长指数",
-    points: [58, 60, 63, 66, 69, 70],
-    weeks: 6,
-    note: "连续 4 周保持增长",
-  },
+  axes: ["判断", "洞察", "交付", "表达", "链接"].map((label) => ({ label, value: null, previous: null })),
+  composite: null,
+  previousComposite: null,
+  outcomeCount: 0,
+  externalChecks: 0,
+  trend: null,
 };
 
 /* ── 页头（知识库 / 记忆库共用）────────────────────────────── */
 
-export const libraryHeader = {
-  alignment: 86, // 理解度百分比（演示兜底值：后端给了真数就会被覆盖）
-  level: 4, // 对齐等级（同上）
+// 不再放兜底值：没拿到后端真数就是 null，界面显示"—"，绝不拿别人的 Lv.4 / 86% 当你的。
+export const libraryHeader: { alignment: number | null; level: number | null } = {
+  alignment: null,
+  level: null,
 };
 
 /** 后端到底给没给"理解度 / 等级"这两个真数？
@@ -389,10 +212,11 @@ export type AlignmentView = {
 
 export function alignmentView(): AlignmentView {
   const top = ALIGNMENT_STAGE.length - 1;
+  const level = libraryHeader.level === null ? 1 : Math.min(Math.max(1, Math.round(libraryHeader.level)), top);
   return {
     live: hasLiveAlignment,
-    percent: libraryHeader.alignment,
-    level: Math.min(Math.max(1, Math.round(libraryHeader.level)), top),
+    percent: libraryHeader.alignment ?? 0,   // live=false 时页面走"—"，这个 0 不会被显示
+    level,
   };
 }
 
@@ -420,7 +244,4 @@ export const IMPORT_SOURCES = [
  * 【接后端时】换成 GET /documents → [{ id, name, status }]
  * status: "待提取" | "已提取"（提取是后台的周期任务，手机端只负责导入与预览）
  */
-export const documents: LiveDocument[] = [
-  { id: "d1", name: "我的简历.pdf", status: "待提取" },
-  { id: "d2", name: "访谈录音.m4a", status: "已提取" },
-];
+export const documents: LiveDocument[] = [];

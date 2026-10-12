@@ -700,11 +700,6 @@
   font-size: 13px;
   font-weight: 600;
 }
-.emptyNote {
-  color: #a8b0b7;
-  font-size: 10.5px;
-  font-style: normal;
-}
 /* 筛选条 + 工具圆钮 同一行 */
 /* 卡片做大一点：这一页要"看得爽"，卡面信息也更清楚。
    注意：公共 CSS 里图片区写死 50px、说明写死 25px 且 overflow:hidden，

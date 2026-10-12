@@ -73,7 +73,14 @@ const SERVICES = [
     key: "foundry", title: "Skill Foundry", port: 8765, depends: ["freetodo"],
     cwd: path.join(ROOT, "services", "skill-foundry"),
     cmd: ["uv", "run", "python", "-m", "adapter"],
-    env: () => ({ FREETODO_BASE_URL: "http://127.0.0.1:8001", ELFRED_ADAPTER_PORT: "8765" }),
+    // 上游上下文后端：freetodo 是完整路径。legacy 是它自己的回落实现，
+    // 但实测（2026-10-12）passive 扫描（adapter/skill_foundry/passive.py）无条件调 FreeTodo 的
+    // /api/todos，所以 legacy 也绕不过 FreeTodo——技能生成这条链必须要 FreeTodo 起着。
+    env: () => ({
+      FREETODO_BASE_URL: "http://127.0.0.1:8001",
+      ELFRED_ADAPTER_PORT: "8765",
+      ELFRED_CONTEXT_BACKEND: env("ELFRED_CONTEXT_BACKEND", "freetodo"),
+    }),
     check: async () => {
       try {
         const r = await fetch(new URL("/v1/elfred/health", foundryUrl), { signal: AbortSignal.timeout(2500) });
@@ -119,6 +126,9 @@ async function start(key) {
     }
     if (await s.check()) { console.log(`${s.title}：已经在跑，跳过`); continue; }
     if (!existsSync(s.cwd)) { console.log(`${s.title}：目录不存在 ${s.cwd}（跳过）`); continue; }
+    if (s.key === "foundry" && !(await SERVICES.find((x) => x.key === "freetodo").check())) {
+      console.log(`${s.title}：提醒——FreeTodo 没起，它起草扫描会 500（已知硬依赖，继续起服务本身没问题）`);
+    }
     const out = await new Promise((resolve) => {
       try {
         const fd = openSync(logFile(s.key), "w");

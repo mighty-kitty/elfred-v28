@@ -9,6 +9,7 @@
 //   node scripts/run-project.mjs lint
 //   node scripts/run-project.mjs typecheck
 import { mkdir } from "node:fs/promises";
+import { existsSync } from "node:fs";
 import path from "node:path";
 import { spawn } from "node:child_process";
 import { fileURLToPath } from "node:url";
@@ -35,9 +36,9 @@ const environment = {
   npm_config_fund: "false",
 };
 
-function run(entry, args = []) {
+function run(entry, args = [], nodeArgs = []) {
   return new Promise((resolve, reject) => {
-    const child = spawn(process.execPath, [path.join(projectRoot, entry), ...args], {
+    const child = spawn(process.execPath, [...nodeArgs, path.join(projectRoot, entry), ...args], {
       cwd: projectRoot,
       env: environment,
       stdio: "inherit",
@@ -52,7 +53,11 @@ function run(entry, args = []) {
 let exitCode;
 switch (command) {
   case "dev":
-    exitCode = await run("node_modules/vinext/dist/cli.js", ["dev", ...forwardedArgs]);
+    // 本地有 .env.local 时走应用自己的入口：它会把 /api/elfred 也挂上。
+    // 直接跑 vinext dev 只起界面，接口是 404，页面会退回演示数据（第二页/第四页踩过）。
+    exitCode = existsSync(path.join(projectRoot, ".env.local"))
+      ? await run("scripts/start-local.mjs", forwardedArgs, ["--env-file-if-exists=.env.local"])
+      : await run("node_modules/vinext/dist/cli.js", ["dev", ...forwardedArgs]);
     break;
   case "build":
     exitCode = await run("node_modules/vinext/dist/cli.js", ["build", ...forwardedArgs]);

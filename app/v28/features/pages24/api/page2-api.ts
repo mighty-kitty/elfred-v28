@@ -7,7 +7,7 @@
 //   契约 → page2-types.ts（纯类型）
 //
 // 这一层只做两件事：读当前快照 → 拼参数 → 调命令；拿不到会话就如实说"请先登录"，
-// 不退回演示数据（演示兜底在 `data/*` 里，只有真拿不到数据时才用）。
+// 不退回任何假数据：拿不到就如实说空（页面走空态 + 显式提示）。
 import { currentCommand, currentSnapshot, loadPage2 } from "./page2-runtime";
 import { active, field } from "./page2-projector";
 import { questionnairePaper } from '../../../core/dimensions.mjs';

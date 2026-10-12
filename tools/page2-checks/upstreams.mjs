@@ -6,6 +6,8 @@
  *   node tools/page2-checks/upstreams.mjs start emos       # 单个起
  *   node tools/page2-checks/upstreams.mjs stop all         # 只杀它自己拉起来的进程
  *   node tools/page2-checks/upstreams.mjs dev              # 起齐上游，再启动应用（退出时代停上游）
+ *   node tools/page2-checks/upstreams.mjs deps             # 装上游依赖（可重复执行）
+ *   node tools/page2-checks/upstreams.mjs preflight        # 开工前体检：磁盘、node_modules、端口
  *
  * 为什么单独做一个：应用侧的启动脚本只在 `npm run dev:local` 里拉 EMOS，
  * 另外三个上游没人拉，失败时还不给原因（见 docs/第二页第四页-上游启动说明.md）。
@@ -130,6 +132,77 @@ async function status() {
     console.log(`${s.title.padEnd(14)} ${String(s.port).padEnd(6)} ${detail ? "通" : "断"}  ${detail ?? "—"}  · ${running}`);
   }
   console.log("\n提示：Jev 是外部服务，只能配 key，不在这个表里。");
+  await appStatus();
+}
+
+/** 应用本身：端口在不在、接口挂没挂上。区分"起了但没接口"（npm run dev）和"真能跑"（dev:local / 本工具的 dev）。 */
+async function appStatus(quiet = false) {
+  const port = Number(env("ELFRED_PORT", "3000"));
+  const up = await portOpen("127.0.0.1", port);
+  if (!up) { if (!quiet) console.log(`应用            ${port}   没起  · 用本工具 dev 或 npm run dev:local 起来`); return { up: false, api: null }; }
+  let api = null;
+  try {
+    const r = await fetch(`http://127.0.0.1:${port}/api/elfred/health/deps`, { signal: AbortSignal.timeout(5000) });
+    api = r.status;   // 200 或 401 都表示接口在；404 表示这个入口没挂接口
+  } catch { api = 0; }
+  if (!quiet) {
+    const verdict = api === 404 ? "起了，但 /api/elfred 是 404 —— 这个入口没挂后端（npm run dev 就是这样）"
+      : api ? `接口在（/api/elfred/health/deps 返回 ${api}${api === 401 ? "，未登录属正常" : ""}）`
+      : "起了，但接口没响应";
+    console.log(`应用            ${port}   通  ${verdict}`);
+  }
+  return { up: true, api };
+}
+
+/** 开工前体检：磁盘空间、node_modules 是不是符号链接、端口占用。 */
+async function preflight() {
+  const { statfsSync, lstatSync } = await import("node:fs");
+  console.log("① 磁盘空间");
+  try {
+    const s = statfsSync("C:/");
+    const freeGb = (s.bavail * s.bsize) / 1e9;
+    console.log(`   C 盘剩余 ${freeGb.toFixed(2)} GB ${freeGb < 5 ? "← 偏小，装依赖/构建可能报 ENOSPC，先清 Temp 和 npm 缓存" : ""}`);
+  } catch { console.log("   读不到磁盘信息"); }
+  console.log("② node_modules");
+  const nm = path.join(ROOT, "node_modules");
+  if (!existsSync(nm)) console.log("   没有 node_modules，先跑 npm ci");
+  else if (lstatSync(nm).isSymbolicLink()) console.log("   是符号链接 ← Turbopack 会拒绝：Symlink ... points out of the filesystem root。摘掉链接后 npm ci");
+  else console.log("   是真实目录，正常");
+  console.log("③ 端口");
+  const ports = [[Number(env("ELFRED_PORT", "3000")), "应用"], ...SERVICES.map((s) => [s.port, s.title])];
+  for (const [port, title] of ports) {
+    const used = await portOpen("127.0.0.1", port);
+    console.log(`   ${String(port).padEnd(6)} ${title.padEnd(14)} ${used ? "已被占用（可能已经在跑）" : "空闲"}`);
+  }
+  console.log("④ 上游依赖");
+  console.log(`   FreeTodo 解释器：${existsSync(freetodoVenvPython) ? freetodoVenvPython : "（没装，先跑 deps）"}`);
+  console.log(`   Skill Foundry：用 uv run，需要 uv 在 PATH（本次：${(() => { try { execFileSync("uv", ["--version"], { stdio: "ignore" }); return "有"; } catch { return "没有"; } })()}）`);
+}
+
+/** 装上游依赖：FreeTodo 用独立环境（不进全局），可重复执行。 */
+async function deps() {
+  mkdirSync(DATA, { recursive: true });
+  const ftReq = path.join(freetodoDir, "requirements-runtime.txt");
+  console.log("① FreeTodo 依赖");
+  if (!existsSync(freetodoDir)) { console.log(`   找不到 FreeTodo 目录：${freetodoDir}（可用 ELFRED_FREETODO_DIR 指）`); }
+  else {
+    if (!existsSync(freetodoVenvPython)) {
+      console.log(`   建独立环境：${path.join(DATA, "freetodo-venv")}`);
+      execFileSync(env("ELFRED_PYTHON", "python"), ["-m", "venv", path.join(DATA, "freetodo-venv")], { stdio: "inherit" });
+    }
+    if (existsSync(ftReq)) {
+      console.log("   装 requirements-runtime.txt（第一次会比较久，torch 那几个包很大）");
+      try { execFileSync(freetodoVenvPython, ["-m", "pip", "install", "--disable-pip-version-check", "--no-input", "--no-warn-script-location", "-r", ftReq], { stdio: "inherit" }); }
+      catch { console.log("   ↑ 这条如果以文件占用报错结束，重跑一次本命令即可（Windows 上写 exe 偶发）"); }
+    }
+    // 实测：它那份清单里没有 icalendar，缺了 todo 路由注册不上 → /api/todos 404 → Foundry 扫描 500
+    console.log("   补装清单里缺的 icalendar");
+    try { execFileSync(freetodoVenvPython, ["-m", "pip", "install", "--disable-pip-version-check", "--no-input", "--no-warn-script-location", "icalendar"], { stdio: "inherit" }); } catch {}
+  }
+  console.log("② Skill Foundry 依赖");
+  try { execFileSync("uv", ["sync"], { cwd: path.join(ROOT, "services", "skill-foundry"), stdio: "inherit" }); }
+  catch { console.log("   uv sync 没跑成；只要 uv 在 PATH，`upstreams.mjs start foundry` 时会自己同步"); }
+  console.log("③ PA 网关依赖：用全局 python（uvicorn/fastapi 已有）");
 }
 
 async function start(key) {
@@ -193,7 +266,9 @@ if (action === "status") await status();
 else if (action === "start") await start(target);
 else if (action === "stop") stop(target);
 else if (action === "dev") await dev();
-else { console.log("用法：node tools/page2-checks/upstreams.mjs status | start [all|emos|gateway|foundry|freetodo] | stop [all|名字]"); }
+else if (action === "deps") await deps();
+else if (action === "preflight") await preflight();
+else { console.log("用法：node tools/page2-checks/upstreams.mjs status | start [all|名字] | stop [all|名字] | dev | deps | preflight"); }
 
 /**
  * 起齐上游 → 启动应用（调仓库自己的 dev 入口，不改它的脚本）→ 退出时把上游停掉。
@@ -222,4 +297,11 @@ async function dev() {
   process.on("SIGINT", shutdown);
   process.on("SIGTERM", shutdown);
   child.on("exit", (code) => { console.log(`\n应用退出了（code ${code}），停掉上游`); stop("all"); process.exit(code ?? 0); });
+  // 起来之后替你看一眼接口挂没挂（npm run dev 那个入口会在这里报 404）
+  await sleep(15000);
+  for (let i = 0; i < 12; i++) {
+    const r = await appStatus(true);
+    if (r.up && r.api) { await appStatus(); break; }
+    await sleep(5000);
+  }
 }

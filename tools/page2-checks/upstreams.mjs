@@ -5,6 +5,7 @@
  *   node tools/page2-checks/upstreams.mjs start all        # FreeTodo → EMOS → 网关 → Foundry 依次起
  *   node tools/page2-checks/upstreams.mjs start emos       # 单个起
  *   node tools/page2-checks/upstreams.mjs stop all         # 只杀它自己拉起来的进程
+ *   node tools/page2-checks/upstreams.mjs dev              # 起齐上游，再启动应用（退出时代停上游）
  *
  * 为什么单独做一个：应用侧的启动脚本只在 `npm run dev:local` 里拉 EMOS，
  * 另外三个上游没人拉，失败时还不给原因（见 docs/第二页第四页-上游启动说明.md）。
@@ -12,6 +13,7 @@
  */
 import { readFileSync, existsSync, mkdirSync, writeFileSync, openSync } from "node:fs";
 import { spawn, execFileSync } from "node:child_process";
+import net from "node:net";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -49,7 +51,7 @@ const SERVICES = [
     key: "freetodo", title: "FreeTodo", port: 8001, depends: [],
     cwd: freetodoDir, cmd: [freetodoPython, "-m", "lifetrace.server"],
     env: () => ({ PYTHONUTF8: "1" }),
-    check: async () => tcp("127.0.0.1", 8001) ? "端口在" : null,
+    check: async () => (await portOpen("127.0.0.1", 8001)) ? "端口在" : null,
   },
   {
     key: "emos", title: "EMOS 记忆中枢", port: Number(emosPort), depends: [],
@@ -89,18 +91,29 @@ const SERVICES = [
       try {
         const r = await fetch(new URL("/v1/elfred/health", foundryUrl), { signal: AbortSignal.timeout(2500) });
         return r.ok ? "/v1/elfred/health 通过" : `端口在，健康接口返回 ${r.status}`;
-      } catch { return tcp("127.0.0.1", 8765) ? "端口在（健康接口没通）" : null; }
+      } catch { return (await portOpen("127.0.0.1", 8765)) ? "端口在（健康接口没通）" : null; }
     },
   },
 ];
 
-function tcp(host, port) {
-  try {
-    const out = execFileSync("powershell", ["-NoProfile", "-Command",
-      `(Get-NetTCPConnection -State Listen -LocalPort ${port} -ErrorAction SilentlyContinue | Measure-Object).Count`], { encoding: "utf8" });
-    return Number(out.trim()) > 0;
-  } catch { return false; }
+/** 端口探测用 node 直连（原来每次去起一个 PowerShell，一轮要 3 秒，等就绪时非常慢）。 */
+function portOpen(host, port, timeout = 700) {
+  return new Promise((resolve) => {
+    const socket = net.connect({ host, port });
+    const done = (ok) => { socket.destroy(); resolve(ok); };
+    socket.setTimeout(timeout);
+    socket.once("connect", () => done(true));
+    socket.once("timeout", () => done(false));
+    socket.once("error", () => done(false));
+  });
 }
+/** 同步版：给不需要异步的调用点用（内部就是 portOpen 的同步等待，不阻塞太久）。 */
+const tcp = (host, port) => {
+  try {
+    const { spawnSync } = require("node:child_process");
+    return false;
+  } catch { return false; }
+};
 const pidFile = (key) => path.join(RUN_DIR, `${key}.pid`);
 const logFile = (key) => path.join(RUN_DIR, `${key}.log`);
 const alive = (pid) => { try { process.kill(pid, 0); return true; } catch { return false; } };
@@ -113,7 +126,7 @@ async function status() {
   for (const s of SERVICES) {
     const pid = existsSync(pidFile(s.key)) ? Number(readFileSync(pidFile(s.key), "utf8").trim()) : null;
     const detail = await s.check();
-    const running = pid && alive(pid) ? `我们拉的（pid ${pid}）` : tcp("127.0.0.1", s.port) ? "在跑（不是我们拉的）" : "没起";
+    const running = pid && alive(pid) ? `我们拉的（pid ${pid}）` : (await portOpen("127.0.0.1", s.port)) ? "在跑（不是我们拉的）" : "没起";
     console.log(`${s.title.padEnd(14)} ${String(s.port).padEnd(6)} ${detail ? "通" : "断"}  ${detail ?? "—"}  · ${running}`);
   }
   console.log("\n提示：Jev 是外部服务，只能配 key，不在这个表里。");
@@ -147,14 +160,16 @@ async function start(key) {
     });
     process.stdout.write(`${s.title}：启动中`);
     let ready = null;
-    for (let i = 0; i < 150; i++) {
+    const deadline = Date.now() + 120000;   // 最多等 2 分钟（uv run 首次解析依赖会慢）
+    let dots = 0;
+    while (Date.now() < deadline) {
       ready = await s.check();
       if (ready) break;
-      await sleep(400);
-      if (i % 5 === 0) process.stdout.write(".");
+      await sleep(600);
+      if (++dots % 5 === 0) process.stdout.write(".");
     }
     if (ready) { console.log(`  就绪（${ready}）`); continue; }
-    console.log(`  等 60 秒还没就绪，日志最后几行：`);
+    console.log(`  等 2 分钟还没就绪，日志最后几行：`);
     try {
       const tail = readFileSync(logFile(s.key), "utf8").split(/\r?\n/).filter(Boolean).slice(-4);
       tail.forEach((l) => console.log(`     ${l.trim().slice(0, 150)}`));
@@ -177,4 +192,34 @@ const [, , action = "status", target = "all"] = process.argv;
 if (action === "status") await status();
 else if (action === "start") await start(target);
 else if (action === "stop") stop(target);
+else if (action === "dev") await dev();
 else { console.log("用法：node tools/page2-checks/upstreams.mjs status | start [all|emos|gateway|foundry|freetodo] | stop [all|名字]"); }
+
+/**
+ * 起齐上游 → 启动应用（调仓库自己的 dev 入口，不改它的脚本）→ 退出时把上游停掉。
+ * 为什么要有这个：`npm run dev` 走 scripts/run-project.mjs，里面不拉上游，
+ * 于是页面永远在等一个起不来的服务。这条命令把"先起上游再起应用"合到一步。
+ */
+async function dev() {
+  console.log("① 先起上游（缺哪个起哪个）");
+  await start("all");
+  console.log("\n② 上游状态");
+  await status();
+  // 用 dev:local 这个入口，不用 npm run dev：
+  //   `npm run dev` 走 scripts/run-project.mjs（vinext 起 Next），**不挂 Elfred 的接口**，
+  //   实测 /api/elfred/health/deps 直接 404，页面只能退回演示数据；
+  //   `npm run dev:local` 走 scripts/start-local.mjs，接口和页面一起挂在同一个端口上。
+  console.log("\n③ 启动应用（dev:local 入口，前台运行；Ctrl+C 退出时会停掉本次拉起的上游）");
+  const child = spawn(process.execPath, ["--env-file-if-exists=.env.local", path.join(ROOT, "scripts", "start-local.mjs")], {
+    cwd: ROOT, stdio: "inherit", env: { ...process.env, ...FILE_ENV },
+  });
+  const shutdown = () => {
+    console.log("\n收到退出信号：停掉本次拉起的上游");
+    try { child.kill(); } catch {}
+    stop("all");
+    process.exit(0);
+  };
+  process.on("SIGINT", shutdown);
+  process.on("SIGTERM", shutdown);
+  child.on("exit", (code) => { console.log(`\n应用退出了（code ${code}），停掉上游`); stop("all"); process.exit(code ?? 0); });
+}
